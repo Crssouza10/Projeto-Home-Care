@@ -1,0 +1,2324 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Minha Saúde - CR$ HOME CARE AI</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Inter', sans-serif; }
+        
+        body {
+            background: linear-gradient(135deg, #0A1128 0%, #1a2f4a 100%);
+            min-height: 100vh;
+            color: #FFFFFF;
+            overflow-x: hidden;
+        }
+        
+        .grid-bg {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image: 
+                linear-gradient(rgba(0, 212, 255, 0.03) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(0, 212, 255, 0.03) 1px, transparent 1px);
+            background-size: 60px 60px;
+            z-index: 0;
+            pointer-events: none;
+        }
+        
+        /* HEADER */
+        .header {
+            position: relative;
+            z-index: 100;
+            padding: 32px 40px;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+        }
+        
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+        
+        .header-avatar {
+            width: 48px;
+            height: 48px;
+            background: linear-gradient(135deg, rgba(0, 212, 255, 0.2), rgba(0, 82, 255, 0.2));
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.3rem;
+            border: 2px solid rgba(0, 212, 255, 0.3);
+        }
+        
+        .header-info h2 {
+            font-size: 1.6rem;
+            font-weight: 800;
+            margin-bottom: 4px;
+        }
+        
+        .header-info .user-name {
+            color: #8A9BB5;
+            font-size: 0.95rem;
+        }
+        
+        .header-right {
+            display: flex;
+            gap: 16px;
+            align-items: center;
+        }
+        
+        .header-stat {
+            background: rgba(11, 26, 58, 0.6);
+            border: 1px solid rgba(0, 212, 255, 0.15);
+            border-radius: 12px;
+            padding: 12px 18px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .header-stat:hover {
+            border-color: rgba(0, 212, 255, 0.3);
+            transform: translateY(-2px);
+        }
+        
+        .header-stat-icon {
+            width: 38px;
+            height: 38px;
+            background: linear-gradient(135deg, rgba(139, 92, 246, 0.3), rgba(124, 58, 237, 0.3));
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.1rem;
+        }
+        
+        .header-stat-value {
+            font-size: 1.4rem;
+            font-weight: 900;
+            color: #00D4FF;
+            line-height: 1;
+        }
+        
+        .header-stat-label {
+            font-size: 0.7rem;
+            color: #8A9BB5;
+        }
+        
+        .header-date {
+            text-align: right;
+            background: rgba(11, 26, 58, 0.6);
+            padding: 12px 20px;
+            border-radius: 12px;
+            border: 1px solid rgba(0, 212, 255, 0.15);
+        }
+        
+        .header-date .day {
+            font-size: 2rem;
+            font-weight: 900;
+            color: #00D4FF;
+            line-height: 1;
+        }
+        
+        .header-date .month-year {
+            font-size: 0.8rem;
+            color: #8A9BB5;
+            margin-top: 4px;
+        }
+        
+        .btn-logout {
+            background: rgba(239, 68, 68, 0.15);
+            border: 1px solid rgba(239, 68, 68, 0.3);
+            border-radius: 10px;
+            color: #EF4444;
+            padding: 10px 18px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .btn-logout:hover {
+            background: rgba(239, 68, 68, 0.25);
+        }
+        
+        /* MAIN CONTAINER */
+        .main-container {
+            position: relative;
+            z-index: 10;
+            padding: 0 40px 40px;
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+        
+        /* SECTION */
+        .section {
+            background: rgba(11, 26, 58, 0.6);
+            border: 1px solid rgba(0, 212, 255, 0.15);
+            border-radius: 20px;
+            padding: 24px;
+            margin-bottom: 24px;
+        }
+        
+        .section-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        
+        .section-title {
+            font-size: 1.1rem;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        /* ÍCONES DE AÇÃO (NO CARD) */
+        .card-actions-group {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+        }
+        
+        .card-icon-btn {
+            width: 40px;
+            height: 40px;
+            border-radius: 10px;
+            border: 1px solid rgba(138, 155, 181, 0.2);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            font-size: 1.1rem;
+            transition: all 0.2s;
+        }
+        
+        .card-icon-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+        
+        .card-icon-btn.insert {
+            background: #FFFFFF;
+            color: #10b981;
+        }
+        
+        .card-icon-btn.insert:hover {
+            background: #f0fdf4;
+        }
+        
+        .card-icon-btn.create {
+            background: #FFFFFF;
+            color: #8b5cf6;
+        }
+        
+        .card-icon-btn.create:hover {
+            background: #faf5ff;
+        }
+        
+        .card-icon-btn.edit {
+            background: #FFFFFF;
+            color: #667eea;
+        }
+        
+        .card-icon-btn.edit:hover {
+            background: #f0f4ff;
+        }
+        
+        .card-icon-btn.delete {
+            background: #FFFFFF;
+            color: #ef4444;
+        }
+        
+        .card-icon-btn.delete:hover {
+            background: #fef2f2;
+        }
+        
+        /* TABS */
+        .tabs {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 24px;
+            overflow-x: auto;
+            padding-bottom: 4px;
+        }
+        
+        .tab {
+            flex: 1;
+            min-width: 120px;
+            padding: 14px 12px;
+            background: rgba(0, 212, 255, 0.05);
+            border: 1px solid rgba(0, 212, 255, 0.15);
+            border-radius: 12px;
+            font-weight: 600;
+            color: #8A9BB5;
+            font-size: 0.9rem;
+            cursor: pointer;
+            transition: all 0.3s;
+            white-space: nowrap;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+        
+        .tab:hover {
+            border-color: rgba(0, 212, 255, 0.3);
+        }
+        
+        .tab.active {
+            background: linear-gradient(135deg, #0052FF, #00D4FF);
+            color: white;
+            border-color: transparent;
+        }
+        
+        .tab-count {
+            background: rgba(255, 255, 255, 0.2);
+            padding: 2px 8px;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: 700;
+        }
+        
+        .tab.active .tab-count {
+            background: rgba(255, 255, 255, 0.3);
+        }
+        
+        .screen {
+            display: none;
+            animation: fadeIn 0.3s ease;
+        }
+        
+        .screen.active {
+            display: block;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        /* MAIN GRID */
+        .main-grid {
+            display: grid;
+            grid-template-columns: 1fr 380px;
+            gap: 24px;
+        }
+        
+        @media (max-width: 1200px) {
+            .main-grid { grid-template-columns: 1fr; }
+        }
+        
+        /* CARDS DE MEDICAMENTOS */
+        .med-card {
+            background: #FFFFFF;
+            border-radius: 16px;
+            padding: 20px;
+            margin-bottom: 16px;
+            color: #333;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(138, 155, 181, 0.1);
+        }
+        
+        .med-card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 12px;
+        }
+        
+        .med-time-badge {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            padding: 8px 16px;
+            border-radius: 10px;
+            font-weight: 700;
+            font-size: 0.95rem;
+        }
+        
+        .med-name {
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: #1a2f4a;
+            margin-bottom: 4px;
+        }
+        
+        .med-dosage {
+            color: #666;
+            font-size: 0.9rem;
+            margin-bottom: 8px;
+        }
+        
+        .med-days {
+            color: #8A9BB5;
+            font-size: 0.85rem;
+            margin-bottom: 16px;
+            font-style: italic;
+        }
+        
+        .med-actions {
+            display: flex;
+            gap: 10px;
+        }
+        
+        .btn-taken {
+            flex: 1;
+            padding: 12px;
+            background: linear-gradient(135deg, #10b981, #059669);
+            border: none;
+            border-radius: 12px;
+            color: white;
+            font-weight: 700;
+            font-size: 0.9rem;
+            cursor: pointer;
+        }
+        
+        .btn-later {
+            flex: 1;
+            padding: 12px;
+            background: linear-gradient(135deg, #fbbf24, #f59e0b);
+            border: none;
+            border-radius: 12px;
+            color: white;
+            font-weight: 700;
+            font-size: 0.9rem;
+            cursor: pointer;
+        }
+        
+        /* CARDS DE CONSULTAS */
+        .appt-card {
+            background: #FFFFFF;
+            border-radius: 16px;
+            padding: 20px;
+            margin-bottom: 16px;
+            color: #333;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+            border-left: 4px solid #f59e0b;
+        }
+        
+        .appt-card.confirmed { border-left-color: #10b981; }
+        .appt-card.cancelled { border-left-color: #ef4444; opacity: 0.7; }
+        
+        /* CARDS DE RESPONSÁVEIS */
+        .resp-card {
+            background: #FFFFFF;
+            border-radius: 16px;
+            padding: 20px;
+            margin-bottom: 16px;
+            color: #333;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+            border-left: 4px solid #8b5cf6;
+        }
+        
+        .resp-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+        
+        .resp-avatar {
+            width: 50px;
+            height: 50px;
+            background: linear-gradient(135deg, #8b5cf6, #6d28d9);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 1.2rem;
+            font-weight: 700;
+        }
+        
+        .resp-info {
+            flex: 1;
+            margin-left: 16px;
+        }
+        
+        .resp-name {
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: #1a2f4a;
+            margin-bottom: 4px;
+        }
+        
+        .resp-relationship {
+            color: #8b5cf6;
+            font-size: 0.9rem;
+            font-weight: 600;
+        }
+        
+        .resp-actions {
+            display: flex;
+            gap: 8px;
+            margin-top: 12px;
+        }
+        
+        .btn-whatsapp {
+            flex: 1;
+            padding: 10px;
+            background: #25d366;
+            border: none;
+            border-radius: 10px;
+            color: white;
+            font-weight: 600;
+            cursor: pointer;
+        }
+        
+        .btn-call {
+            flex: 1;
+            padding: 10px;
+            background: #10b981;
+            border: none;
+            border-radius: 10px;
+            color: white;
+            font-weight: 600;
+            cursor: pointer;
+        }
+        
+        /* CARDS DE CONTATOS */
+        .contact-card {
+            background: #FFFFFF;
+            border-radius: 16px;
+            padding: 20px;
+            margin-bottom: 16px;
+            color: #333;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+            border-left: 4px solid #ec4899;
+        }
+        
+        .contact-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+        
+        .contact-avatar {
+            width: 50px;
+            height: 50px;
+            background: linear-gradient(135deg, #ec4899, #be185d);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 1.2rem;
+            font-weight: 700;
+        }
+        
+        .contact-type {
+            color: #ec4899;
+            font-size: 0.9rem;
+            font-weight: 600;
+        }
+        
+        /* CALENDÁRIO */
+        .calendar-container {
+            background: rgba(17, 27, 51, 0.6);
+            border-radius: 14px;
+            padding: 20px;
+        }
+        
+        .calendar-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        
+        .calendar-title {
+            font-weight: 700;
+            font-size: 1rem;
+        }
+        
+        .calendar-nav {
+            display: flex;
+            gap: 8px;
+        }
+        
+        .calendar-btn {
+            width: 30px;
+            height: 30px;
+            background: rgba(0, 212, 255, 0.1);
+            border: 1px solid rgba(0, 212, 255, 0.2);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            color: #00D4FF;
+            transition: all 0.2s;
+        }
+        
+        .calendar-btn:hover {
+            background: rgba(0, 212, 255, 0.2);
+        }
+        
+        .calendar-grid {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 4px;
+            text-align: center;
+        }
+        
+        .calendar-day-header {
+            font-size: 0.7rem;
+            color: #8A9BB5;
+            padding: 8px 0;
+            font-weight: 600;
+        }
+        
+        .calendar-day {
+            aspect-ratio: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 10px;
+            font-size: 0.85rem;
+            cursor: pointer;
+            font-weight: 600;
+            position: relative;
+            transition: all 0.2s;
+        }
+        
+        .calendar-day:hover {
+            background: rgba(0, 212, 255, 0.2);
+            transform: scale(1.1);
+        }
+        
+        .calendar-day.today {
+            background: linear-gradient(135deg, #0052FF, #00D4FF);
+            font-weight: 800;
+            box-shadow: 0 2px 8px rgba(0, 212, 255, 0.4);
+        }
+        
+        .calendar-day.selected {
+            background: linear-gradient(135deg, #f59e0b, #d97706);
+            font-weight: 800;
+            box-shadow: 0 2px 8px rgba(245, 158, 11, 0.4);
+            animation: pulse 1s ease;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.15); }
+        }
+        
+        .calendar-day.has-event::after {
+            content: '';
+            position: absolute;
+            bottom: 4px;
+            width: 6px;
+            height: 6px;
+            background: #34D399;
+            border-radius: 50%;
+        }
+        
+        .calendar-day.has-event.has-multiple::after {
+            width: 12px;
+            height: 6px;
+            background: linear-gradient(90deg, #34D399 50%, #10b981 50%);
+            border-radius: 3px;
+        }
+        
+        .calendar-day.other-month {
+            color: #4A5568;
+            opacity: 0.5;
+            cursor: default;
+        }
+        
+        .calendar-day.other-month:hover {
+            background: transparent;
+            transform: none;
+        }
+        
+        /* MODAIS */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        
+        .modal.active {
+            display: flex;
+        }
+        
+        .modal-content {
+            background: linear-gradient(135deg, #1a2f4a, #0A1128);
+            border: 1px solid rgba(0, 212, 255, 0.3);
+            border-radius: 24px;
+            padding: 32px;
+            width: 100%;
+            max-width: 500px;
+            max-height: 90vh;
+            overflow-y: auto;
+            animation: slideUp 0.3s ease;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+        }
+        
+        @keyframes slideUp {
+            from { transform: translateY(50px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+        
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 24px;
+        }
+        
+        .modal-title {
+            font-size: 1.5rem;
+            font-weight: 800;
+            color: #FFFFFF;
+        }
+        
+        .modal-close {
+            background: rgba(239, 68, 68, 0.2);
+            border: 1px solid rgba(239, 68, 68, 0.3);
+            color: #EF4444;
+            width: 36px;
+            height: 36px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            font-size: 1.2rem;
+            transition: all 0.2s;
+        }
+        
+        .modal-close:hover {
+            background: rgba(239, 68, 68, 0.3);
+            transform: rotate(90deg);
+        }
+        
+        .form-group {
+            margin-bottom: 20px;
+        }
+        
+        .form-label {
+            display: block;
+            font-weight: 600;
+            color: #C5D0E0;
+            margin-bottom: 8px;
+            font-size: 0.9rem;
+        }
+        
+        .form-input, .form-select, .form-textarea {
+            width: 100%;
+            padding: 14px;
+            background: rgba(11, 26, 58, 0.6);
+            border: 1px solid rgba(0, 212, 255, 0.2);
+            border-radius: 12px;
+            color: #FFFFFF;
+            font-size: 1rem;
+            outline: none;
+            transition: all 0.2s;
+        }
+        
+        .form-input:focus, .form-select:focus, .form-textarea:focus {
+            border-color: #00D4FF;
+            box-shadow: 0 0 0 3px rgba(0, 212, 255, 0.1);
+        }
+        
+        .form-textarea {
+            min-height: 100px;
+            resize: vertical;
+        }
+        
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+        }
+        
+        .btn-submit {
+            width: 100%;
+            padding: 16px;
+            background: linear-gradient(135deg, #10b981, #059669);
+            border: none;
+            border-radius: 12px;
+            color: white;
+            font-weight: 700;
+            font-size: 1.05rem;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .btn-submit:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(16, 185, 129, 0.4);
+        }
+        
+        .btn-submit:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        .days-selector {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 8px;
+            margin-top: 8px;
+        }
+        
+        .day-chip {
+            padding: 10px 4px;
+            background: rgba(0, 212, 255, 0.1);
+            border: 1px solid rgba(0, 212, 255, 0.2);
+            border-radius: 8px;
+            text-align: center;
+            font-size: 0.75rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            color: #8A9BB5;
+        }
+        
+        .day-chip.active {
+            background: linear-gradient(135deg, #0052FF, #00D4FF);
+            color: white;
+            border-color: transparent;
+        }
+        
+        .day-chip:hover {
+            border-color: rgba(0, 212, 255, 0.4);
+        }
+        
+        /* FAB */
+        .fab {
+            position: fixed;
+            bottom: 24px;
+            right: 24px;
+            width: 60px;
+            height: 60px;
+            background: linear-gradient(135deg, #10b981, #059669);
+            border: none;
+            border-radius: 50%;
+            color: white;
+            font-size: 2rem;
+            box-shadow: 0 8px 25px rgba(16, 185, 129, 0.4);
+            cursor: pointer;
+            transition: all 0.3s;
+            z-index: 200;
+        }
+        
+        .fab:active {
+            transform: scale(0.95);
+        }
+        
+        /* TOAST */
+        .toast {
+            position: fixed;
+            bottom: 100px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #10b981;
+            color: white;
+            padding: 14px 24px;
+            border-radius: 14px;
+            font-weight: 600;
+            z-index: 2000;
+            opacity: 0;
+            transition: opacity 0.3s;
+            pointer-events: none;
+        }
+        
+        .toast.show {
+            opacity: 1;
+        }
+        
+        .toast.error {
+            background: #ef4444;
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #8A9BB5;
+        }
+        
+        .empty-state {
+            text-align: center;
+            padding: 40px 20px;
+            color: #8A9BB5;
+        }
+        
+        .empty-state .icon {
+            font-size: 4rem;
+            display: block;
+            margin-bottom: 16px;
+        }
+        
+        .empty-state .hint {
+            margin-top: 16px;
+            padding: 12px 20px;
+            background: rgba(0, 212, 255, 0.1);
+            border-radius: 10px;
+            border: 1px dashed rgba(0, 212, 255, 0.3);
+        }
+        
+        .empty-state .hint button {
+            background: linear-gradient(135deg, #10b981, #059669);
+            border: none;
+            color: white;
+            padding: 8px 16px;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            margin-top: 8px;
+        }
+        
+        @media (max-width: 768px) {
+            .header { padding: 20px; }
+            .main-container { padding: 0 20px 20px; }
+            .main-grid { grid-template-columns: 1fr; }
+            .form-row { grid-template-columns: 1fr; }
+            .days-selector { grid-template-columns: repeat(4, 1fr); }
+        }
+    </style>
+</head>
+<body>
+    <div class="grid-bg"></div>
+    
+    <!-- HEADER -->
+    <header class="header">
+        <div class="header-left">
+            <div class="header-avatar">👤</div>
+            <div class="header-info">
+                <h2 id="greeting">Boa tarde!</h2>
+                <div class="user-name" id="user-name">Eliane Amorzinho</div>
+            </div>
+        </div>
+        <div class="header-right">
+            <div class="header-stat" onclick="showTodayCommitments()">
+                <div class="header-stat-icon">📋</div>
+                <div>
+                    <div class="header-stat-value" id="today-commitments">0</div>
+                    <div class="header-stat-label">Compromissos para hoje</div>
+                </div>
+            </div>
+            <div class="header-date">
+                <div class="day" id="current-day">16</div>
+                <div class="month-year" id="current-month">Maio 2026</div>
+            </div>
+            <button class="btn-logout" onclick="handleLogout()">Sair</button>
+        </div>
+    </header>
+    
+    <!-- MAIN CONTAINER -->
+    <div class="main-container">
+        <div class="main-grid">
+            <!-- LEFT: CONTENT -->
+            <div class="section">
+                <div class="section-header">
+                    <div class="section-title">👤 Meus Dados</div>
+                </div>
+                
+                <!-- TABS -->
+                <div class="tabs">
+                    <button class="tab active" onclick="showScreen('medications', this)">
+                        💊 Remédios <span class="tab-count" id="tab-meds">0</span>
+                    </button>
+                    <button class="tab" onclick="showScreen('appointments', this)">
+                        📅 Consultas <span class="tab-count" id="tab-appts">0</span>
+                    </button>
+                    <button class="tab" onclick="showScreen('responsibles', this)">
+                        👨‍ Responsável <span class="tab-count" id="tab-resp">0</span>
+                    </button>
+                    <button class="tab" onclick="showScreen('contacts', this)">
+                        📞 Contatos <span class="tab-count" id="tab-contacts">0</span>
+                    </button>
+                </div>
+                
+                <!-- SCREENS -->
+                <div id="screen-medications" class="screen active">
+                    <div id="medications-list"><div class="loading">⏳ Carregando...</div></div>
+                </div>
+                <div id="screen-appointments" class="screen">
+                    <div id="appointments-list"><div class="loading">⏳ Carregando...</div></div>
+                </div>
+                <div id="screen-responsibles" class="screen">
+                    <div id="responsibles-list"><div class="loading">⏳ Carregando...</div></div>
+                </div>
+                <div id="screen-contacts" class="screen">
+                    <div id="contacts-list"><div class="loading">⏳ Carregando...</div></div>
+                </div>
+            </div>
+            
+            <!-- RIGHT: CALENDAR -->
+            <div class="section">
+                <div class="section-title">📅 Calendário</div>
+                <div class="calendar-container" id="calendar"></div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- MODAL MEDICAMENTO -->
+    <div class="modal" id="modal-medication">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 class="modal-title" id="med-modal-title">💊 Adicionar Medicamento</h3>
+                <button class="modal-close" onclick="closeModal('modal-medication')">&times;</button>
+            </div>
+            <form id="form-medication" onsubmit="saveMedication(event)">
+                <input type="hidden" id="med-id">
+                <div class="form-group">
+                    <label class="form-label">Nome do Medicamento *</label>
+                    <input type="text" class="form-input" id="med-name" placeholder="Ex: Dipirona" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Dosagem *</label>
+                    <input type="text" class="form-input" id="med-dosage" placeholder="Ex: 500mg - 1 comprimido" required>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">Horário *</label>
+                        <input type="time" class="form-input" id="med-time" required>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Dias da Semana *</label>
+                    <div class="days-selector" id="med-days">
+                        <div class="day-chip active" data-day="0">Dom</div>
+                        <div class="day-chip active" data-day="1">Seg</div>
+                        <div class="day-chip active" data-day="2">Ter</div>
+                        <div class="day-chip active" data-day="3">Qua</div>
+                        <div class="day-chip active" data-day="4">Qui</div>
+                        <div class="day-chip active" data-day="5">Sex</div>
+                        <div class="day-chip active" data-day="6">Sáb</div>
+                    </div>
+                </div>
+                <button type="submit" class="btn-submit">💾 Salvar Medicamento</button>
+            </form>
+        </div>
+    </div>
+    
+    <!-- MODAL CONSULTA -->
+    <div class="modal" id="modal-appointment">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 class="modal-title" id="appt-modal-title">📅 Agendar Consulta</h3>
+                <button class="modal-close" onclick="closeModal('modal-appointment')">&times;</button>
+            </div>
+            <form id="form-appointment" onsubmit="saveAppointment(event)">
+                <input type="hidden" id="appt-id">
+                <div class="form-group">
+                    <label class="form-label">Médico *</label>
+                    <input type="text" class="form-input" id="appt-doctor" placeholder="Ex: Dr. Carlos Silva" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Especialidade</label>
+                    <input type="text" class="form-input" id="appt-specialty" placeholder="Ex: Cardiologista">
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">Data *</label>
+                        <input type="date" class="form-input" id="appt-date" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Horário *</label>
+                        <input type="time" class="form-input" id="appt-time" required>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Observações</label>
+                    <textarea class="form-textarea" id="appt-notes" placeholder="Ex: Levar exames de sangue..."></textarea>
+                </div>
+                <button type="submit" class="btn-submit">💾 Salvar Consulta</button>
+            </form>
+        </div>
+    </div>
+    
+    <!-- MODAL RESPONSÁVEL -->
+    <div class="modal" id="modal-responsible">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 class="modal-title" id="resp-modal-title">👨‍👦 Adicionar Responsável</h3>
+                <button class="modal-close" onclick="closeModal('modal-responsible')">&times;</button>
+            </div>
+            <form id="form-responsible" onsubmit="saveResponsible(event)">
+                <input type="hidden" id="resp-id">
+                <div class="form-group">
+                    <label class="form-label">Nome Completo *</label>
+                    <input type="text" class="form-input" id="resp-name" placeholder="Ex: Maria Silva" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Parentesco *</label>
+                    <select class="form-select" id="resp-relationship" required>
+                        <option value="">Selecione...</option>
+                        <option value="Filho(a)">Filho(a)</option>
+                        <option value="Cônjuge">Cônjuge</option>
+                        <option value="Neto(a)">Neto(a)</option>
+                        <option value="Sobrinho(a)">Sobrinho(a)</option>
+                        <option value="Cuidador(a)">Cuidador(a)</option>
+                        <option value="Outro">Outro</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Telefone *</label>
+                    <input type="tel" class="form-input" id="resp-phone" placeholder="(61) 99999-9999" required>
+                </div>
+                <button type="submit" class="btn-submit">💾 Salvar Responsável</button>
+            </form>
+        </div>
+    </div>
+    
+    <!-- MODAL CONTATO -->
+    <div class="modal" id="modal-contact">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 class="modal-title" id="contact-modal-title">📞 Adicionar Contato</h3>
+                <button class="modal-close" onclick="closeModal('modal-contact')">&times;</button>
+            </div>
+            <form id="form-contact" onsubmit="saveContact(event)">
+                <input type="hidden" id="contact-id">
+                <div class="form-group">
+                    <label class="form-label">Nome *</label>
+                    <input type="text" class="form-input" id="contact-name" placeholder="Ex: Dr. Emergency" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Tipo *</label>
+                    <select class="form-select" id="contact-type" required>
+                        <option value="">Selecione...</option>
+                        <option value="Médico">Médico</option>
+                        <option value="Hospital">Hospital</option>
+                        <option value="Farmácia">Farmácia</option>
+                        <option value="Ambulância">Ambulância</option>
+                        <option value="Outro">Outro</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Telefone *</label>
+                    <input type="tel" class="form-input" id="contact-phone" placeholder="(61) 3333-4444" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Email</label>
+                    <input type="email" class="form-input" id="contact-email" placeholder="email@exemplo.com">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Observações</label>
+                    <textarea class="form-textarea" id="contact-notes" placeholder="Ex: Plantão 24h..."></textarea>
+                </div>
+                <button type="submit" class="btn-submit">💾 Salvar Contato</button>
+            </form>
+        </div>
+    </div>
+    
+    <!-- FAB -->
+    <button class="fab" id="fab-btn" onclick="handleFabClick()">+</button>
+    
+    <div class="toast" id="toast"></div>
+    
+    <script>
+        // ✅ Usa o próprio host da página (funciona em PC e celular)
+        const API_URL = window.location.origin;
+        let userId = null;
+        let currentUser = null;
+        let currentScreen = 'medications';
+        let medicationsData = [];
+        let appointmentsData = [];
+        let responsiblesData = [];
+        let contactsData = [];
+       
+
+        // Variáveis do calendário
+        let currentCalendarMonth = new Date().getMonth();
+        let currentCalendarYear = new Date().getFullYear();
+        let selectedDate = null; // Data selecionada no calendário
+        
+        document.addEventListener('DOMContentLoaded', function() {
+            userId = localStorage.getItem('userId');
+            currentUser = JSON.parse(localStorage.getItem('currentUser') || '{}');
+            if (!userId) { window.location.href = '/'; return; }
+            
+            const hour = new Date().getHours();
+            const greeting = hour < 12 ? 'Bom dia' : hour < 18 ? 'Boa tarde' : 'Boa noite';
+            document.getElementById('greeting').textContent = `${greeting}!`;
+            document.getElementById('user-name').textContent = currentUser.full_name || 'Paciente';
+            
+            // Configurar dias da semana clicáveis
+            setupDayChips();
+            
+            // ✅ INICIALIZAÇÃO: Definir data atual como padrão de visualização
+            const today = new Date();
+            const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+            
+            viewingSpecificDate = todayStr; // ✅ Define hoje como data alvo inicial
+            selectedDate = today;
+            
+            setCurrentDate();
+            generateCalendar();
+            loadAllData();
+            
+            // ✅ Após carregar dados, aplicar filtros iniciais
+            setTimeout(() => {
+                // Atualiza contadores para hoje
+                updateCountersForDate(todayStr);
+                
+                // Se a aba ativa for consultas, carrega filtrado
+                if (currentScreen === 'appointments') {
+                    loadAppointmentsForDate(todayStr);
+                } else if (currentScreen === 'medications') {
+                    loadMedicationsForDay(today.getDay());
+                }
+            }, 300);
+        });
+        
+        function setupDayChips() {
+            document.querySelectorAll('.day-chip').forEach(chip => {
+                chip.addEventListener('click', function() {
+                    this.classList.toggle('active');
+                });
+            });
+        }
+        
+        function setCurrentDate() {
+            const now = new Date();
+            const months = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+            document.getElementById('current-day').textContent = String(now.getDate()).padStart(2,'0');
+            document.getElementById('current-month').textContent = `${months[now.getMonth()]} ${now.getFullYear()}`;
+        }
+        
+        function generateCalendar() {
+            const monthNames = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+            const dayNames = ['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'];
+            const today = new Date();
+            const firstDay = new Date(currentCalendarYear, currentCalendarMonth, 1).getDay();
+            const daysInMonth = new Date(currentCalendarYear, currentCalendarMonth + 1, 0).getDate();
+            const daysInPrevMonth = new Date(currentCalendarYear, currentCalendarMonth, 0).getDate();
+            
+            // Coletar dias com eventos
+            const daysWithEvents = new Set();
+            const daysWithMultipleEvents = new Set();
+            
+            // Adicionar dias de medicamentos
+            medicationsData.forEach(med => {
+                if (med.days_of_week && med.days_of_week.length > 0) {
+                    for (let day = 1; day <= daysInMonth; day++) {
+                        const dayOfWeek = new Date(currentCalendarYear, currentCalendarMonth, day).getDay();
+                        if (med.days_of_week.includes(dayOfWeek)) {
+                            if (daysWithEvents.has(day)) {
+                                daysWithMultipleEvents.add(day);
+                            } else {
+                                daysWithEvents.add(day);
+                            }
+                        }
+                    }
+                }
+            });
+            
+            // Adicionar dias de consultas
+            appointmentsData.forEach(appt => {
+                const apptDate = new Date(appt.appointment_date + 'T00:00:00');
+                if (apptDate.getMonth() === currentCalendarMonth && apptDate.getFullYear() === currentCalendarYear) {
+                    const day = apptDate.getDate();
+                    if (daysWithEvents.has(day)) {
+                        daysWithMultipleEvents.add(day);
+                    } else {
+                        daysWithEvents.add(day);
+                    }
+                }
+            });
+            
+            let html = `
+                <div class="calendar-header">
+                    <div class="calendar-title">${monthNames[currentCalendarMonth]} ${currentCalendarYear}</div>
+                    <div class="calendar-nav">
+                        <div class="calendar-btn" onclick="changeMonth(-1)">‹</div>
+                        <div class="calendar-btn" onclick="changeMonth(1)">›</div>
+                    </div>
+                </div>
+                <div class="calendar-grid">
+                    ${dayNames.map(d => `<div class="calendar-day-header">${d}</div>`).join('')}
+            `;
+            
+            // Dias do mês anterior
+            for (let i = firstDay - 1; i >= 0; i--) {
+                const day = daysInPrevMonth - i;
+                html += `<div class="calendar-day other-month">${day}</div>`;
+            }
+            
+            // Dias do mês atual
+            for (let day = 1; day <= daysInMonth; day++) {
+                const classes = ['calendar-day'];
+                const isToday = today.getDate() === day && today.getMonth() === currentCalendarMonth && today.getFullYear() === currentCalendarYear;
+                const isSelected = selectedDate && selectedDate.getDate() === day && selectedDate.getMonth() === currentCalendarMonth && selectedDate.getFullYear() === currentCalendarYear;
+                
+                if (isToday) classes.push('today');
+                if (isSelected) classes.push('selected');
+                if (daysWithEvents.has(day)) classes.push('has-event');
+                if (daysWithMultipleEvents.has(day)) classes.push('has-multiple');
+                
+                // Adicionar evento de clique
+                const dateStr = `${currentCalendarYear}-${String(currentCalendarMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+                html += `<div class="${classes.join(' ')}" onclick="selectDay('${dateStr}')">${day}</div>`;
+            }
+            
+            // Dias do próximo mês
+            const totalCells = firstDay + daysInMonth;
+            const remainingCells = 42 - totalCells;
+            for (let day = 1; day <= remainingCells; day++) {
+                html += `<div class="calendar-day other-month">${day}</div>`;
+            }
+            
+            html += '</div>';
+            document.getElementById('calendar').innerHTML = html;
+        }
+        
+        function changeMonth(delta) {
+            currentCalendarMonth += delta;
+            if (currentCalendarMonth > 11) {
+                currentCalendarMonth = 0;
+                currentCalendarYear++;
+            } else if (currentCalendarMonth < 0) {
+                currentCalendarMonth = 11;
+                currentCalendarYear--;
+            }
+            generateCalendar();
+        }
+    
+        // Variável global para controlar se está vendo um dia específico
+        let viewingSpecificDate = null;
+
+
+        function selectDay(dateStr) {
+            console.log('📅 Data selecionada (string):', dateStr);
+            
+            // Criar data local para evitar problemas de timezone
+            const parts = dateStr.split('-');
+            const year = parseInt(parts[0]);
+            const month = parseInt(parts[1]) - 1; // JavaScript usa 0-11
+            const day = parseInt(parts[2]);
+            
+            selectedDate = new Date(year, month, day);
+            viewingSpecificDate = dateStr; // ✅ Marca que está vendo um dia específico
+            
+            console.log('📅 Data selecionada:', selectedDate);
+            
+            generateCalendar(); // Re-renderiza para mostrar o destaque
+            
+            // Formata a data para exibição
+            const dayStr = String(selectedDate.getDate()).padStart(2, '0');
+            const monthStr = String(selectedDate.getMonth() + 1).padStart(2, '0');
+            const yearStr = selectedDate.getFullYear();
+            const dateBR = `${dayStr}/${monthStr}/${yearStr}`;
+            
+            // ✅ Atualiza contadores para o dia selecionado
+            updateCountersForDate(dateStr);
+            
+            // Se estiver na aba de consultas, atualiza com filtro
+            if (currentScreen === 'appointments') {
+                loadAppointmentsForDate(dateStr);
+            } else if (currentScreen === 'medications') {
+                loadMedicationsForDay(selectedDate.getDay());
+            }
+            
+            showToast(`📅 Dia ${dateBR} selecionado`);
+        }
+
+
+        // ✅ CORREÇÃO: Função updateCounters original (para quando não há data específica selecionada)
+        function updateCounters() {
+            console.log('📊 Atualizando contadores (padrão)...');
+            
+            // Contadores das abas
+            document.getElementById('tab-meds').textContent = medicationsData.length;
+            document.getElementById('tab-appts').textContent = appointmentsData.length;
+            document.getElementById('tab-resp').textContent = responsiblesData.length;
+            document.getElementById('tab-contacts').textContent = contactsData.length;
+            
+            // Contador de consultas mostra apenas consultas de HOJE
+            const today = new Date();
+            const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+            
+            let apptsToday = 0;
+            appointmentsData.forEach(appt => {
+                if (appt.appointment_date === todayStr) {
+                    apptsToday++;
+                }
+            });
+            
+            document.getElementById('tab-appts').textContent = apptsToday;
+            
+            // Calcular compromissos para HOJE (medicamentos + consultas)
+            const currentDayOfWeek = today.getDay();
+            
+            let medsToday = 0;
+            medicationsData.forEach(med => {
+                if (med.days_of_week && med.days_of_week.includes(currentDayOfWeek)) {
+                    medsToday++;
+                } else if (!med.days_of_week || med.days_of_week.length === 0) {
+                    medsToday++;
+                }
+            });
+            
+            const totalToday = medsToday + apptsToday;
+            document.getElementById('today-commitments').textContent = totalToday;
+            
+            // Reseta para mostrar "hoje"
+            viewingSpecificDate = null;
+            document.querySelector('.header-stat-label').textContent = 'Compromissos para hoje';
+            
+            generateCalendar();
+        }
+
+
+        // ✅ NOVA FUNÇÃO: Atualiza contadores para uma data específica
+        function updateCountersForDate(dateStr) {
+            console.log('🔄 Atualizando contadores para:', dateStr);
+            
+            // Atualiza o texto do header
+            const parts = dateStr.split('-');
+            const day = String(parts[2]).padStart(2, '0');
+            const month = String(parts[1]).padStart(2, '0');
+            const year = parts[0];
+            const dateBR = `${day}/${month}/${year}`;
+            
+            // Verifica se é hoje
+            const today = new Date();
+            const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+            
+            if (dateStr === todayStr) {
+                document.querySelector('.header-stat-label').textContent = 'Compromissos para hoje';
+            } else {
+                document.querySelector('.header-stat-label').textContent = `Compromissos para ${dateBR}`;
+            }
+            
+            // Conta medicamentos para este dia da semana
+            const selectedDayObj = new Date(dateStr + 'T00:00:00');
+            const dayOfWeek = selectedDayObj.getDay();
+            
+            let medsCount = 0;
+            medicationsData.forEach(med => {
+                if (med.days_of_week && med.days_of_week.includes(dayOfWeek)) {
+                    medsCount++;
+                } else if (!med.days_of_week || med.days_of_week.length === 0) {
+                    medsCount++;
+                }
+            });
+            
+            // Conta consultas para esta data exata
+            let apptsCount = 0;
+            appointmentsData.forEach(appt => {
+                if (appt.appointment_date === dateStr) {
+                    apptsCount++;
+                }
+            });
+            
+            const total = medsCount + apptsCount;
+            document.getElementById('today-commitments').textContent = total;
+            
+            console.log(`✅ Medicamentos: ${medsCount}, Consultas: ${apptsCount}, Total: ${total}`);
+        }        
+
+
+        // ✅ CORREÇÃO: Função showTodayCommitments
+        function showTodayCommitments() {
+            const today = new Date();
+            const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+            selectDay(todayStr);
+            
+            if (currentScreen !== 'appointments') {
+                const consultationsTab = document.querySelector('.tab:nth-child(2)');
+                showScreen('appointments', consultationsTab);
+            }
+        }
+       
+
+        function loadAllData() {
+            // Carrega todos os dados em paralelo
+            Promise.all([
+                loadMedications(),
+                loadAppointments(),
+                loadResponsibles(),
+                loadContacts()
+            ]).then(() => {
+                console.log('✅ Todos os dados carregados');
+                // Os contadores são atualizados pelas funções load* individualmente
+            });
+        }
+        
+        function loadAppointmentsForDate(dateStr) {
+            const container = document.getElementById('appointments-list');
+            
+            // Filtra apenas consultas da data selecionada
+            const appointmentsOnDate = appointmentsData.filter(appt => {
+                return appt.appointment_date === dateStr;
+            });
+            
+            // Formata a data para exibição
+            const parts = dateStr.split('-');
+            const day = String(parts[2]).padStart(2, '0');
+            const month = String(parts[1]).padStart(2, '0');
+            const year = parts[0];
+            const dateBR = `${day}/${month}/${year}`;
+            
+            if (appointmentsOnDate.length === 0) {
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <span class="icon">📅</span>
+                        <p>Nenhuma consulta para ${dateBR}</p>
+                        <div class="hint">
+                            <p>💡 Use o botão <strong style="color: #10b981;">➕ Inserir</strong> nos cards acima para adicionar uma nova consulta para este dia.</p>
+                            <button onclick="handleInsert()">➕ Adicionar Consulta</button>
+                        </div>
+                    </div>
+                `;
+                document.getElementById('tab-appts').textContent = '0';
+                return;
+            }
+            
+            container.innerHTML = appointmentsOnDate.map(appt => {
+                const dateStrBR = new Date(appt.appointment_date + 'T00:00:00').toLocaleDateString('pt-BR');
+                return `
+                    <div class="appt-card ${appt.status === 'confirmed' ? 'confirmed' : appt.status === 'cancelled' ? 'cancelled' : ''}">
+                        <div class="med-card-header">
+                            <div>
+                                <div class="med-name">👨‍⚕️ ${appt.doctor_name || 'Médico'}</div>
+                                <div class="med-dosage">${appt.specialty || 'Especialidade não informada'}</div>
+                            </div>
+                            <div class="card-actions-group">
+                                <button class="card-icon-btn insert" onclick="handleInsert()" title="Inserir">➕</button>
+                                <button class="card-icon-btn create" onclick="handleCreate()" title="Criar">✨</button>
+                                <button class="card-icon-btn edit" onclick="editAppt('${appt.id}')" title="Editar">✏️</button>
+                                <button class="card-icon-btn delete" onclick="deleteAppointment('${appt.id}')" title="Excluir">🗑️</button>
+                            </div>
+                        </div>
+                        <div class="med-days">📅 ${dateStrBR} ⏰ ${appt.appointment_time || ''}</div>
+                        ${appt.notes ? `<div class="med-dosage">📝 ${appt.notes}</div>` : ''}
+                        <div class="med-actions">
+                            ${appt.status !== 'cancelled' && appt.status !== 'completed' ? `
+                                <button class="btn-taken" onclick="confirmAppt('${appt.id}')">✅ Confirmar</button>
+                                <button class="btn-later" onclick="cancelAppt('${appt.id}')">❌ Cancelar</button>
+                            ` : ''}
+                        </div>
+                    </div>
+                `;
+            }).join('');
+            
+            document.getElementById('tab-appts').textContent = appointmentsOnDate.length;
+        }
+        
+        function loadMedicationsForDay(dayOfWeek) {
+            const container = document.getElementById('medications-list');
+            
+            // Filtra apenas medicamentos do dia da semana selecionado
+            const medsOnDay = medicationsData.filter(med => {
+                if (!med.days_of_week || med.days_of_week.length === 0) return true;
+                return med.days_of_week.includes(dayOfWeek);
+            });
+            
+            if (medsOnDay.length === 0) {
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <span class="icon">💊</span>
+                        <p>Nenhum medicamento para este dia</p>
+                        <div class="hint">
+                            <p>💡 Use o botão <strong style="color: #10b981;">➕ Inserir</strong> para adicionar um novo medicamento.</p>
+                            <button onclick="handleInsert()">➕ Adicionar Medicamento</button>
+                        </div>
+                    </div>
+                `;
+                document.getElementById('tab-meds').textContent = '0';
+                return;
+            }
+            
+            medsOnDay.sort((a, b) => (a.time || '').localeCompare(b.time || ''));
+            container.innerHTML = medsOnDay.map(med => {
+                const diasSemana = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
+                let diasText = med.days_of_week && med.days_of_week.length > 0 ? med.days_of_week.map(d => diasSemana[d]).join(', ') : 'Todos os dias';
+                return `
+                    <div class="med-card">
+                        <div class="med-card-header">
+                            <div class="med-time-badge">${med.time || '--:--'}</div>
+                            <div class="card-actions-group">
+                                <button class="card-icon-btn insert" onclick="handleInsert()" title="Inserir">➕</button>
+                                <button class="card-icon-btn create" onclick="handleCreate()" title="Criar">✨</button>
+                                <button class="card-icon-btn edit" onclick="editMed('${med.id}')" title="Editar">✏️</button>
+                                <button class="card-icon-btn delete" onclick="deleteMedication('${med.id}')" title="Excluir">🗑️</button>
+                            </div>
+                        </div>
+                        <div class="med-name">${med.name || 'Sem nome'}</div>
+                        <div class="med-dosage">💉 ${med.dosage || ''}</div>
+                        <div class="med-days">📆 ${diasText}</div>
+                        <div class="med-actions">
+                            <button class="btn-taken" onclick="markTaken('${med.id}')">✅ Tomei!</button>
+                            <button class="btn-later" onclick="markLater('${med.id}')">⏰ Lembrar</button>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+            
+            document.getElementById('tab-meds').textContent = medsOnDay.length;
+        }
+        
+   
+        function showScreen(screen, btn) {
+            currentScreen = screen;
+            document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            document.getElementById(`screen-${screen}`).classList.add('active');
+            if (btn) btn.classList.add('active');
+            
+            const fab = document.getElementById('fab-btn');
+            
+            // ✅ CORREÇÃO: Usa viewingSpecificDate ou data atual como padrão
+            const targetDateStr = viewingSpecificDate || `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}-${String(new Date().getDate()).padStart(2, '0')}`;
+            const targetDateObj = new Date(targetDateStr + 'T00:00:00');
+            
+            if (screen === 'medications') { 
+                fab.style.display = 'block'; 
+                fab.style.background = 'linear-gradient(135deg, #10b981, #059669)'; 
+                // Mostra medicamentos do dia alvo (não todos)
+                loadMedicationsForDay(targetDateObj.getDay());
+                
+            } else if (screen === 'appointments') { 
+                fab.style.display = 'block'; 
+                fab.style.background = 'linear-gradient(135deg, #f59e0b, #d97706)'; 
+                // Mostra APENAS consultas do dia alvo (não todas)
+                loadAppointmentsForDate(targetDateStr);
+                
+            } else if (screen === 'responsibles') { 
+                fab.style.display = 'block'; 
+                fab.style.background = 'linear-gradient(135deg, #8b5cf6, #6d28d9)'; 
+                loadResponsibles(); // Sempre mostra todos
+                
+            } else if (screen === 'contacts') { 
+                fab.style.display = 'block'; 
+                fab.style.background = 'linear-gradient(135deg, #ec4899, #be185d)'; 
+                loadContacts(); // Sempre mostra todos
+                
+            } else { 
+                fab.style.display = 'none'; 
+            }
+        }
+ 
+        function handleFabClick() {
+            handleInsert();
+        }
+        
+        function handleLogout() { 
+            if (confirm('Deseja sair?')) { 
+                localStorage.clear(); 
+                window.location.href = '/'; 
+            } 
+        }
+        
+        // ===== FUNÇÕES DE INSERIR/CREAR =====
+        function handleInsert() {
+            const screenNames = {
+                'medications': '💊 Medicamento',
+                'appointments': '📅 Consulta',
+                'responsibles': '👨‍ Responsável',
+                'contacts': '📞 Contato'
+            };
+            const name = screenNames[currentScreen];
+            
+            if (currentScreen === 'medications') openMedModal();
+            else if (currentScreen === 'appointments') openApptModal();
+            else if (currentScreen === 'responsibles') openRespModal();
+            else if (currentScreen === 'contacts') openContactModal();
+            
+            showToast(`➕ Adicionar ${name}`);
+        }
+        
+        function handleCreate() {
+            const screenNames = {
+                'medications': '💊 Plano de Medicamentos',
+                'appointments': '📅 Agenda de Consultas',
+                'responsibles': '👨‍ Rede de Cuidadores',
+                'contacts': '📞 Lista de Emergência'
+            };
+            const name = screenNames[currentScreen];
+            showToast(`✨ Criar ${name}`);
+        }
+        
+        // ===== MEDICAÇÕES =====
+        async function loadMedications() {
+            const container = document.getElementById('medications-list');
+            container.innerHTML = '<div class="loading">⏳ Carregando...</div>';
+            try {
+                if (!userId) return;
+                const res = await fetch(`${API_URL}/api/cliente/${userId}/medications`);
+                if (!res.ok) throw new Error('Erro');
+                medicationsData = await res.json();
+                if (!Array.isArray(medicationsData) || medicationsData.length === 0) {
+                    container.innerHTML = `
+                        <div class="empty-state">
+                            <span class="icon">💊</span>
+                            <p>Nenhum remédio cadastrado</p>
+                            <div class="hint">
+                                <p>💡 Use o botão <strong style="color: #10b981;">➕ Inserir</strong> para adicionar um novo medicamento.</p>
+                                <button onclick="handleInsert()">➕ Adicionar Medicamento</button>
+                            </div>
+                        </div>
+                    `;
+                    updateCounters();
+                    return;
+                }
+                medicationsData.sort((a, b) => (a.time || '').localeCompare(b.time || ''));
+                container.innerHTML = medicationsData.map(med => {
+                    const diasSemana = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
+                    let diasText = med.days_of_week && med.days_of_week.length > 0 ? med.days_of_week.map(d => diasSemana[d]).join(', ') : 'Todos os dias';
+                    return `
+                        <div class="med-card">
+                            <div class="med-card-header">
+                                <div class="med-time-badge">${med.time || '--:--'}</div>
+                                <div class="card-actions-group">
+                                    <button class="card-icon-btn insert" onclick="handleInsert()" title="Inserir">➕</button>
+                                    <button class="card-icon-btn create" onclick="handleCreate()" title="Criar">✨</button>
+                                    <button class="card-icon-btn edit" onclick="editMed('${med.id}')" title="Editar">✏️</button>
+                                    <button class="card-icon-btn delete" onclick="deleteMedication('${med.id}')" title="Excluir">🗑️</button>
+                                </div>
+                            </div>
+                            <div class="med-name">${med.name || 'Sem nome'}</div>
+                            <div class="med-dosage">💉 ${med.dosage || ''}</div>
+                            <div class="med-days">📆 ${diasText}</div>
+                            <div class="med-actions">
+                                <button class="btn-taken" onclick="markTaken('${med.id}')">✅ Tomei!</button>
+                                <button class="btn-later" onclick="markLater('${med.id}')">⏰ Lembrar</button>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+                updateCounters();
+            } catch (e) { 
+                container.innerHTML = `<div class="empty-state"><span class="icon">❌</span><p>Erro ao carregar</p></div>`;
+                updateCounters();
+            }
+        }
+        
+        // ===== CONSULTAS =====
+        async function loadAppointments() {
+            const container = document.getElementById('appointments-list');
+            container.innerHTML = '<div class="loading">⏳ Carregando...</div>';
+            try {
+                if (!userId) return;
+                const res = await fetch(`${API_URL}/api/cliente/${userId}/appointments`);
+                if (!res.ok) throw new Error('Erro');
+                appointmentsData = await res.json();
+                if (!Array.isArray(appointmentsData) || appointmentsData.length === 0) {
+                    container.innerHTML = `
+                        <div class="empty-state">
+                            <span class="icon">📅</span>
+                            <p>Nenhuma consulta agendada</p>
+                            <div class="hint">
+                                <p>💡 Use o botão <strong style="color: #10b981;">➕ Inserir</strong> para agendar uma nova consulta.</p>
+                                <button onclick="handleInsert()">➕ Agendar Consulta</button>
+                            </div>
+                        </div>
+                    `;
+                    updateCounters();
+                    return;
+                }
+                appointmentsData.sort((a, b) => new Date(`${a.appointment_date}T${a.appointment_time}`) - new Date(`${b.appointment_date}T${b.appointment_time}`));
+                container.innerHTML = appointmentsData.map(appt => {
+                    const dateStr = new Date(appt.appointment_date + 'T00:00:00').toLocaleDateString('pt-BR');
+                    return `
+                        <div class="appt-card ${appt.status === 'confirmed' ? 'confirmed' : appt.status === 'cancelled' ? 'cancelled' : ''}">
+                            <div class="med-card-header">
+                                <div>
+                                    <div class="med-name">👨‍⚕️ ${appt.doctor_name || 'Médico'}</div>
+                                    <div class="med-dosage">${appt.specialty || 'Especialidade não informada'}</div>
+                                </div>
+                                <div class="card-actions-group">
+                                    <button class="card-icon-btn insert" onclick="handleInsert()" title="Inserir">➕</button>
+                                    <button class="card-icon-btn create" onclick="handleCreate()" title="Criar">✨</button>
+                                    <button class="card-icon-btn edit" onclick="editAppt('${appt.id}')" title="Editar">✏️</button>
+                                    <button class="card-icon-btn delete" onclick="deleteAppointment('${appt.id}')" title="Excluir">🗑️</button>
+                                </div>
+                            </div>
+                            <div class="med-days">📅 ${dateStr} ⏰ ${appt.appointment_time || ''}</div>
+                            ${appt.notes ? `<div class="med-dosage">📝 ${appt.notes}</div>` : ''}
+                            <div class="med-actions">
+                                ${appt.status !== 'cancelled' && appt.status !== 'completed' ? `
+                                    <button class="btn-taken" onclick="confirmAppt('${appt.id}')">✅ Confirmar</button>
+                                    <button class="btn-later" onclick="cancelAppt('${appt.id}')">❌ Cancelar</button>
+                                ` : ''}
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+                updateCounters();
+            } catch (e) { 
+                container.innerHTML = `<div class="empty-state"><span class="icon">❌</span><p>Erro ao carregar</p></div>`;
+                updateCounters();
+            }
+        }
+        
+        // ===== RESPONSÁVEIS =====
+        async function loadResponsibles() {
+            const container = document.getElementById('responsibles-list');
+            container.innerHTML = '<div class="loading">⏳ Carregando...</div>';
+            try {
+                if (!userId) return;
+                const res = await fetch(`${API_URL}/api/cliente/${userId}/responsibles`);
+                if (!res.ok) throw new Error('Erro');
+                responsiblesData = await res.json();
+                if (!Array.isArray(responsiblesData) || responsiblesData.length === 0) {
+                    container.innerHTML = `
+                        <div class="empty-state">
+                            <span class="icon">👨‍👦</span>
+                            <p>Nenhum responsável cadastrado</p>
+                            <div class="hint">
+                                <p>💡 Use o botão <strong style="color: #10b981;">➕ Inserir</strong> para adicionar um responsável.</p>
+                                <button onclick="handleInsert()">➕ Adicionar Responsável</button>
+                            </div>
+                        </div>
+                    `;
+                    updateCounters();
+                    return;
+                }
+                container.innerHTML = responsiblesData.map(resp => {
+                    const initials = (resp.name || 'R').split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
+                    const phoneClean = (resp.phone || '').replace(/\D/g, '');
+                    return `
+                        <div class="resp-card">
+                            <div class="resp-header">
+                                <div style="display:flex;align-items:center;">
+                                    <div class="resp-avatar">${initials}</div>
+                                    <div class="resp-info">
+                                        <div class="resp-name">${resp.name || 'Responsável'}</div>
+                                        <div class="resp-relationship">${resp.relationship || 'Parentesco'}</div>
+                                    </div>
+                                </div>
+                                <div class="card-actions-group">
+                                    <button class="card-icon-btn insert" onclick="handleInsert()" title="Inserir">➕</button>
+                                    <button class="card-icon-btn create" onclick="handleCreate()" title="Criar">✨</button>
+                                    <button class="card-icon-btn edit" onclick="editResp('${resp.id}')" title="Editar">✏️</button>
+                                    <button class="card-icon-btn delete" onclick="deleteResponsible('${resp.id}')" title="Excluir">🗑️</button>
+                                </div>
+                            </div>
+                            <div class="med-dosage">📱 ${resp.phone || 'Sem telefone'}</div>
+                            <div class="resp-actions">
+                                <button class="btn-whatsapp" onclick="window.open('https://wa.me/55${phoneClean}','_blank')">💬 WhatsApp</button>
+                                <button class="btn-call" onclick="window.location.href='tel:${phoneClean}'">📞 Ligar</button>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+                updateCounters();
+            } catch (e) { 
+                container.innerHTML = `<div class="empty-state"><span class="icon">❌</span><p>Erro ao carregar</p></div>`;
+                updateCounters();
+            }
+        }
+        
+        // ===== CONTATOS =====
+        async function loadContacts() {
+            const container = document.getElementById('contacts-list');
+            container.innerHTML = '<div class="loading">⏳ Carregando...</div>';
+            try {
+                if (!userId) return;
+                const res = await fetch(`${API_URL}/api/cliente/${userId}/emergency-contacts`);
+                if (!res.ok) throw new Error('Erro');
+                contactsData = await res.json();
+                if (!Array.isArray(contactsData) || contactsData.length === 0) {
+                    container.innerHTML = `
+                        <div class="empty-state">
+                            <span class="icon">📞</span>
+                            <p>Nenhum contato de emergência</p>
+                            <div class="hint">
+                                <p>💡 Use o botão <strong style="color: #10b981;">➕ Inserir</strong> para adicionar um contato.</p>
+                                <button onclick="handleInsert()">➕ Adicionar Contato</button>
+                            </div>
+                        </div>
+                    `;
+                    updateCounters();
+                    return;
+                }
+                container.innerHTML = contactsData.map(c => {
+                    const initials = (c.name || 'C').split(' ').map(n=>n[0]).join('').substring(0,2).toUpperCase();
+                    const phoneClean = (c.phone || '').replace(/\D/g, '');
+                    return `
+                        <div class="contact-card">
+                            <div class="contact-header">
+                                <div style="display:flex;align-items:center;">
+                                    <div class="contact-avatar">${initials}</div>
+                                    <div class="resp-info">
+                                        <div class="resp-name">${c.name || 'Contato'}</div>
+                                        <div class="contact-type">${c.type || 'Tipo'}</div>
+                                    </div>
+                                </div>
+                                <div class="card-actions-group">
+                                    <button class="card-icon-btn insert" onclick="handleInsert()" title="Inserir">➕</button>
+                                    <button class="card-icon-btn create" onclick="handleCreate()" title="Criar">✨</button>
+                                    <button class="card-icon-btn edit" onclick="editContact('${c.id}')" title="Editar">✏️</button>
+                                    <button class="card-icon-btn delete" onclick="deleteContact('${c.id}')" title="Excluir">🗑️</button>
+                                </div>
+                            </div>
+                            <div class="med-dosage">📱 ${c.phone || 'Sem telefone'}</div>
+                            ${c.email ? `<div class="med-dosage">📧 ${c.email}</div>` : ''}
+                            ${c.notes ? `<div class="med-dosage">📝 ${c.notes}</div>` : ''}
+                            <div class="resp-actions">
+                                <button class="btn-whatsapp" onclick="window.open('https://wa.me/55${phoneClean}','_blank')">💬 WhatsApp</button>
+                                <button class="btn-call" onclick="window.location.href='tel:${phoneClean}'">📞 Ligar</button>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+                updateCounters();
+            } catch (e) { 
+                container.innerHTML = `<div class="empty-state"><span class="icon">❌</span><p>Erro ao carregar</p></div>`;
+                updateCounters();
+            }
+        }
+        
+        // ===== MODAIS =====
+        function openMedModal(med = null) {
+            const modal = document.getElementById('modal-medication');
+            const title = document.getElementById('med-modal-title');
+            const form = document.getElementById('form-medication');
+            
+            if (med) {
+                title.textContent = '✏️ Editar Medicamento';
+                document.getElementById('med-id').value = med.id;
+                document.getElementById('med-name').value = med.name || '';
+                document.getElementById('med-dosage').value = med.dosage || '';
+                document.getElementById('med-time').value = med.time || '';
+                
+                document.querySelectorAll('#med-days .day-chip').forEach(chip => {
+                    const day = parseInt(chip.dataset.day);
+                    if (med.days_of_week && med.days_of_week.includes(day)) {
+                        chip.classList.add('active');
+                    } else {
+                        chip.classList.remove('active');
+                    }
+                });
+            } else {
+                title.textContent = '💊 Adicionar Medicamento';
+                form.reset();
+                document.getElementById('med-id').value = '';
+                document.querySelectorAll('#med-days .day-chip').forEach(chip => chip.classList.add('active'));
+            }
+            
+            modal.classList.add('active');
+        }
+        
+        function openApptModal(appt = null) {
+            const modal = document.getElementById('modal-appointment');
+            const title = document.getElementById('appt-modal-title');
+            const form = document.getElementById('form-appointment');
+            const submitBtn = form.querySelector('.btn-submit');
+            
+            if (appt) {
+                title.textContent = '✏️ Editar Consulta';
+                submitBtn.textContent = '💾 Atualizar Consulta';
+                document.getElementById('appt-id').value = appt.id;
+                document.getElementById('appt-doctor').value = appt.doctor_name || '';
+                document.getElementById('appt-specialty').value = appt.specialty || '';
+                document.getElementById('appt-date').value = appt.appointment_date || '';
+                document.getElementById('appt-time').value = appt.appointment_time || '';
+                document.getElementById('appt-notes').value = appt.notes || '';
+            } else {
+                title.textContent = '📅 Agendar Consulta';
+                submitBtn.textContent = '💾 Salvar Consulta';
+                form.reset();
+                document.getElementById('appt-id').value = '';
+                const defaultDate = selectedDate ? 
+                    `${selectedDate.getFullYear()}-${String(selectedDate.getMonth() + 1).padStart(2, '0')}-${String(selectedDate.getDate()).padStart(2, '0')}` :
+                    new Date().toISOString().split('T')[0];
+                document.getElementById('appt-date').value = defaultDate;
+            }
+            
+            modal.classList.add('active');
+        }
+        
+        function openRespModal(resp = null) {
+            const modal = document.getElementById('modal-responsible');
+            const title = document.getElementById('resp-modal-title');
+            const form = document.getElementById('form-responsible');
+            
+            if (resp) {
+                title.textContent = '✏️ Editar Responsável';
+                document.getElementById('resp-id').value = resp.id;
+                document.getElementById('resp-name').value = resp.name || '';
+                document.getElementById('resp-relationship').value = resp.relationship || '';
+                document.getElementById('resp-phone').value = resp.phone || '';
+            } else {
+                title.textContent = '👨‍👦 Adicionar Responsável';
+                form.reset();
+                document.getElementById('resp-id').value = '';
+            }
+            
+            modal.classList.add('active');
+        }
+        
+        function openContactModal(contact = null) {
+            const modal = document.getElementById('modal-contact');
+            const title = document.getElementById('contact-modal-title');
+            const form = document.getElementById('form-contact');
+            
+            if (contact) {
+                title.textContent = '✏️ Editar Contato';
+                document.getElementById('contact-id').value = contact.id;
+                document.getElementById('contact-name').value = contact.name || '';
+                document.getElementById('contact-type').value = contact.type || '';
+                document.getElementById('contact-phone').value = contact.phone || '';
+                document.getElementById('contact-email').value = contact.email || '';
+                document.getElementById('contact-notes').value = contact.notes || '';
+            } else {
+                title.textContent = '📞 Adicionar Contato';
+                form.reset();
+                document.getElementById('contact-id').value = '';
+            }
+            
+            modal.classList.add('active');
+        }
+        
+        function closeModal(modalId) {
+            document.getElementById(modalId).classList.remove('active');
+        }
+        
+        // Fechar modal ao clicar fora
+        document.querySelectorAll('.modal').forEach(modal => {
+            modal.addEventListener('click', function(e) {
+                if (e.target === this) {
+                    this.classList.remove('active');
+                }
+            });
+        });
+        
+        // ===== SAVE FUNCTIONS =====
+        async function saveMedication(e) {
+            e.preventDefault();
+            const btn = e.target.querySelector('.btn-submit');
+            const originalText = btn.textContent;
+            btn.disabled = true;
+            btn.textContent = '💾 Salvando...';
+            
+            const id = document.getElementById('med-id').value;
+            const days = Array.from(document.querySelectorAll('#med-days .day-chip.active')).map(chip => parseInt(chip.dataset.day));
+            
+            const payload = {
+                user_id: userId,
+                name: document.getElementById('med-name').value,
+                dosage: document.getElementById('med-dosage').value,
+                time: document.getElementById('med-time').value,
+                days_of_week: days
+            };
+            
+            try {
+                const url = id ? `${API_URL}/api/medications/${id}` : `${API_URL}/api/cliente/${userId}/medications`;
+                const method = id ? 'PUT' : 'POST';
+                
+                const response = await fetch(url, {
+                    method,
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                
+                if (!response.ok) {
+                    const errorData = await response.json().catch(() => ({}));
+                    throw new Error(errorData.detail || 'Erro ao salvar');
+                }
+                
+                showToast(id ? '✅ Medicamento atualizado!' : '✅ Medicamento adicionado!');
+                closeModal('modal-medication');
+                loadMedications();
+            } catch (error) {
+                showToast('❌ ' + error.message, true);
+                console.error(error);
+            } finally {
+                btn.disabled = false;
+                btn.textContent = originalText;
+            }
+        }
+        
+        async function saveAppointment(e) {
+            e.preventDefault();
+            const btn = e.target.querySelector('.btn-submit');
+            const originalText = btn.textContent;
+            btn.disabled = true;
+            btn.textContent = '💾 Salvando...';
+            
+            const id = document.getElementById('appt-id').value;
+            
+            // ✅ CORREÇÃO: Formato correto do payload para edição/criação
+            const payload = {
+                user_id: userId,
+                doctor_name: document.getElementById('appt-doctor').value,
+                specialty: document.getElementById('appt-specialty').value,
+                appointment_date: document.getElementById('appt-date').value,
+                appointment_time: document.getElementById('appt-time').value,
+                notes: document.getElementById('appt-notes').value
+            };
+            
+            // ✅ CORREÇÃO: Log para debugging
+            console.log('📤 Enviando consulta:', { id, payload });
+            
+            try {
+                // ✅ CORREÇÃO: URL correta para PUT/POST
+                const url = id ? `${API_URL}/api/appointments/${id}` : `${API_URL}/api/cliente/${userId}/appointments`;
+                const method = id ? 'PUT' : 'POST';
+                
+                console.log('🌐 URL:', url, 'Método:', method);
+                
+                const response = await fetch(url, {
+                    method,
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                
+                // ✅ CORREÇÃO: Tratamento de erro detalhado
+                if (!response.ok) {
+                    const errorData = await response.json().catch(() => ({}));
+                    console.error('❌ Erro do servidor:', errorData);
+                    throw new Error(errorData.detail || `Erro ${response.status}: ${response.statusText}`);
+                }
+                
+                const result = await response.json();
+                console.log('✅ Resposta:', result);
+                
+                showToast(id ? '✅ Consulta atualizada!' : '✅ Consulta agendada!');
+                closeModal('modal-appointment');
+                loadAppointments();
+            } catch (error) {
+                showToast('❌ ' + error.message, true);
+                console.error('❌ Erro detalhado:', error);
+            } finally {
+                btn.disabled = false;
+                btn.textContent = originalText;
+            }
+        }
+        
+        async function saveResponsible(e) {
+            e.preventDefault();
+            const btn = e.target.querySelector('.btn-submit');
+            const originalText = btn.textContent;
+            btn.disabled = true;
+            btn.textContent = '💾 Salvando...';
+            
+            const id = document.getElementById('resp-id').value;
+            
+            const payload = {
+                user_id: userId,
+                name: document.getElementById('resp-name').value,
+                relationship: document.getElementById('resp-relationship').value,
+                phone: document.getElementById('resp-phone').value
+            };
+            
+            try {
+                const url = id ? `${API_URL}/api/cliente/${userId}/responsibles/${id}` : `${API_URL}/api/cliente/${userId}/responsibles`;
+                const method = id ? 'PUT' : 'POST';
+                
+                const response = await fetch(url, {
+                    method,
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                
+                if (!response.ok) {
+                    const errorData = await response.json().catch(() => ({}));
+                    throw new Error(errorData.detail || 'Erro ao salvar');
+                }
+                
+                showToast(id ? '✅ Responsável atualizado!' : '✅ Responsável adicionado!');
+                closeModal('modal-responsible');
+                loadResponsibles();
+            } catch (error) {
+                showToast('❌ ' + error.message, true);
+                console.error(error);
+            } finally {
+                btn.disabled = false;
+                btn.textContent = originalText;
+            }
+        }
+        
+        async function saveContact(e) {
+            e.preventDefault();
+            const btn = e.target.querySelector('.btn-submit');
+            const originalText = btn.textContent;
+            btn.disabled = true;
+            btn.textContent = '💾 Salvando...';
+            
+            const id = document.getElementById('contact-id').value;
+            
+            const payload = {
+                name: document.getElementById('contact-name').value,
+                type: document.getElementById('contact-type').value,
+                phone: document.getElementById('contact-phone').value,
+                email: document.getElementById('contact-email').value,
+                notes: document.getElementById('contact-notes').value
+            };
+            
+            try {
+                const url = id ? `${API_URL}/api/emergency-contacts/${id}` : `${API_URL}/api/cliente/${userId}/emergency-contacts`;
+                const method = id ? 'PUT' : 'POST';
+                
+                const response = await fetch(url, {
+                    method,
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                
+                if (!response.ok) {
+                    const errorData = await response.json().catch(() => ({}));
+                    throw new Error(errorData.detail || 'Erro ao salvar');
+                }
+                
+                showToast(id ? '✅ Contato atualizado!' : '✅ Contato adicionado!');
+                closeModal('modal-contact');
+                loadContacts();
+            } catch (error) {
+                showToast('❌ ' + error.message, true);
+                console.error(error);
+            } finally {
+                btn.disabled = false;
+                btn.textContent = originalText;
+            }
+        }
+        
+        // ===== DELETE FUNCTIONS =====
+        async function deleteMedication(id) {
+            if (!confirm('Deseja excluir este medicamento?')) return;
+            try {
+                const response = await fetch(`${API_URL}/api/medications/${id}`, { method: 'DELETE' });
+                if (!response.ok) throw new Error('Erro ao excluir');
+                showToast('🗑️ Medicamento excluído');
+                loadMedications();
+            } catch (error) {
+                showToast('❌ Erro ao excluir: ' + error.message, true);
+                console.error(error);
+            }
+        }
+        
+        async function deleteAppointment(id) {
+            if (!confirm('Deseja excluir esta consulta?')) return;
+            try {
+                // ✅ CORREÇÃO: URL correta para DELETE
+                console.log('🗑️ Excluindo consulta ID:', id);
+                const response = await fetch(`${API_URL}/api/appointments/${id}`, { method: 'DELETE' });
+                
+                // ✅ CORREÇÃO: Verificar resposta
+                if (!response.ok) {
+                    const errorData = await response.json().catch(() => ({}));
+                    throw new Error(errorData.detail || `Erro ${response.status}`);
+                }
+                
+                showToast('🗑️ Consulta excluída');
+                loadAppointments();
+            } catch (error) {
+                showToast('❌ Erro ao excluir: ' + error.message, true);
+                console.error(error);
+            }
+        }
+        
+        async function deleteResponsible(id) {
+            if (!confirm('Deseja excluir este responsável?')) return;
+            try {
+                const response = await fetch(`${API_URL}/api/cliente/${userId}/responsibles/${id}`, { method: 'DELETE' });
+                if (!response.ok) {
+                    const errorData = await response.json().catch(() => ({}));
+                    throw new Error(errorData.detail || 'Erro ao excluir');
+                }
+                showToast('🗑️ Responsável excluído');
+                loadResponsibles();
+            } catch (error) {
+                showToast('❌ Erro ao excluir: ' + error.message, true);
+                console.error(error);
+            }
+        }
+        
+        async function deleteContact(id) {
+            if (!confirm('Deseja excluir este contato?')) return;
+            try {
+                const response = await fetch(`${API_URL}/api/emergency-contacts/${id}`, { method: 'DELETE' });
+                if (!response.ok) {
+                    const errorData = await response.json().catch(() => ({}));
+                    throw new Error(errorData.detail || 'Erro ao excluir');
+                }
+                showToast('🗑️ Contato excluído');
+                loadContacts();
+            } catch (error) {
+                showToast('❌ Erro ao excluir: ' + error.message, true);
+                console.error(error);
+            }
+        }
+        
+        // ===== AÇÕES =====
+        async function markTaken(id) {
+            try {
+                await fetch(`${API_URL}/api/medications/${id}/take`, { method: 'POST' });
+                showToast('✅ Confirmado!');
+                loadMedications();
+            } catch { alert('Erro'); }
+        }
+        
+        function markLater(id) { showToast('⏰ Lembrete!'); }
+        
+        async function confirmAppt(id) {
+            try {
+                await fetch(`${API_URL}/api/appointments/${id}/confirm`, { method: 'POST' });
+                showToast('✅ Consulta confirmada!');
+                loadAppointments();
+            } catch { alert('Erro'); }
+        }
+        
+        async function cancelAppt(id) {
+            if (!confirm('Deseja cancelar esta consulta?')) return;
+            try {
+                await fetch(`${API_URL}/api/appointments/${id}/cancel`, { method: 'POST' });
+                showToast('❌ Consulta cancelada');
+                loadAppointments();
+            } catch { alert('Erro'); }
+        }
+        
+        function editMed(id) {
+            const med = medicationsData.find(m => m.id === id);
+            if (med) openMedModal(med);
+        }
+        
+        function editAppt(id) {
+            // ✅ CORREÇÃO: Buscar nos dados carregados
+            const appt = appointmentsData.find(a => a.id === id);
+            console.log('✏️ Editando consulta:', appt);
+            if (appt) {
+                openApptModal(appt);
+            } else {
+                showToast('❌ Consulta não encontrada', true);
+            }
+        }
+        
+        function editResp(id) {
+            const resp = responsiblesData.find(r => r.id === id);
+            if (resp) openRespModal(resp);
+        }
+        
+        function editContact(id) {
+            const contact = contactsData.find(c => c.id === id);
+            if (contact) openContactModal(contact);
+        }
+        
+        function showToast(msg, isError = false) { 
+            const toast = document.getElementById('toast'); 
+            toast.textContent = msg; 
+            toast.className = 'toast show' + (isError ? ' error' : '');
+            setTimeout(() => toast.classList.remove('show'), 3000); 
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,1084 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CR$ HOME CARE AI - Cuidado Inteligente</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <style>
+        * {
+            font-family: 'Inter', sans-serif;
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: linear-gradient(135deg, #0A1128 0%, #1a2f4a 100%);
+            min-height: 100vh;
+            overflow-x: hidden;
+            position: relative;
+        }
+
+        /* Grid Background */
+        .grid-bg {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image:
+                linear-gradient(rgba(0, 212, 255, 0.03) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(0, 212, 255, 0.03) 1px, transparent 1px);
+            background-size: 60px 60px;
+            z-index: 0;
+        }
+
+        /* Floating Particles */
+        .particles {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 0;
+            pointer-events: none;
+        }
+
+        .particle {
+            position: absolute;
+            width: 3px;
+            height: 3px;
+            background: rgba(0, 212, 255, 0.4);
+            border-radius: 50%;
+            animation: floatParticle 15s infinite ease-in-out;
+        }
+
+        @keyframes floatParticle {
+            0%, 100% { transform: translate(0, 0); opacity: 0.3; }
+            25% { transform: translate(50px, -30px); opacity: 0.6; }
+            50% { transform: translate(-20px, -60px); opacity: 0.4; }
+            75% { transform: translate(30px, -20px); opacity: 0.5; }
+        }
+
+        /* Glow Effects */
+        .glow-effect {
+            position: fixed;
+            border-radius: 50%;
+            filter: blur(100px);
+            z-index: 0;
+            pointer-events: none;
+        }
+
+        .glow-1 {
+            width: 500px;
+            height: 500px;
+            background: radial-gradient(circle, rgba(0, 82, 255, 0.12) 0%, transparent 70%);
+            top: -150px;
+            left: -150px;
+            animation: glowFloat 12s ease-in-out infinite;
+        }
+
+        .glow-2 {
+            width: 400px;
+            height: 400px;
+            background: radial-gradient(circle, rgba(0, 212, 255, 0.08) 0%, transparent 70%);
+            bottom: -100px;
+            right: -100px;
+            animation: glowFloat 15s ease-in-out infinite reverse;
+        }
+
+        @keyframes glowFloat {
+            0%, 100% { transform: translate(0, 0); }
+            50% { transform: translate(40px, 30px); }
+        }
+
+        /* Main Container - Centralizado */
+        .main-container {
+            position: relative;
+            z-index: 10;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 40px 20px;
+        }
+
+        /* Content Wrapper */
+        .content-wrapper {
+            display: grid;
+            grid-template-columns: 1fr 420px;
+            gap: 60px;
+            max-width: 1200px;
+            width: 100%;
+            align-items: center;
+        }
+
+        /* Left Side - Branding */
+        .left-section {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+            padding: 20px;
+        }
+
+        /* Logo Original */
+        .logo-container {
+            margin-bottom: 32px;
+        }
+
+        .logo-wrapper {
+            position: relative;
+            width: 140px;
+            height: 140px;
+            margin: 0 auto 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .logo-hex {
+            width: 120px;
+            height: 120px;
+            position: relative;
+            z-index: 2;
+        }
+
+        .hex-bg {
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, #0052FF 0%, #00D4FF 100%);
+            clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
+            position: absolute;
+            top: 0;
+            left: 0;
+            box-shadow: 0 20px 60px rgba(0, 212, 255, 0.3);
+        }
+
+        .hex-inner {
+            width: 105px;
+            height: 105px;
+            background: linear-gradient(135deg, #0A1128 0%, #1a2f4a 100%);
+            clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 3;
+        }
+
+        .hex-text {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 2.8rem;
+            font-weight: 900;
+            color: #FFFFFF;
+            z-index: 4;
+            letter-spacing: 2px;
+        }
+
+        /* Circuit Lines */
+        .circuit-left {
+            position: absolute;
+            left: 0;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 45px;
+            height: 50px;
+            z-index: 1;
+        }
+
+        .circuit-line {
+            position: absolute;
+            background: linear-gradient(90deg, rgba(255,255,255,0.3), rgba(0, 212, 255, 0.6));
+            height: 2px;
+            border-radius: 2px;
+        }
+
+        .circuit-line::after {
+            content: '';
+            position: absolute;
+            right: 0;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 5px;
+            height: 5px;
+            background: rgba(0, 212, 255, 0.8);
+            border-radius: 50%;
+        }
+
+        .circuit-left .circuit-line:nth-child(1) { width: 40px; top: 0; left: 0; }
+        .circuit-left .circuit-line:nth-child(2) { width: 35px; top: 10px; left: 5px; }
+        .circuit-left .circuit-line:nth-child(3) { width: 45px; top: 20px; left: 0; }
+        .circuit-left .circuit-line:nth-child(4) { width: 38px; top: 30px; left: 3px; }
+        .circuit-left .circuit-line:nth-child(5) { width: 42px; top: 40px; left: 0; }
+
+        .circuit-right {
+            position: absolute;
+            right: 0;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 45px;
+            height: 50px;
+            z-index: 1;
+        }
+
+        .circuit-right .circuit-line::after { left: 0; right: auto; }
+        .circuit-right .circuit-line:nth-child(1) { width: 40px; top: 0; right: 0; }
+        .circuit-right .circuit-line:nth-child(2) { width: 35px; top: 10px; right: 5px; }
+        .circuit-right .circuit-line:nth-child(3) { width: 45px; top: 20px; right: 0; }
+        .circuit-right .circuit-line:nth-child(4) { width: 38px; top: 30px; right: 3px; }
+        .circuit-right .circuit-line:nth-child(5) { width: 42px; top: 40px; right: 0; }
+
+        .brand-title {
+            font-size: 2rem;
+            font-weight: 800;
+            color: #FFFFFF;
+            margin-bottom: 8px;
+            letter-spacing: 1px;
+        }
+
+        .brand-title .cyan {
+            background: linear-gradient(135deg, #00D4FF, #0099FF);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .brand-subtitle {
+            font-size: 0.95rem;
+            color: #8A9BB5;
+            font-weight: 500;
+        }
+
+        /* Message Box */
+        .message-box {
+            background: rgba(11, 26, 58, 0.7);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(0, 212, 255, 0.15);
+            border-radius: 20px;
+            padding: 28px;
+            width: 100%;
+            max-width: 500px;
+        }
+
+        .message-title {
+            font-size: 1.15rem;
+            font-weight: 700;
+            color: #00D4FF;
+            margin-bottom: 18px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+
+        .pulse-dot {
+            width: 10px;
+            height: 10px;
+            background: #00D4FF;
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.5; transform: scale(1.3); }
+        }
+
+        .heart-icon {
+            color: #34D399;
+            animation: heartBeat 2s infinite;
+        }
+
+        @keyframes heartBeat {
+            0%, 100% { transform: scale(1); }
+            15% { transform: scale(1.15); }
+            30% { transform: scale(1); }
+            45% { transform: scale(1.1); }
+        }
+
+        .message-text {
+            color: #B8C5D6;
+            line-height: 1.8;
+            font-size: 0.9rem;
+            margin-bottom: 16px;
+        }
+
+        .message-text p {
+            margin-bottom: 12px;
+        }
+
+        .message-text strong {
+            color: #FFFFFF;
+            font-weight: 600;
+        }
+
+        .highlight-box {
+            background: linear-gradient(135deg, rgba(0, 212, 255, 0.08), rgba(52, 211, 153, 0.08));
+            border: 1px solid rgba(52, 211, 153, 0.2);
+            border-radius: 12px;
+            padding: 14px;
+            margin-top: 16px;
+            text-align: center;
+        }
+
+        .highlight-text {
+            color: #34D399;
+            font-weight: 700;
+            font-size: 0.95rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        /* Right Side - Login Form */
+        .right-section {
+            width: 100%;
+        }
+
+        .login-card {
+            background: rgba(11, 26, 58, 0.85);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(0, 212, 255, 0.2);
+            border-radius: 24px;
+            padding: 40px 36px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4), 0 0 40px rgba(0, 212, 255, 0.08);
+        }
+
+        .login-header {
+            text-align: center;
+            margin-bottom: 32px;
+        }
+
+        .login-title {
+            font-size: 1.5rem;
+            font-weight: 800;
+            color: #FFFFFF;
+            margin-bottom: 8px;
+        }
+
+        .login-subtitle {
+            font-size: 0.85rem;
+            color: #8A9BB5;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-label {
+            display: block;
+            color: #C5D0E0;
+            font-size: 0.85rem;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+
+        .form-input {
+            width: 100%;
+            padding: 14px 16px;
+            background: rgba(17, 27, 51, 0.8);
+            border: 1.5px solid rgba(138, 155, 181, 0.2);
+            border-radius: 12px;
+            color: #FFFFFF;
+            font-size: 0.95rem;
+            transition: all 0.3s;
+            outline: none;
+        }
+
+        .form-input:focus {
+            border-color: #00D4FF;
+            box-shadow: 0 0 0 3px rgba(0, 212, 255, 0.1);
+        }
+
+        .form-input::placeholder {
+            color: #5A6B8A;
+        }
+
+        .password-wrapper {
+            position: relative;
+        }
+
+        .password-toggle {
+            position: absolute;
+            right: 14px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: none;
+            border: none;
+            color: #5A6B8A;
+            cursor: pointer;
+            font-size: 1.1rem;
+            padding: 4px;
+            transition: color 0.3s;
+        }
+
+        .password-toggle:hover {
+            color: #00D4FF;
+        }
+
+        .btn-login {
+            width: 100%;
+            padding: 16px;
+            background: linear-gradient(135deg, #0052FF 0%, #00D4FF 100%);
+            border: none;
+            border-radius: 12px;
+            color: #FFFFFF;
+            font-size: 1rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.3s;
+            margin-top: 8px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .btn-login::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+            transition: left 0.5s;
+        }
+
+        .btn-login:hover::before {
+            left: 100%;
+        }
+
+        .btn-login:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 30px rgba(0, 82, 255, 0.4);
+        }
+
+        .btn-login:active {
+            transform: translateY(0);
+        }
+
+        .btn-login:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none !important;
+        }
+
+        .error-msg {
+            background: rgba(239, 68, 68, 0.1);
+            border: 1px solid rgba(239, 68, 68, 0.3);
+            color: #EF4444;
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 16px;
+            font-size: 0.85rem;
+            display: none;
+        }
+
+        .error-msg.show {
+            display: block;
+            animation: shake 0.5s;
+        }
+
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-10px); }
+            75% { transform: translateX(10px); }
+        }
+
+        .divider {
+            display: flex;
+            align-items: center;
+            margin: 24px 0;
+            gap: 12px;
+        }
+
+        .divider-line {
+            flex: 1;
+            height: 1px;
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .divider-text {
+            color: #5A6B8A;
+            font-size: 0.8rem;
+        }
+
+        .social-login {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+
+        .social-btn {
+            padding: 12px;
+            background: rgba(17, 27, 51, 0.6);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            color: #C5D0E0;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            font-size: 0.85rem;
+        }
+
+        .social-btn:hover {
+            background: rgba(17, 27, 51, 0.9);
+            border-color: rgba(255, 255, 255, 0.2);
+            transform: translateY(-2px);
+        }
+
+        .demo-credentials {
+            background: rgba(0, 212, 255, 0.05);
+            border: 1px solid rgba(0, 212, 255, 0.15);
+            border-radius: 12px;
+            padding: 16px;
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .demo-credentials p {
+            color: #8A9BB5;
+            font-size: 0.8rem;
+            margin-bottom: 8px;
+            font-weight: 600;
+        }
+
+        .credentials-box {
+            display: flex;
+            justify-content: center;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+
+        .cred-item {
+            background: rgba(0, 212, 255, 0.1);
+            padding: 6px 12px;
+            border-radius: 6px;
+            font-size: 0.8rem;
+        }
+
+        .cred-item code {
+            color: #00D4FF;
+            font-weight: 700;
+        }
+
+        .footer-text {
+            text-align: center;
+            color: #5A6B8A;
+            font-size: 0.75rem;
+        }
+
+        /* Responsive */
+        @media (max-width: 1024px) {
+            .content-wrapper {
+                grid-template-columns: 1fr;
+                gap: 40px;
+                max-width: 500px;
+            }
+
+            .left-section {
+                order: 2;
+            }
+
+            .right-section {
+                order: 1;
+            }
+
+            .logo-wrapper {
+                width: 100px;
+                height: 100px;
+            }
+
+            .logo-hex {
+                width: 90px;
+                height: 90px;
+            }
+
+            .hex-inner {
+                width: 80px;
+                height: 80px;
+            }
+
+            .hex-text {
+                font-size: 2.2rem;
+            }
+
+            .brand-title {
+                font-size: 1.6rem;
+            }
+
+            .message-box {
+                padding: 24px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .main-container {
+                padding: 20px 16px;
+            }
+
+            .login-card {
+                padding: 32px 24px;
+            }
+
+            .social-login {
+                grid-template-columns: 1fr;
+            }
+
+            .logo-wrapper {
+                width: 80px;
+                height: 80px;
+            }
+
+            .logo-hex {
+                width: 70px;
+                height: 70px;
+            }
+
+            .hex-inner {
+                width: 62px;
+                height: 62px;
+            }
+
+            .hex-text {
+                font-size: 1.8rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Background Effects -->
+    <div class="grid-bg"></div>
+    <div class="glow-effect glow-1"></div>
+    <div class="glow-effect glow-2"></div>
+    <div class="particles" id="particles"></div>
+
+    <!-- Main Container -->
+    <div class="main-container">
+        <div class="content-wrapper">
+            <!-- Left Side: Branding & Info -->
+            <div class="left-section">
+                <!-- Logo -->
+                <div class="logo-container">
+                    <div class="logo-wrapper">
+                        <div class="circuit-left">
+                            <div class="circuit-line"></div>
+                            <div class="circuit-line"></div>
+                            <div class="circuit-line"></div>
+                            <div class="circuit-line"></div>
+                            <div class="circuit-line"></div>
+                        </div>
+                        <div class="logo-hex">
+                            <div class="hex-bg"></div>
+                            <div class="hex-inner"></div>
+                            <div class="hex-text">CR$</div>
+                        </div>
+                        <div class="circuit-right">
+                            <div class="circuit-line"></div>
+                            <div class="circuit-line"></div>
+                            <div class="circuit-line"></div>
+                            <div class="circuit-line"></div>
+                            <div class="circuit-line"></div>
+                        </div>
+                    </div>
+                    <h1 class="brand-title">CR$ <span class="cyan">HOME CARE</span> AI</h1>
+                    <p class="brand-subtitle">Cuidado Domiciliar Inteligente com IA</p>
+                </div>
+
+                <!-- Message Box -->
+                <div class="message-box">
+                    <div class="message-title">
+                        <span class="pulse-dot"></span>
+                        <span>Cuidar de você, no tempo certo.</span>
+                        <span class="heart-icon">💚</span>
+                    </div>
+                    <div class="message-text">
+                        <p>
+                            Vamos ajudá-lo a lembrar do que realmente importa:
+                            <strong>a atenção à saúde, na hora certa.</strong>
+                        </p>
+                        <p>
+                            Você não está sozinho nesse cuidado. Tudo foi pensado para facilitar o dia a dia,
+                            especialmente de quem mais precisa de atenção.
+                        </p>
+                        <p>
+                            Ao transformar a rotina de medicamentos em algo simples e confiável,
+                            o resultado é claro:
+                        </p>
+                    </div>
+                    <div class="highlight-box">
+                        <div class="highlight-text">
+                            <span>🌿</span>
+                            <span>Saúde organizada, vida tranquila.</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Side: Login Form -->
+            <div class="right-section">
+                <div class="login-card">
+                    <div class="login-header">
+                        <h2 class="login-title">Acesse sua conta</h2>
+                        <p class="login-subtitle">Entre para gerenciar seu cuidado</p>
+                    </div>
+
+                    <div class="error-msg" id="error-msg"></div>
+
+                    <form id="login-form" onsubmit="handleLogin(event)">
+                        <div class="form-group">
+                            <label class="form-label">Nome Completo ou Telefone</label>
+                            <input type="text" class="form-input" id="username" placeholder="Digite seu nome completo ou telefone"   
+                                autocomplete="username"
+                                required
+                            >
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label">Senha</label>
+                            <div class="password-wrapper">
+                                <input
+                                    type="password"
+                                    class="form-input"
+                                    id="password"
+                                    placeholder="Digite sua senha"
+                                    autocomplete="current-password"
+                                    required
+                                >
+                                <button type="button" class="password-toggle" onclick="togglePassword()">
+                                    👁️
+                                </button>
+                            </div>
+                        </div>
+
+                        <button type="submit" class="btn-login" id="login-btn">
+                            🚀 Entrar no Sistema
+                        </button>
+                    </form>
+
+                    <div class="divider">
+                        <div class="divider-line"></div>
+                        <span class="divider-text">ou entre com</span>
+                        <div class="divider-line"></div>
+                    </div>
+
+                    <div class="social-login">
+                        <button class="social-btn" onclick="socialLogin('google')">
+                            <svg width="18" height="18" viewBox="0 0 24 24">
+                                <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z"/>
+                                <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+                                <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
+                                <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+                            </svg>
+                            Google
+                        </button>
+                        <button class="social-btn" onclick="socialLogin('apple')">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="white">
+                                <path d="M17.05 20.28c-.98.95-2.05.88-3.08.4-1.09-.5-2.08-.48-3.24 0-1.44.62-2.2.44-3.06-.4C2.79 15.25 3.51 7.59 9.05 7.31c1.35.07 2.29.74 3.08.8 1.18-.24 2.31-.93 3.57-.84 1.51.12 2.65.72 3.4 1.8-3.12 1.87-2.38 5.98.48 7.13-.57 1.5-1.31 2.99-2.54 4.09zM12.03 7.25c-.15-2.23 1.66-4.07 3.74-4.25.29 2.58-2.34 4.5-3.74 4.25z"/>
+                            </svg>
+                            Apple
+                        </button>
+                    </div>
+
+                    <div class="demo-credentials">
+                        <p>👨‍💼 Credenciais de Demonstração:</p>
+                        <div class="credentials-box">
+                            <div class="cred-item">
+                                <span>Usuário: </span><code>Admin</code>
+                            </div>
+                            <div class="cred-item">
+                                <span>Senha: </span><code>admin123</code>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- === SEÇÃO DE PLANOS (MVP BÁSICA) === -->
+                    <div style="margin-top: 24px; padding-top: 20px; border-top: 1px solid rgba(0, 212, 255, 0.1);">
+                        <p style="text-align: center; color: #8A9BB5; font-size: 0.85rem; margin-bottom: 16px;">
+                            Novo por aqui? Comece com a <strong style="color: #00D4FF;">Conta Básica</strong>
+                        </p>
+                        
+                        <div style="background: rgba(0, 212, 255, 0.05); border: 1px solid rgba(0, 212, 255, 0.2); border-radius: 12px; padding: 16px;">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                                <div>
+                                    <div style="font-weight: 700; color: #FFFFFF; font-size: 1rem;">Conta Básica</div>
+                                    <div style="font-size: 0.8rem; color: #8A9BB5;">Gratuita • Essencial</div>
+                                </div>
+                                <span style="background: rgba(0, 212, 255, 0.15); color: #00D4FF; padding: 4px 10px; border-radius: 6px; font-size: 0.75rem; font-weight: 700;">POPULAR</span>
+                            </div>
+                            
+                            <ul style="font-size: 0.8rem; color: #B8C5D6; margin-bottom: 16px; padding-left: 20px; line-height: 1.8;">
+                                <li>✅ Agenda de medicamentos</li>
+                                <li>✅ Lembretes por SMS</li>
+                                <li>✅ Até 5 contatos responsáveis</li>
+                            </ul>
+                            
+                            <button class="btn-login" style="background: linear-gradient(135deg, #00D4FF, #0099FF); padding: 12px; font-size: 0.95rem;" onclick="openRegister()">
+                                🚀 Criar Conta Gratuita
+                            </button>
+                        </div>
+                        
+                        <p style="text-align: center; font-size: 0.75rem; color: #5A6B8A; margin-top: 12px;">
+                            Planos Pro e Enterprise em breve
+                        </p>
+                    </div>
+                    <!-- === FIM SEÇÃO PLANOS === -->
+                    <div class="footer-text">
+                        © 2026 CR$ HOME CARE AI • Todos os direitos reservados
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Generate Particles
+        function createParticles() {
+            const container = document.getElementById('particles');
+            for (let i = 0; i < 30; i++) {
+                const particle = document.createElement('div');
+                particle.className = 'particle';
+                particle.style.left = Math.random() * 100 + '%';
+                particle.style.top = Math.random() * 100 + '%';
+                particle.style.animationDelay = Math.random() * 15 + 's';
+                particle.style.animationDuration = (10 + Math.random() * 10) + 's';
+                container.appendChild(particle);
+            }
+        }
+        createParticles();
+
+        // Toggle Password
+        function togglePassword() {
+            const passwordInput = document.getElementById('password');
+            const toggleBtn = document.querySelector('.password-toggle');
+
+            if (passwordInput.type === 'password') {
+                passwordInput.type = 'text';
+                toggleBtn.textContent = '🙈';
+            } else {
+                passwordInput.type = 'password';
+                toggleBtn.textContent = '👁️';
+            }
+        }
+
+        // Handle Login - VERSÃO CORRIGIDA COM API REAL
+        async function handleLogin(e) {
+            e.preventDefault();
+
+            const username = document.getElementById('username').value.trim();
+            const password = document.getElementById('password').value;
+            const errorMsg = document.getElementById('error-msg');
+            const loginBtn = document.getElementById('login-btn');
+
+            errorMsg.classList.remove('show');
+            errorMsg.textContent = '';
+
+            loginBtn.disabled = true;
+            loginBtn.innerHTML = '⏳ Verificando...';
+
+            try {
+                // 1️⃣ Tenta login via API (usuários cadastrados no banco)
+                const response = await fetch('http://localhost:8000/api/cliente/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        username: username,
+                        password: password
+                    })
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    // ✅ Login bem-sucedido - usuário do banco
+                    localStorage.setItem('currentUser', JSON.stringify(data.user));
+                    localStorage.setItem('userId', data.user.id);
+                    localStorage.setItem('is_logged_in', 'true');
+                    
+                    // Redireciona para dashboard do cliente
+                    window.location.href = '/dashboard-cliente';
+                    
+                } else {
+                    // ❌ Falhou na API - verifica se é admin demo
+                    if (username.toLowerCase() === 'admin' && password === 'admin123') {
+                        // Login admin (fallback para demonstração)
+                        localStorage.setItem('currentUser', JSON.stringify({
+                            full_name: 'Administrador',
+
+                            email: 'admin@homecare.com',
+                            role: 'admin'
+                        }));
+                        localStorage.setItem('userId', 'admin-id');
+                        localStorage.setItem('is_logged_in', 'true');
+                        
+                        window.location.href = '/dashboard';
+                    } else {
+                        // Erro real
+                        throw new Error(data.detail || 'Usuário ou senha incorretos');
+                    }
+                }
+            } catch (error) {
+                errorMsg.textContent = '❌ ' + error.message;
+                errorMsg.classList.add('show');
+                loginBtn.disabled = false;
+                loginBtn.innerHTML = '🚀 Entrar no Sistema';
+                document.getElementById('password').value = '';
+            }
+        }
+        // Social Login
+        function socialLogin(provider) {
+            const providerName = provider === 'google' ? 'Google' : 'Apple';
+            alert(`🔐 Login com ${providerName}\n\nEm breve: Integração com OAuth2`);
+        }
+
+        // Check if already logged in
+        if (localStorage.getItem('is_logged_in') === 'true') {
+            window.location.href = '/dashboard';
+        }
+        // === FUNÇÕES DE CADASTRO (MVP BÁSICA) ===
+
+        // Abrir modal de cadastro
+        function openRegister() {
+            document.getElementById('register-modal').style.display = 'flex';
+            document.getElementById('register-error').style.display = 'none';
+        }
+
+        // Fechar modal
+        function closeRegister() {
+            document.getElementById('register-modal').style.display = 'none';
+            document.getElementById('register-form').reset();
+        }
+
+        // Fechar modal ao clicar fora
+        document.getElementById('register-modal').addEventListener('click', function(e) {
+            if (e.target === this) {
+                closeRegister();
+            }
+        });
+
+        // Processar cadastro
+        async function handleRegister(e) {
+            e.preventDefault();
+            
+            const name = document.getElementById('reg-name').value.trim();
+            const email = document.getElementById('reg-email').value.trim();
+            const phone = document.getElementById('reg-phone').value.trim();
+            const password = document.getElementById('reg-pass').value;
+            const errorBox = document.getElementById('register-error');
+            const btn = document.getElementById('register-btn');
+            
+            // Reset
+            errorBox.style.display = 'none';
+            errorBox.textContent = '';
+            btn.disabled = true;
+            btn.innerHTML = '⏳ Criando conta...';
+            
+            try {
+                // Chama API do backend (FastAPI)
+                const response = await fetch('http://localhost:8000/api/users', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        full_name: name,
+                        email: email,
+                        phone: phone || null,
+                        password: password
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    // Sucesso!
+                    alert('✅ Conta criada com sucesso!\n\nAgora faça login com seu email e senha.');
+                    closeRegister();
+                    
+                    // Preenche o login com o email cadastrado (UX)
+                    document.getElementById('username').value = email;
+                    document.getElementById('password').focus();
+                } else {
+                    // Erro da API
+                    throw new Error(data.detail || 'Erro ao criar conta. Tente novamente.');
+                }
+            } catch (error) {
+                // Exibe erro
+                errorBox.textContent = '❌ ' + error.message;
+                errorBox.style.display = 'block';
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = '✅ Finalizar Cadastro';
+            }
+        }
+        // === FIM FUNÇÕES CADASTRO ===
+
+    </script>
+
+    <!-- === MODAL DE CADASTRO (CONTA BÁSICA) === -->
+    <div id="register-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(10, 17, 40, 0.95); z-index: 1000; align-items: center; justify-content: center; padding: 20px;">
+        <div style="background: rgba(11, 26, 58, 0.95); border: 1px solid rgba(0, 212, 255, 0.3); border-radius: 24px; padding: 32px; width: 100%; max-width: 450px; position: relative; animation: slideUp 0.3s ease;">
+            
+            <!-- Botão Fechar -->
+            <button onclick="closeRegister()" style="position: absolute; top: 16px; right: 16px; background: none; border: none; color: #8A9BB5; font-size: 1.5rem; cursor: pointer; transition: color 0.3s;" onmouseover="this.style.color='#00D4FF'" onmouseout="this.style.color='#8A9BB5'">&times;</button>
+            
+            <!-- Cabeçalho -->
+            <div style="text-align: center; margin-bottom: 24px;">
+                <div style="font-size: 2rem; margin-bottom: 8px;">✨</div>
+                <h3 style="color: #FFFFFF; font-size: 1.4rem; font-weight: 800;">Criar Conta Básica</h3>
+                <p style="color: #8A9BB5; font-size: 0.9rem;">Gratuito • Sem cartão de crédito</p>
+            </div>
+            
+            <!-- Mensagem de Erro -->
+            <div id="register-error" style="background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.3); color: #EF4444; padding: 12px; border-radius: 8px; margin-bottom: 16px; font-size: 0.85rem; display: none;"></div>
+            
+            <!-- Formulário -->
+            <form id="register-form" onsubmit="handleRegister(event)">
+                <div class="form-group">
+                    <label class="form-label">Nome Completo</label>
+                    <input type="text" class="form-input" id="reg-name" placeholder="Seu nome completo" required style="background: rgba(17, 27, 51, 0.9);">
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label">Email</label>
+                    <input type="email" class="form-input" id="reg-email" placeholder="seu@email.com" required style="background: rgba(17, 27, 51, 0.9);">
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label">Telefone (opcional)</label>
+                    <input type="tel" class="form-input" id="reg-phone" placeholder="(00) 00000-0000" style="background: rgba(17, 27, 51, 0.9);">
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label">Senha</label>
+                    <input type="password" class="form-input" id="reg-pass" placeholder="Crie uma senha segura" required style="background: rgba(17, 27, 51, 0.9);">
+                </div>
+                
+                <button type="submit" class="btn-login" id="register-btn" style="margin-top: 8px;">
+                    ✅ Finalizar Cadastro
+                </button>
+            </form>
+            
+            <p style="text-align: center; font-size: 0.8rem; color: #5A6B8A; margin-top: 20px;">
+                Ao criar conta, você concorda com nossos <a href="#" style="color: #00D4FF; text-decoration: none;">Termos de Uso</a>
+            </p>
+        </div>
+</div>
+
+<style>
+@keyframes slideUp {
+    from { transform: translateY(30px); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
+}
+</style>
+<!-- === FIM MODAL CADASTRO === -->
+
+</body>
+</html>

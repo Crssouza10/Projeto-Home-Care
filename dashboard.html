@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - CR$ HOME CARE AI</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <style>
+        * { font-family: 'Inter', sans-serif; margin: 0; padding: 0; box-sizing: border-box; }
+        body { background: linear-gradient(135deg, #0A1128 0%, #1a2f4a 100%); min-height: 100vh; color: #FFFFFF; overflow-x: hidden; }
+        .grid-bg { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-image: linear-gradient(rgba(0, 212, 255, 0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(0, 212, 255, 0.03) 1px, transparent 1px); background-size: 60px 60px; z-index: 0; }
+        .header { position: relative; z-index: 100; background: rgba(11, 26, 58, 0.95); backdrop-filter: blur(20px); border-bottom: 1px solid rgba(0, 212, 255, 0.2); padding: 16px 40px; display: flex; justify-content: space-between; align-items: center; }
+        .header-left { display: flex; align-items: center; gap: 20px; }
+        .logo-container { display: flex; align-items: center; gap: 14px; }
+        .logo-wrapper { position: relative; width: 50px; height: 50px; display: flex; align-items: center; justify-content: center; }
+        .logo-hex { width: 44px; height: 44px; position: relative; z-index: 2; }
+        .hex-bg { width: 100%; height: 100%; background: linear-gradient(135deg, #0052FF 0%, #00D4FF 100%); clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%); position: absolute; top: 0; left: 0; }
+        .hex-inner { width: 38px; height: 38px; background: linear-gradient(135deg, #0A1128 0%, #1a2f4a 100%); clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%); position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 3; }
+        .hex-text { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: 1.4rem; font-weight: 900; color: #FFFFFF; z-index: 4; letter-spacing: 1px; }
+        .circuit-left { position: absolute; left: 0; top: 50%; transform: translateY(-50%); width: 30px; height: 36px; z-index: 1; }
+        .circuit-line { position: absolute; background: linear-gradient(90deg, rgba(255,255,255,0.3), rgba(0, 212, 255, 0.6)); height: 1.5px; border-radius: 2px; }
+        .circuit-line::after { content: ''; position: absolute; right: 0; top: 50%; transform: translateY(-50%); width: 3px; height: 3px; background: rgba(0, 212, 255, 0.8); border-radius: 50%; }
+        .circuit-left .circuit-line:nth-child(1) { width: 26px; top: 0; left: 0; }
+        .circuit-left .circuit-line:nth-child(2) { width: 22px; top: 7px; left: 4px; }
+        .circuit-left .circuit-line:nth-child(3) { width: 30px; top: 14px; left: 0; }
+        .circuit-left .circuit-line:nth-child(4) { width: 24px; top: 21px; left: 3px; }
+        .circuit-left .circuit-line:nth-child(5) { width: 28px; top: 28px; left: 0; }
+        .circuit-right { position: absolute; right: 0; top: 50%; transform: translateY(-50%); width: 30px; height: 36px; z-index: 1; }
+        .circuit-right .circuit-line::after { left: 0; right: auto; }
+        .circuit-right .circuit-line:nth-child(1) { width: 26px; top: 0; right: 0; }
+        .circuit-right .circuit-line:nth-child(2) { width: 22px; top: 7px; right: 4px; }
+        .circuit-right .circuit-line:nth-child(3) { width: 30px; top: 14px; right: 0; }
+        .circuit-right .circuit-line:nth-child(4) { width: 24px; top: 21px; right: 3px; }
+        .circuit-right .circuit-line:nth-child(5) { width: 28px; top: 28px; right: 0; }
+        .header-title-group h1 { font-size: 1.2rem; font-weight: 800; margin-bottom: 2px; }
+        .header-title-group p { font-size: 0.75rem; color: #8A9BB5; }
+        .header-right { display: flex; align-items: center; gap: 20px; }
+        .notification-bell { position: relative; width: 40px; height: 40px; background: rgba(0, 212, 255, 0.1); border: 1px solid rgba(0, 212, 255, 0.2); border-radius: 10px; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all 0.3s; font-size: 1.2rem; }
+        .notification-bell:hover { background: rgba(0, 212, 255, 0.2); }
+        .notification-badge { position: absolute; top: -3px; right: -3px; width: 18px; height: 18px; background: #EF4444; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.65rem; font-weight: 700; }
+        .user-menu { display: flex; align-items: center; gap: 12px; padding: 8px 16px; background: rgba(0, 212, 255, 0.05); border: 1px solid rgba(0, 212, 255, 0.15); border-radius: 12px; }
+        .user-avatar { width: 38px; height: 38px; background: linear-gradient(135deg, #0052FF, #00D4FF); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 0.95rem; }
+        .user-info { text-align: right; }
+        .user-name { font-weight: 700; font-size: 0.85rem; margin-bottom: 2px; }
+        .user-role { font-size: 0.65rem; color: #00D4FF; font-weight: 600; }
+        .btn-logout { padding: 10px 18px; background: rgba(239, 68, 68, 0.15); border: 1px solid rgba(239, 68, 68, 0.3); border-radius: 10px; color: #EF4444; font-weight: 600; cursor: pointer; transition: all 0.3s; font-size: 0.85rem; }
+        .btn-logout:hover { background: rgba(239, 68, 68, 0.25); }
+        .main-container { position: relative; z-index: 10; padding: 32px 40px; max-width: 1400px; margin: 0 auto; }
+        .welcome-banner { background: linear-gradient(135deg, rgba(0, 82, 255, 0.15), rgba(0, 212, 255, 0.1)); border: 1px solid rgba(0, 212, 255, 0.2); border-radius: 20px; padding: 28px 32px; margin-bottom: 32px; display: flex; justify-content: space-between; align-items: center; }
+        .welcome-left { display: flex; flex-direction: column; }
+        .welcome-text h2 { font-size: 1.6rem; font-weight: 800; margin-bottom: 6px; }
+        .welcome-text p { color: #8A9BB5; font-size: 0.9rem; }
+        .welcome-right { display: flex; gap: 16px; align-items: center; }
+        .active-clients-card { background: rgba(11, 26, 58, 0.6); border: 1px solid rgba(0, 212, 255, 0.15); border-radius: 12px; padding: 12px 18px; display: flex; align-items: center; gap: 12px; }
+        .active-clients-icon { width: 38px; height: 38px; background: linear-gradient(135deg, rgba(139, 92, 246, 0.3), rgba(124, 58, 237, 0.3)); border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 1.1rem; }
+        .active-clients-info { display: flex; flex-direction: column; }
+        .active-clients-value { font-size: 1.4rem; font-weight: 900; color: #FFFFFF; line-height: 1; }
+        .active-clients-label { font-size: 0.7rem; color: #8A9BB5; margin-top: 2px; }
+        .date-display { text-align: right; background: rgba(11, 26, 58, 0.6); padding: 12px 20px; border-radius: 12px; border: 1px solid rgba(0, 212, 255, 0.15); }
+        .date-display .day { font-size: 2rem; font-weight: 900; color: #00D4FF; line-height: 1; }
+        .date-display .month-year { font-size: 0.8rem; color: #8A9BB5; margin-top: 4px; }
+        .main-grid { display: grid; grid-template-columns: 1fr 380px; gap: 24px; }
+        @media (max-width: 1200px) { .main-grid { grid-template-columns: 1fr; } }
+        .section { background: rgba(11, 26, 58, 0.6); border: 1px solid rgba(0, 212, 255, 0.15); border-radius: 20px; padding: 24px; }
+        .section-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+        .section-title { font-size: 1.1rem; font-weight: 700; display: flex; align-items: center; gap: 8px; }
+        .client-list { display: flex; flex-direction: column; gap: 12px; }
+        .client-item { background: rgba(17, 27, 51, 0.6); border: 1px solid rgba(138, 155, 181, 0.1); border-radius: 14px; padding: 18px; display: grid; grid-template-columns: auto 1fr auto; gap: 16px; align-items: center; transition: all 0.3s; cursor: pointer; }
+        .client-item:hover { border-color: rgba(0, 212, 255, 0.3); transform: translateX(4px); background: rgba(17, 27, 51, 0.8); }
+        .client-avatar { width: 48px; height: 48px; background: linear-gradient(135deg, rgba(0, 212, 255, 0.2), rgba(0, 82, 255, 0.2)); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1.3rem; border: 2px solid rgba(0, 212, 255, 0.3); }
+        .client-info { flex: 1; }
+        .client-name { font-weight: 700; font-size: 1rem; margin-bottom: 4px; color: #FFFFFF; }
+        .client-status { display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; border-radius: 20px; font-size: 0.75rem; font-weight: 600; }
+        .client-status.has-appointment { background: rgba(52, 211, 153, 0.15); color: #34D399; border: 1px solid rgba(52, 211, 153, 0.3); }
+        .client-status.no-appointment { background: rgba(251, 191, 36, 0.15); color: #FBBF24; border: 1px solid rgba(251, 191, 36, 0.3); }
+        .client-stats { display: flex; gap: 8px; }
+        .stat-mini { padding: 6px 10px; background: rgba(0, 212, 255, 0.1); border-radius: 8px; text-align: center; min-width: 50px; }
+        .stat-mini-value { font-weight: 800; font-size: 0.9rem; color: #00D4FF; display: block; }
+        .stat-mini-label { font-size: 0.65rem; color: #8A9BB5; }
+        .calendar-container { background: rgba(17, 27, 51, 0.6); border-radius: 14px; padding: 20px; }
+        .calendar-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+        .calendar-title { font-weight: 700; font-size: 1rem; }
+        .calendar-nav { display: flex; gap: 8px; }
+        .calendar-btn { width: 30px; height: 30px; background: rgba(0, 212, 255, 0.1); border: 1px solid rgba(0, 212, 255, 0.2); border-radius: 8px; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all 0.3s; color: #00D4FF; }
+        .calendar-btn:hover { background: rgba(0, 212, 255, 0.2); }
+        .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; text-align: center; }
+        .calendar-day-header { font-size: 0.7rem; color: #8A9BB5; padding: 8px 0; font-weight: 600; }
+        .calendar-day { aspect-ratio: 1; display: flex; align-items: center; justify-content: center; border-radius: 10px; font-size: 0.85rem; cursor: pointer; transition: all 0.2s; font-weight: 600; position: relative; }
+        .calendar-day:hover { background: rgba(0, 212, 255, 0.1); }
+        .calendar-day.today { background: linear-gradient(135deg, #0052FF, #00D4FF); font-weight: 800; }
+        .calendar-day.has-event::after { content: ''; position: absolute; bottom: 3px; width: 5px; height: 5px; background: #34D399; border-radius: 50%; }
+        @media (max-width: 768px) { .header { padding: 16px 20px; } .main-container { padding: 20px; } .welcome-banner { flex-direction: column; text-align: center; gap: 20px; } .welcome-right { justify-content: center; } .client-item { grid-template-columns: 1fr; } }
+    </style>
+</head>
+<body>
+    <div class="grid-bg"></div>
+    <header class="header">
+        <div class="header-left">
+            <div class="logo-container">
+                <div class="logo-wrapper">
+                    <div class="circuit-left"><div class="circuit-line"></div><div class="circuit-line"></div><div class="circuit-line"></div><div class="circuit-line"></div><div class="circuit-line"></div></div>
+                    <div class="logo-hex"><div class="hex-bg"></div><div class="hex-inner"></div><div class="hex-text">CR$</div></div>
+                    <div class="circuit-right"><div class="circuit-line"></div><div class="circuit-line"></div><div class="circuit-line"></div><div class="circuit-line"></div><div class="circuit-line"></div></div>
+                </div>
+                <div class="header-title-group"><h1>Dashboard</h1><p>Visão Geral do Sistema</p></div>
+            </div>
+        </div>
+        <div class="header-right">
+            <div class="notification-bell">🔔<span class="notification-badge">3</span></div>
+            <div class="user-menu"><div class="user-avatar">A</div><div class="user-info"><div class="user-name">Administrador</div><div class="user-role">👑 Admin Master</div></div></div>
+            <button class="btn-logout" onclick="handleLogout()">Sair</button>
+        </div>
+    </header>
+    <div class="main-container">
+        <div class="welcome-banner">
+            <div class="welcome-left"><div class="welcome-text"><h2>Bom dia, Administrador! 👋</h2><p>Aqui está o resumo do cuidado de hoje</p></div></div>
+            <div class="welcome-right">
+                <div class="active-clients-card"><div class="active-clients-icon">👥</div><div class="active-clients-info"><span class="active-clients-value" id="total-clients">-</span><span class="active-clients-label">Clientes Ativos</span></div></div>
+                <div class="date-display"><div class="day" id="current-day">07</div><div class="month-year" id="current-month">Maio 2026</div></div>
+            </div>
+        </div>
+        <div class="main-grid">
+            <div class="section">
+                <div class="section-header"><div class="section-title"><span>👥</span>Clientes Ativos</div></div>
+                <div class="client-list" id="client-list">
+                    <div style="text-align:center;padding:40px;color:#8A9BB5"><div style="border:4px solid rgba(255,255,255,0.1);border-top:4px solid #00D4FF;border-radius:50%;width:50px;height:50px;animation:spin 1s linear infinite;margin:0 auto 20px"></div>Carregando clientes...</div>
+                </div>
+            </div>
+            <div><div class="section"><div class="section-header"><div class="section-title"><span>📅</span>Calendário</div></div><div class="calendar-container" id="calendar"></div></div></div>
+        </div>
+    </div>
+    <script>
+        function handleLogout() { localStorage.clear(); window.location.href = '/'; }
+        if (localStorage.getItem('is_logged_in') !== 'true') { window.location.href = '/'; }
+        function setCurrentDate() { const now = new Date(); const months = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro']; document.getElementById('current-day').textContent = String(now.getDate()).padStart(2,'0'); document.getElementById('current-month').textContent = months[now.getMonth()]+' '+now.getFullYear(); }
+        setCurrentDate();
+        function generateCalendar() { const now = new Date(); const monthNames = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez']; const dayNames = ['Dom','Seg','Ter','Qua','Qui','Sex','Sáb']; const firstDay = new Date(now.getFullYear(), now.getMonth(), 1).getDay(); const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate(); const today = now.getDate(); let html = `<div class="calendar-header"><div class="calendar-title">${monthNames[now.getMonth()]} ${now.getFullYear()}</div><div class="calendar-nav"><div class="calendar-btn">‹</div><div class="calendar-btn">›</div></div></div><div class="calendar-grid">${dayNames.map(d=>`<div class="calendar-day-header">${d}</div>`).join('')}${Array(firstDay).fill('<div></div>').join('')}${Array.from({length:daysInMonth},(_,i)=>{const day=i+1;const classes=['calendar-day'];if(day===today)classes.push('today');if([7,9,15,22].includes(day))classes.push('has-event');return `<div class="${classes.join(' ')}">${day}</div>`;}).join('')}</div>`; document.getElementById('calendar').innerHTML = html; }
+        generateCalendar();
+        async function carregarClientesReais() { 
+        try { 
+            const response = await fetch('http://localhost:8000/api/admin/clientes'); 
+            const data = await response.json(); 
+            const container = document.getElementById('client-list'); 
+            const totalEl = document.getElementById('total-clients'); 
+            
+            if (!data.clientes || data.clientes.length === 0) { 
+                container.innerHTML = `<div style="text-align:center;padding:40px;color:#8A9BB5"><div style="font-size:64px;margin-bottom:20px">👥</div><p style="font-size:18px">Nenhum cliente cadastrado</p></div>`; 
+                return; 
+            } 
+            
+            totalEl.textContent = data.clientes.length; 
+            
+            container.innerHTML = data.clientes.map(c => `
+                <div class="client-item">
+                    <div class="client-avatar">👤</div>
+                    <div class="client-info">
+                        <div class="client-name">${c.full_name}</div>
+                        <div class="client-status ${c.has_appointment?'has-appointment':'no-appointment'}">
+                            ${c.has_appointment?'✓ Tem agendamento':'○ Não tem agendamento'}
+                        </div>
+                    </div>
+                    <div class="client-stats">
+                        <div class="stat-mini">
+                            <span class="stat-mini-value">${c.medications_count||0}</span>
+                            <span class="stat-mini-label">Remédios</span>
+                        </div>
+                        <div class="stat-mini">
+                            <span class="stat-mini-value">${c.consultas_count||0}</span>
+                            <span class="stat-mini-label">Consultas</span>
+                        </div>
+                        <div class="stat-mini">
+                            <span class="stat-mini-value">${c.responsibles_count||0}</span>
+                            <span class="stat-mini-label">Responsáveis</span>
+                        </div>
+                        <div class="stat-mini">
+                            <span class="stat-mini-value">${c.contatos_count||0}</span>
+                            <span class="stat-mini-label">Contatos</span>
+                        </div>
+                    </div>
+                </div>
+            `).join(''); 
+            
+            console.log('✅ Clientes carregados:', data.clientes.length); 
+        } catch (error) { 
+            console.error('❌ Erro:', error); 
+            document.getElementById('client-list').innerHTML = `<div style="text-align:center;padding:40px;color:#EF4444"><p>Erro ao carregar clientes</p></div>`; 
+        } 
+    }
+        document.addEventListener('DOMContentLoaded', carregarClientesReais);
+    </script>
+</body>
+</html>
