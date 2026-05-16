@@ -35,6 +35,9 @@ app.add_middleware(
 
 # Configuração do Banco de Dados
 DATABASE_URL = os.getenv("DATABASE_URL")
+if DATABASE_URL and DATABASE_URL.startswith("postgres://"):
+    DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
+
 engine = create_engine(DATABASE_URL)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
@@ -127,7 +130,10 @@ class EmergencyContact(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
 
 # Criar tabelas
-Base.metadata.create_all(bind=engine)
+try:
+    Base.metadata.create_all(bind=engine)
+except Exception as e:
+    print(f"Erro ao criar tabelas na inicialização (Vercel): {e}")
 
 # ==================== PYDANTIC SCHEMAS ====================
 
