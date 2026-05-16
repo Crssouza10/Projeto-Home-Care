@@ -14,6 +14,7 @@ import uuid
 from pathlib import Path
 from hashlib import sha256
 from fastapi.middleware.cors import CORSMiddleware
+import traceback
 
 # Carregar variáveis de ambiente
 load_dotenv()
@@ -252,6 +253,16 @@ def _get_periodo(time_val):
         return "Não definido"
 
 # ==================== ROTAS ====================
+
+@app.exception_handler(Exception)
+async def global_exception_handler(request: Request, exc: Exception):
+    error_msg = str(exc)
+    print(f"🔥 ERRO FATAL: {error_msg}")
+    print(traceback.format_exc())
+    return JSONResponse(
+        status_code=500,
+        content={"detail": f"Erro do Servidor: {error_msg}"}
+    )
 
 # --- FRONTEND ---
 @app.get("/", response_class=HTMLResponse)
