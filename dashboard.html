@@ -138,7 +138,7 @@
         generateCalendar();
         async function carregarClientesReais() { 
         try { 
-            const response = await fetch('http://localhost:8000/api/admin/clientes'); 
+            const response = await fetch('/api/admin/clientes'); 
             const data = await response.json(); 
             const container = document.getElementById('client-list'); 
             const totalEl = document.getElementById('total-clients'); 

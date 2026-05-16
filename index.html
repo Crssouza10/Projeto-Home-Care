@@ -887,7 +887,7 @@
 
             try {
                 // 1️⃣ Tenta login via API (usuários cadastrados no banco)
-                const response = await fetch('http://localhost:8000/api/cliente/login', {
+                const response = await fetch('/api/cliente/login', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
@@ -984,7 +984,7 @@
             
             try {
                 // Chama API do backend (FastAPI)
-                const response = await fetch('http://localhost:8000/api/users', {
+                const response = await fetch('/api/users', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
