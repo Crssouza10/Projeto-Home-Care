@@ -898,6 +898,69 @@
             .form-row { grid-template-columns: 1fr; }
             .days-selector { grid-template-columns: repeat(4, 1fr); }
         }
+
+        /* ===== OTIMIZAÇÃO MOBILE ===== */
+        @media (max-width: 768px) {
+            .header { padding: 12px 16px; flex-direction: column; gap: 10px; }
+            .header-info h2 { font-size: 1.2rem; }
+            .header-stat { padding: 6px 10px; }
+            .header-stat-value { font-size: 1.1rem; }
+            .header-stat-label { font-size: 0.65rem; }
+            .header-date { padding: 6px 10px; }
+            .header-date .day { font-size: 1.3rem; }
+            
+            .main-container { padding: 0 10px 10px; }
+            .section { padding: 12px; margin-bottom: 10px; }
+            
+            .tabs { gap: 6px; margin-bottom: 12px; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+            .tab { padding: 8px 6px; font-size: 0.75rem; min-width: 90px; }
+            
+            .med-card, .appt-card, .resp-card, .contact-card { padding: 12px; margin-bottom: 10px; }
+            .med-name { font-size: 0.95rem; }
+            .med-dosage, .med-days { font-size: 0.8rem; }
+            
+            .card-actions-group { gap: 4px; }
+            .card-icon-btn { width: 30px; height: 30px; font-size: 0.85rem; }
+            
+            .med-actions { flex-direction: column; gap: 6px; }
+            .btn-taken, .btn-later { padding: 8px; font-size: 0.8rem; }
+            
+            .calendar-container { padding: 10px; }
+            .calendar-day { font-size: 0.7rem; }
+            
+            .modal-content { padding: 16px; max-width: 95%; }
+            .modal-title { font-size: 1.1rem; }
+            
+            .form-input, .form-select, .form-textarea { padding: 8px; font-size: 0.9rem; }
+            .form-label { font-size: 0.8rem; }
+            .btn-submit { padding: 10px; font-size: 0.9rem; }
+            
+            .fab { width: 48px; height: 48px; font-size: 1.3rem; bottom: 12px; right: 12px; }
+            
+            .main-grid { grid-template-columns: 1fr; gap: 10px; }
+            
+            .toast { padding: 8px 12px; font-size: 0.85rem; bottom: 70px; }
+        }
+
+        @media (max-width: 480px) {
+            .header-info h2 { font-size: 1rem; }
+            .header-stat-value { font-size: 1rem; }
+            .tab { font-size: 0.7rem; padding: 6px 4px; min-width: 80px; }
+            .med-card, .appt-card { padding: 10px; }
+            .med-name { font-size: 0.9rem; }
+            .card-icon-btn { width: 28px; height: 28px; }
+            .btn-taken, .btn-later { padding: 6px; font-size: 0.75rem; }
+        }
+
+        /* Melhor experiência de toque */
+        * { -webkit-tap-highlight-color: transparent; touch-action: manipulation; }
+        button, .card-icon-btn, .tab { touch-action: manipulation; -webkit-user-select: none; user-select: none; }
+        html { scroll-behavior: smooth; -webkit-overflow-scrolling: touch; }
+        input, select, textarea { font-size: 16px !important; }
+
+
+
+
     </style>
 </head>
 <body>
