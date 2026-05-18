@@ -898,7 +898,6 @@
             .form-row { grid-template-columns: 1fr; }
             .days-selector { grid-template-columns: repeat(4, 1fr); }
         }
-
         /* ===== MOBILE OTIMIZADO ===== */
         @media (max-width: 768px) {
             .header { padding: 10px 12px; flex-direction: column; gap: 8px; }
@@ -916,71 +915,74 @@
             
             /* Cards mais compactos */
             .med-card, .appt-card, .resp-card, .contact-card { 
-                padding: 10px; 
-                margin-bottom: 8px; 
+                padding: 8px; 
+                margin-bottom: 6px; 
             }
             
             .med-card-header { 
-                flex-direction: column; 
-                gap: 6px; 
+                flex-wrap: wrap;
+                align-items: center;
             }
             
             .med-time-badge { 
-                padding: 4px 10px; 
-                font-size: 0.8rem; 
+                padding: 3px 8px; 
+                font-size: 0.75rem; 
             }
             
-            .med-name { font-size: 0.9rem; }
-            .med-dosage { font-size: 0.75rem; }
-            .med-days { font-size: 0.7rem; }
+            .med-name { font-size: 0.85rem; margin-top: 4px; }
+            .med-dosage { font-size: 0.7rem; }
+            .med-days { font-size: 0.65rem; margin-bottom: 8px; }
             
-            /* Botões de ação menores e alinhados */
+            /* ✅ BOTÕES DE AÇÃO - 4 BOTÕES VISÍVEIS */
             .card-actions-group { 
-                gap: 3px; 
-                justify-content: flex-end;
-                width: 100%;
+                gap: 2px; 
+                margin-left: auto;
+                flex-shrink: 0;
             }
             
             .card-icon-btn { 
-                width: 28px; 
-                height: 28px; 
-                font-size: 0.8rem; 
+                width: 26px; 
+                height: 26px; 
+                font-size: 0.75rem; 
+                padding: 0;
+                border-radius: 6px;
             }
             
-            /* Botões Tomei/Lembrar MENORES e em coluna */
+            /* Botões Tomei/Lembrar MENORES */
             .med-actions { 
                 flex-direction: column; 
-                gap: 5px; 
-                margin-top: 8px;
+                gap: 4px; 
+                margin-top: 6px;
             }
             
             .btn-taken, .btn-later { 
-                padding: 6px 10px; 
-                font-size: 0.75rem; 
+                padding: 5px 8px; 
+                font-size: 0.7rem; 
                 width: 100%;
+                border-radius: 8px;
             }
             
             /* Calendário compacto */
-            .calendar-container { padding: 8px; }
-            .calendar-day { font-size: 0.65rem; padding: 2px; }
-            .calendar-day-header { font-size: 0.6rem; }
+            .calendar-container { padding: 6px; }
+            .calendar-day { font-size: 0.6rem; padding: 2px; }
+            .calendar-day-header { font-size: 0.55rem; }
             
             /* Modal */
-            .modal-content { padding: 14px; max-width: 95%; }
-            .modal-title { font-size: 1rem; }
+            .modal-content { padding: 12px; max-width: 95%; }
+            .modal-title { font-size: 0.95rem; }
             
             .form-input, .form-select, .form-textarea { 
                 padding: 8px; 
                 font-size: 0.85rem; 
             }
-            .form-label { font-size: 0.75rem; }
-            .btn-submit { padding: 8px; font-size: 0.85rem; }
+            .form-label { font-size: 0.7rem; }
+            .btn-submit { padding: 8px; font-size: 0.8rem; }
             
             /* FAB menor */
             .fab { 
-                width: 44px; 
-                height: 44px; 
-                font-size: 1.2rem; 
+                width: 42px; 
+                height: 42px; 
+                font-size: 1.1rem; 
                 bottom: 10px; 
                 right: 10px; 
             }
@@ -989,32 +991,27 @@
             
             .toast { 
                 padding: 6px 10px; 
-                font-size: 0.75rem; 
+                font-size: 0.7rem; 
                 bottom: 60px; 
             }
         }
 
         /* TELAS MUITO PEQUENAS (< 400px) */
         @media (max-width: 400px) {
-            .header-info h2 { font-size: 1rem; }
-            .header-stat-value { font-size: 0.9rem; }
-            .header-stat-label { font-size: 0.55rem; }
-            
-            .tab { font-size: 0.65rem; padding: 5px 3px; min-width: 70px; }
-            
-            .med-time-badge { padding: 3px 8px; font-size: 0.75rem; }
-            .med-name { font-size: 0.85rem; }
-            .med-dosage { font-size: 0.7rem; }
-            .med-days { font-size: 0.65rem; }
-            
-            .card-icon-btn { width: 26px; height: 26px; font-size: 0.75rem; }
-            
-            .btn-taken, .btn-later { 
-                padding: 5px 8px; 
+            .card-icon-btn { 
+                width: 24px; 
+                height: 24px; 
                 font-size: 0.7rem; 
             }
             
-            .calendar-day { font-size: 0.6rem; }
+            .med-name { font-size: 0.8rem; }
+            .med-dosage { font-size: 0.65rem; }
+            .med-days { font-size: 0.6rem; }
+            
+            .btn-taken, .btn-later { 
+                padding: 4px 6px; 
+                font-size: 0.65rem; 
+            }
         }
 
         /* Melhor toque */
@@ -1022,6 +1019,7 @@
         button, .card-icon-btn, .tab { touch-action: manipulation; -webkit-user-select: none; }
         html { scroll-behavior: smooth; -webkit-overflow-scrolling: touch; }
         input, select, textarea { font-size: 16px !important; }
+
 
 
     </style>
