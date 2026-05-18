@@ -1437,40 +1437,33 @@
         let viewingSpecificDate = null;
 
 
+
         function selectDay(dateStr) {
-            console.log('📅 Data selecionada (string):', dateStr);
-            
-            // Criar data local para evitar problemas de timezone
+            console.log('📅 Data selecionada:', dateStr);
             const parts = dateStr.split('-');
-            const year = parseInt(parts[0]);
-            const month = parseInt(parts[1]) - 1; // JavaScript usa 0-11
-            const day = parseInt(parts[2]);
-            
-            selectedDate = new Date(year, month, day);
-            viewingSpecificDate = dateStr; // ✅ Marca que está vendo um dia específico
-            
-            console.log('📅 Data selecionada:', selectedDate);
-            
-            generateCalendar(); // Re-renderiza para mostrar o destaque
-            
-            // Formata a data para exibição
+            selectedDate = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
+            viewingSpecificDate = dateStr;
+
+            generateCalendar();
+
             const dayStr = String(selectedDate.getDate()).padStart(2, '0');
             const monthStr = String(selectedDate.getMonth() + 1).padStart(2, '0');
             const yearStr = selectedDate.getFullYear();
             const dateBR = `${dayStr}/${monthStr}/${yearStr}`;
-            
-            // ✅ Atualiza contadores para o dia selecionado
+
+            // ✅ CORREÇÃO: Atualiza o header com a data selecionada
+            document.getElementById('current-day').textContent = dayStr;
+            const months = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+            document.getElementById('current-month').textContent = `${months[selectedDate.getMonth()]} ${yearStr}`;
+
             updateCountersForDate(dateStr);
-            
-            // Se estiver na aba de consultas, atualiza com filtro
-            if (currentScreen === 'appointments') {
-                loadAppointmentsForDate(dateStr);
-            } else if (currentScreen === 'medications') {
-                loadMedicationsForDay(selectedDate.getDay());
-            }
-            
+
+            if (currentScreen === 'appointments') loadAppointmentsForDate(dateStr);
+            else if (currentScreen === 'medications') loadMedicationsForDay(selectedDate.getDay());
+
             showToast(`📅 Dia ${dateBR} selecionado`);
         }
+                
 
 
         // ✅ CORREÇÃO: Função updateCounters original (para quando não há data específica selecionada)
