@@ -5,6 +5,13 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Minha Saúde - CR$ HOME CARE AI</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <!-- PWA Meta Tags -->
+    <meta name="theme-color" content="#00D4FF">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="HomeCare">
+    <link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/3135/3135715.png">
+    <link rel="manifest" href="/manifest.json">
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Inter', sans-serif; }
         
@@ -2446,5 +2453,37 @@
             setTimeout(() => toast.classList.remove('show'), 3000); 
         }
     </script>
+    <!-- PWA Registration Script -->
+    <script>
+    // Registrar Service Worker
+    if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/sw.js')
+        .then(reg => console.log('[PWA] Service Worker registrado:', reg.scope))
+        .catch(err => console.log('[PWA] Erro ao registrar SW:', err));
+    });
+    }
+
+    // Prompt de instalação (Android/Chrome)
+    let deferredPrompt;
+    window.addEventListener('beforeinstallprompt', (e) => {
+    e.preventDefault();
+    deferredPrompt = e;
+    console.log('[PWA] App pode ser instalado');
+    });
+
+    // Função para instalar manualmente (opcional - pode adicionar um botão depois)
+    function installApp() {
+    if (deferredPrompt) {
+        deferredPrompt.prompt();
+        deferredPrompt.userChoice.then((choice) => {
+        if (choice.outcome === 'accepted') {
+            console.log('[PWA] Usuário aceitou instalar');
+        }
+        deferredPrompt = null;
+        });
+    }
+    }
+</script>    
 </body>
 </html>

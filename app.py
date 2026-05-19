@@ -15,6 +15,8 @@ from pathlib import Path
 from hashlib import sha256
 from fastapi.middleware.cors import CORSMiddleware
 import traceback
+from fastapi.responses import FileResponse, JSONResponse
+import os
 
 # Carregar variáveis de ambiente
 load_dotenv()
@@ -851,6 +853,16 @@ async def delete_emergency_contact(contact_id: str, db: Session = Depends(get_db
     
     return {"status": "sucesso", "mensagem": "Contato excluído"}
 
+# ===== PWA ROUTES =====
+
+
+@app.get("/manifest.json")
+async def get_manifest():
+    return FileResponse("manifest.json", media_type="application/manifest+json")
+
+@app.get("/sw.js")
+async def get_service_worker():
+    return FileResponse("sw.js", media_type="application/javascript")
 # =========================================================
 # INICIALIZAÇÃO
 # =========================================================

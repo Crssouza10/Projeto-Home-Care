@@ -1,0 +1,27 @@
+{
+  "name": "CR$ Home Care AI",
+  "short_name": "HomeCare",
+  "description": "Sistema de Cuidado Domiciliar Inteligente - Medicamentos, Consultas e Responsáveis",
+  "start_url": "/dashboard-cliente",
+  "display": "standalone",
+  "background_color": "#0A1128",
+  "theme_color": "#00D4FF",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "https://cdn-icons-png.flaticon.com/512/3135/3135715.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "https://cdn-icons-png.flaticon.com/512/3135/3135715.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["health", "medical", "lifestyle"],
+  "lang": "pt-BR",
+  "dir": "ltr"
+}
