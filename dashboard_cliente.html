@@ -1036,7 +1036,6 @@
         button, .card-icon-btn, .tab { touch-action: manipulation; -webkit-user-select: none; }
         html { scroll-behavior: smooth; -webkit-overflow-scrolling: touch; }
         input, select, textarea { font-size: 16px !important; }        
- 
 
         /* ===== MODO SÊNIOR (ACESSIBILIDADE) ===== */
         .btn-senior-toggle {
@@ -1050,6 +1049,7 @@
             font-size: 0.85rem;
             transition: all 0.3s;
             white-space: nowrap;
+            flex-shrink: 0; /* ✅ Impede que o botão encolha */
         }
         .btn-senior-toggle:hover { transform: scale(1.05); }
         .btn-senior-toggle.active {
@@ -1102,12 +1102,31 @@
         body.modo-senior .calendar-day { font-size: 1.2rem !important; min-height: 44px !important; }
         body.modo-senior .calendar-day-header { font-size: 1rem !important; }
 
+        /* ✅ CORREÇÃO MOBILE: Botão alinhado no header */
         @media (max-width: 768px) {
-            body.modo-senior .header { flex-wrap: wrap; gap: 12px; }
-            body.modo-senior .btn-senior-toggle { order: -1; width: 100%; text-align: center; padding: 14px; font-size: 1.2rem; margin-bottom: 8px; }
+            .header-right {
+                display: flex;
+                flex-wrap: wrap;
+                gap: 8px;
+                align-items: center;
+                justify-content: flex-end;
+            }
+            
+            .btn-senior-toggle {
+                order: 0; /* Mantém na ordem natural */
+                width: auto;
+                margin: 0;
+                padding: 6px 10px;
+                font-size: 0.75rem;
+            }
+            
+            body.modo-senior .header { 
+                flex-wrap: wrap; 
+                gap: 8px; 
+            }
+            
             body.modo-senior .med-actions { gap: 12px !important; }
         }
-
 
         
     </style>
