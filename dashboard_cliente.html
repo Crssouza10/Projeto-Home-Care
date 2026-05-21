@@ -1038,6 +1038,78 @@
         input, select, textarea { font-size: 16px !important; }        
  
 
+        /* ===== MODO SÊNIOR (ACESSIBILIDADE) ===== */
+        .btn-senior-toggle {
+            background: linear-gradient(135deg, #6366f1, #4f46e5);
+            border: 2px solid rgba(255,255,255,0.3);
+            color: white;
+            padding: 8px 12px;
+            border-radius: 10px;
+            font-weight: 700;
+            cursor: pointer;
+            font-size: 0.85rem;
+            transition: all 0.3s;
+            white-space: nowrap;
+        }
+        .btn-senior-toggle:hover { transform: scale(1.05); }
+        .btn-senior-toggle.active {
+            background: linear-gradient(135deg, #f59e0b, #d97706);
+            border-color: #fbbf24;
+        }
+
+        /* Overrides quando o modo está ativo */
+        body.modo-senior {
+            font-size: 1.4rem !important;
+            line-height: 1.6 !important;
+        }
+        body.modo-senior .header-info h2 { font-size: 2rem !important; }
+        body.modo-senior .user-name { font-size: 1.2rem !important; }
+        body.modo-senior .header-stat-value { font-size: 1.6rem !important; }
+        body.modo-senior .header-stat-label { font-size: 0.9rem !important; }
+
+        body.modo-senior .med-card, body.modo-senior .appt-card, body.modo-senior .resp-card, body.modo-senior .contact-card {
+            padding: 24px !important;
+            margin-bottom: 20px !important;
+            border: 3px solid #00D4FF !important;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.5) !important;
+        }
+        body.modo-senior .med-name, body.modo-senior .resp-name, body.modo-senior .med-dosage {
+            font-size: 1.5rem !important;
+            font-weight: 800 !important;
+            color: #111827 !important;
+        }
+        body.modo-senior .med-days { font-size: 1.1rem !important; }
+
+        body.modo-senior .btn-taken, body.modo-senior .btn-later, body.modo-senior .btn-whatsapp, body.modo-senior .btn-call {
+            padding: 18px !important;
+            font-size: 1.4rem !important;
+            font-weight: 800 !important;
+            min-height: 60px !important;
+            border-radius: 16px !important;
+        }
+        body.modo-senior .card-icon-btn {
+            width: 52px !important;
+            height: 52px !important;
+            font-size: 1.5rem !important;
+            border-width: 2px !important;
+        }
+
+        body.modo-senior .tab { padding: 16px 12px !important; font-size: 1.1rem !important; min-height: 56px !important; }
+        body.modo-senior .form-input, body.modo-senior .form-select, body.modo-senior .form-textarea {
+            padding: 16px !important; font-size: 1.3rem !important;
+        }
+        body.modo-senior .btn-submit { padding: 18px !important; font-size: 1.3rem !important; }
+        body.modo-senior .calendar-day { font-size: 1.2rem !important; min-height: 44px !important; }
+        body.modo-senior .calendar-day-header { font-size: 1rem !important; }
+
+        @media (max-width: 768px) {
+            body.modo-senior .header { flex-wrap: wrap; gap: 12px; }
+            body.modo-senior .btn-senior-toggle { order: -1; width: 100%; text-align: center; padding: 14px; font-size: 1.2rem; margin-bottom: 8px; }
+            body.modo-senior .med-actions { gap: 12px !important; }
+        }
+
+
+        
     </style>
 </head>
 <body>
@@ -1058,6 +1130,17 @@
             <button id="install-btn" class="btn-install" style="display:none;" onclick="installPWA()">
                 📲 Instalar
             </button>
+
+            <!-- ✅ BOTÃO MODO SÊNIOR -->
+            <button id="btn-modo-senior" class="btn-senior-toggle" onclick="toggleModoSenior()">👵 Modo Sênior</button>
+            
+            <div class="header-stat" onclick="showTodayCommitments()">
+                <div class="header-stat-icon">📋</div>
+                <div>
+                    <div class="header-stat-value" id="today-commitments">0</div>
+                    <div class="header-stat-label">Compromissos para hoje</div>
+                </div>
+            </div>            
             
             <div class="header-stat" onclick="showTodayCommitments()">
                 <div class="header-stat-icon">📋</div>
@@ -2514,6 +2597,36 @@
         });
     }
     }
+
+    // ===== MODO SÊNIOR (LÓGICA & PERSISTÊNCIA) =====
+    function toggleModoSenior() {
+        document.body.classList.toggle('modo-senior');
+        const isSenior = document.body.classList.contains('modo-senior');
+        localStorage.setItem('modoSenior', isSenior);
+        updateSeniorButtonUI();
+    }
+
+    function updateSeniorButtonUI() {
+        const btn = document.getElementById('btn-modo-senior');
+        if (!btn) return;
+        const isSenior = localStorage.getItem('modoSenior') === 'true';
+        if (isSenior) {
+            document.body.classList.add('modo-senior');
+            btn.textContent = '🔙 Modo Normal';
+            btn.classList.add('active');
+        } else {
+            document.body.classList.remove('modo-senior');
+            btn.textContent = '👵 Modo Sênior';
+            btn.classList.remove('active');
+        }
+    }
+
+    // Carregar preferência ao iniciar a página
+    document.addEventListener('DOMContentLoaded', () => {
+        updateSeniorButtonUI();
+    });    
+
+    
 </script>    
 </body>
 </html>
