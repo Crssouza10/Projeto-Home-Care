@@ -17,6 +17,10 @@ from fastapi.middleware.cors import CORSMiddleware
 import traceback
 from fastapi.responses import FileResponse, JSONResponse
 import os
+import datetime
+import json
+from pywebpush import webpush, WebPushException
+from dotenv import load_dotenv
 
 # Carregar variáveis de ambiente
 load_dotenv()
@@ -863,6 +867,107 @@ async def get_manifest():
 @app.get("/sw.js")
 async def get_service_worker():
     return FileResponse("sw.js", media_type="application/javascript")
+
+# ==========================================================
+#  ROTAS DE NOTIFICAÇÃO PUSH E AGENDAMENTO
+# ==========================================================
+
+# 1. O Navegador envia sua assinatura para nós
+@app.post("/api/push/subscribe")
+async def subscribe(subscription: dict):
+    try:
+        # Verifica se já existe para não duplicar
+        endpoint = subscription['endpoint']
+        if not any(s['endpoint'] == endpoint for s in subscriptions):
+            subscriptions.append(subscription)
+            print(f"✅ Nova assinatura registrada: {endpoint}")
+        return {"status": "sucesso"}
+    except Exception as e:
+        print(f"Erro ao assinar: {e}")
+        return {"status": "erro"}, 500
+
+# 2. Endpoint para TESTE RÁPIDO (Dispara manualmente)
+@app.post("/api/teste-push")
+async def test_push():
+    if not subscriptions:
+        return {"msg": "Nenhum dispositivo inscrito ainda."}
+    
+    count = 0
+    for sub in subscriptions:
+        try:
+            # Envia a notificação
+            webpush(
+                subscription_info=sub,
+                data=json.dumps({
+                    "title": "🔔 Teste do Sistema!",
+                    "body": "As notificações push estão funcionando perfeitamente.",
+                    "icon": "https://cdn-icons-png.flaticon.com/512/3135/3135715.png"
+                }),
+                vapid_private_key=VAPID_PRIVATE_KEY,
+                vapid_claims=VAPID_CLAIMS
+            )
+            count += 1
+        except WebPushException as ex:
+            print(f"Erro ao enviar push: {ex}")
+            
+    return {"msg": f"Tentativa de envio para {count} dispositivos."}
+
+# 3. AGENDADOR AUTOMÁTICO (O "Cérebro" que roda a cada minuto)
+@app.get("/api/check-reminders")
+async def check_reminders():
+    # Este endpoint será chamado pelo Vercel Cron a cada minuto
+    print("⏰ Verificando lembretes de medicamentos...")
+    
+    # Pega a hora atual (UTC)
+    now = datetime.datetime.utcnow()
+    current_time = now.strftime("%H:%M") # Ex: "14:00"
+    
+    # 🔍 AQUI VOCÊ COLOCA A LÓGICA DO SEU BANCO DE DADOS
+    # Exemplo simplificado: Buscar no DB onde o horario é igual ao atual
+    # medicamentos_devendo = session.query(Medicamento).filter_by(hora=current_time).all()
+    
+    # Para fins de teste, vamos simular que tem um remédio às "AGORA" + 1 min
+    # ou você pode forçar um teste mudando o horário de um remédio no DB.
+    
+    # Simulação (Remova isso quando conectar no DB real):
+    medicamentos_devendo = [] # Se vazio, nada acontece.
+    
+    count = 0
+    for med in medicamentos_devendo:
+        # Envia para todos os inscritos (ou apenas para o usuário dono do remédio)
+        for sub in subscriptions:
+            try:
+                webpush(
+                    subscription_info=sub,
+                    data=json.dumps({
+                        "title": f"💊 Hora de tomar: {med['nome']}",
+                        "body": f"Dosagem: {med['dosagem']}",
+                        "icon": "https://cdn-icons-png.flaticon.com/512/3135/3135715.png"
+                    }),
+                    vapid_private_key=VAPID_PRIVATE_KEY,
+                    vapid_claims=VAPID_CLAIMS
+                )
+                count += 1
+            except Exception as e:
+                print(f"Erro: {e}")
+
+    return {"status": "ok", "lembretes_enviados": count, "hora_verificada": current_time}
+
+
+# =========================================================
+# Carrega as variáveis do .env
+# =========================================================
+load_dotenv()
+
+# Lista temporária para armazenar assinaturas (para teste rápido)
+# Em produção, salvaríamos isso no Banco de Dados
+subscriptions = [] 
+
+# Carrega as chaves VAPID
+VAPID_PUBLIC_KEY = os.getenv("VAPID_PUBLIC_KEY")
+VAPID_PRIVATE_KEY = os.getenv("VAPID_PRIVATE_KEY")
+VAPID_CLAIMS = {"sub": "mailto:secretary.crs.virtual@gmail.com"}
+
 # =========================================================
 # INICIALIZAÇÃO
 # =========================================================
