@@ -10,5 +10,6 @@
       "path": "/api/check-reminders",
       "schedule": "*/1 * * * *"
     }
-  ]
+  ]  
+  
 }
