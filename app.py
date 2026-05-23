@@ -935,58 +935,55 @@ async def test_push():
     return {"msg": f"Tentativa de envio para {count} dispositivos."}
 
 # 3. AGENDADOR AUTOMÁTICO (O "Cérebro" que roda a cada minuto)
-@app.get("/api/check-reminders")
+@app.get("/api/check-reminders")  # ou /api/verificar-lembretes
 async def check_reminders(db: Session = Depends(get_db)):
-    # 1. Pega a hora atual no fuso de Brasília (ou UTC, ajuste conforme preferir)
-    now = datetime.now()
-    current_time = now.strftime("%H:%M")  # Ex: "14:00"
+    print("🔔 [CRON] INICIANDO VERIFICAÇÃO...")
     
-    print(f"⏰ [CRON] Verificando lembretes para {current_time}...")
-    
-    # 2. Busca no banco os medicamentos ativos com horário igual ao atual
-    # ⚠️ Ajuste os nomes das colunas (time, name, dosage, is_active) conforme seu modelo real
-    meds_due = db.query(Medication).filter(
-        Medication.time == current_time,
-        Medication.is_active == True
-    ).all()
-    
-    if not meds_due:
-        print(f" [CRON] Nenhum remédio agendado para {current_time}")
-        return {"status": "ok", "lembretes_enviados": 0, "hora": current_time}
-    
-    # 3. Envia notificação para cada remédio encontrado
-    sent_count = 0
-    for med in meds_due:
-        # Por enquanto, envia para todos os dispositivos inscritos
-        # (Na versão final, filtraremos por user_id do dono do remédio)
-        for sub in subscriptions:
-            try:
-                webpush(
-                    subscription_info=sub,
-                    data=json.dumps({
-                        "title": f" Hora de tomar: {med.name}",
-                        "body": f"Dosagem: {med.dosage}",
-                        "icon": "https://cdn-icons-png.flaticon.com/512/3135/3135715.png",
-                        "tag": f"med-{med.id}-{current_time}" # Evita duplicatas
-                    }),
-                    vapid_private_key=VAPID_PRIVATE_KEY,
-                    vapid_claims=VAPID_CLAIMS
-                )
-                sent_count += 1
-                print(f"✅ Push enviado: {med.name} às {current_time}")
-            except Exception as e:
-                print(f"❌ Erro ao enviar push: {e}")
-                # Remove assinatura inválida (ex: usuário desinstalou o app)
-                if "410" in str(e) and sub in subscriptions:
-                    subscriptions.remove(sub)
-
-    print(f"📊 [CRON] Total: {len(meds_due)} remédios encontrados | {sent_count} notificações enviadas.")
-    return {
-        "status": "ok", 
-        "lembretes_enviados": sent_count, 
-        "remedios_verificados": len(meds_due),
-        "hora": current_time
-    }
+    try:
+        # Pega hora atual
+        now = datetime.now()
+        current_time = now.strftime("%H:%M")
+        print(f"⏰ Hora atual (servidor): {current_time}")
+        print(f"📋 Total de subscriptions: {len(subscriptions)}")
+        
+        # Busca medicamentos
+        meds_due = db.query(Medication).filter(
+            Medication.time == current_time,
+            Medication.is_active == True
+        ).all()
+        
+        print(f"💊 Medicamentos encontrados: {len(meds_due)}")
+        for med in meds_due:
+            print(f"   - {med.name} ({med.dosage})")
+        
+        if not meds_due:
+            return {"status": "ok", "msg": "Nenhum remédio neste horário", "hora": current_time}
+        
+        # Envia notificações
+        sent = 0
+        for med in meds_due:
+            for sub in subscriptions:
+                try:
+                    print(f"📤 Enviando push para {med.name}...")
+                    webpush(
+                        subscription_info=sub,
+                        data=json.dumps({
+                            "title": f"💊 {med.name}",
+                            "body": f"Dosagem: {med.dosage}",
+                            "icon": "https://cdn-icons-png.flaticon.com/512/3135/3135715.png"
+                        }),
+                        vapid_private_key=VAPID_PRIVATE_KEY,
+                        vapid_claims=VAPID_CLAIMS
+                    )
+                    sent += 1
+                except Exception as e:
+                    print(f"❌ Erro ao enviar: {e}")
+        
+        return {"status": "ok", "enviados": sent, "hora": current_time}
+        
+    except Exception as e:
+        print(f"💥 ERRO GERAL: {e}")
+        return {"status": "error", "msg": str(e)}
 
 # =========================================================
 # Carrega as variáveis do .env
