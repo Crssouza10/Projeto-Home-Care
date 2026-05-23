@@ -21,7 +21,7 @@ import json
 from pywebpush import webpush, WebPushException
 from dotenv import load_dotenv
 
-# Carregar variáveis de ambiente
+# Carregar variáveis de ambiente *****
 load_dotenv()
 
 app = FastAPI(
