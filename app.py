@@ -17,7 +17,6 @@ from fastapi.middleware.cors import CORSMiddleware
 import traceback
 from fastapi.responses import FileResponse, JSONResponse
 import os
-import datetime
 import json
 from pywebpush import webpush, WebPushException
 from dotenv import load_dotenv
@@ -60,8 +59,8 @@ class User(Base):
     phone = Column(String(20), unique=True)
     password_hash = Column(String(255), nullable=False)
     is_active = Column(Boolean, default=True)
-    created_at = Column(DateTime, default=datetime.utcnow)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = Column(DateTime, default=datetime.datetime.utcnow)  # ou datetime.utcnow se mudar o import
+    updated_at = Column(DateTime, default=datetime.datetime.utcnow, onupdate=datetime.datetime.utcnow)
 
 class Medication(Base):
     __tablename__ = "medications"
@@ -73,7 +72,8 @@ class Medication(Base):
     time = Column(Time, nullable=False)
     days_of_week = Column(JSONB, default=[0,1,2,3,4,5,6])
     is_active = Column(Boolean, default=True)
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=datetime.datetime.utcnow)  # ou datetime.utcnow se mudar o import
+
 
 class Prescription(Base):
     __tablename__ = "prescriptions"
@@ -84,7 +84,8 @@ class Prescription(Base):
     ocr_data = Column(JSONB)
     extracted_meds = Column(JSONB)
     status = Column(String(20), default="pending")
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=datetime.datetime.utcnow)  # ou datetime.utcnow se mudar o import
+
 
 class Appointment(Base):
     __tablename__ = "appointments"
@@ -97,7 +98,8 @@ class Appointment(Base):
     appointment_time = Column(Time, nullable=False)
     notes = Column(Text)
     status = Column(String(20), default="scheduled")
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=datetime.datetime.utcnow)  # ou datetime.utcnow se mudar o import
+
 
 class Responsible(Base):
     __tablename__ = "responsibles"
@@ -109,7 +111,8 @@ class Responsible(Base):
     phone = Column(String(20), nullable=False)
     notify_sms = Column(Boolean, default=True)
     notify_email = Column(Boolean, default=False)
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=datetime.datetime.utcnow)  # ou datetime.utcnow se mudar o import
+
 
 class MedicationLog(Base):
     __tablename__ = "medication_logs"
@@ -122,7 +125,8 @@ class MedicationLog(Base):
     confirmed_at = Column(DateTime)
     followup_triggered_at = Column(DateTime)
     responsible_notified_at = Column(DateTime)
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=datetime.datetime.utcnow)  # ou datetime.utcnow se mudar o import
+
 
 # Modelo de Contatos de Emergência (APENAS 1x)
 class EmergencyContact(Base):
@@ -134,7 +138,8 @@ class EmergencyContact(Base):
     phone = Column(String(20), nullable=False)
     email = Column(String(150), nullable=True)
     notes = Column(Text, nullable=True)
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=datetime.datetime.utcnow)  # ou datetime.utcnow se mudar o import
+
 
 # Criar tabelas
 try:
