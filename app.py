@@ -935,14 +935,57 @@ async def test_push():
 
 # 3. AGENDADOR AUTOMÁTICO (O "Cérebro" que roda a cada minuto)
 @app.get("/api/check-reminders")
-async def check_reminders():
-    # Este endpoint será chamado pelo Vercel Cron a cada minuto
-    print("⏰ Verificando lembretes de medicamentos...")
+async def check_reminders(db: Session = Depends(get_db)):
+    # 1. Pega a hora atual no fuso de Brasília (ou UTC, ajuste conforme preferir)
+    now = datetime.now()
+    current_time = now.strftime("%H:%M")  # Ex: "14:00"
     
-    # Por enquanto, vamos apenas retornar o status para garantir que a rota existe
-    # A lógica de banco de dados será implementada na próxima fase
+    print(f"⏰ [CRON] Verificando lembretes para {current_time}...")
     
-    return {"status": "ok", "lembretes_enviados": 0, "msg": "Sistema de agendamento ativo."}
+    # 2. Busca no banco os medicamentos ativos com horário igual ao atual
+    # ⚠️ Ajuste os nomes das colunas (time, name, dosage, is_active) conforme seu modelo real
+    meds_due = db.query(Medication).filter(
+        Medication.time == current_time,
+        Medication.is_active == True
+    ).all()
+    
+    if not meds_due:
+        print(f" [CRON] Nenhum remédio agendado para {current_time}")
+        return {"status": "ok", "lembretes_enviados": 0, "hora": current_time}
+    
+    # 3. Envia notificação para cada remédio encontrado
+    sent_count = 0
+    for med in meds_due:
+        # Por enquanto, envia para todos os dispositivos inscritos
+        # (Na versão final, filtraremos por user_id do dono do remédio)
+        for sub in subscriptions:
+            try:
+                webpush(
+                    subscription_info=sub,
+                    data=json.dumps({
+                        "title": f" Hora de tomar: {med.name}",
+                        "body": f"Dosagem: {med.dosage}",
+                        "icon": "https://cdn-icons-png.flaticon.com/512/3135/3135715.png",
+                        "tag": f"med-{med.id}-{current_time}" # Evita duplicatas
+                    }),
+                    vapid_private_key=VAPID_PRIVATE_KEY,
+                    vapid_claims=VAPID_CLAIMS
+                )
+                sent_count += 1
+                print(f"✅ Push enviado: {med.name} às {current_time}")
+            except Exception as e:
+                print(f"❌ Erro ao enviar push: {e}")
+                # Remove assinatura inválida (ex: usuário desinstalou o app)
+                if "410" in str(e) and sub in subscriptions:
+                    subscriptions.remove(sub)
+
+    print(f"📊 [CRON] Total: {len(meds_due)} remédios encontrados | {sent_count} notificações enviadas.")
+    return {
+        "status": "ok", 
+        "lembretes_enviados": sent_count, 
+        "remedios_verificados": len(meds_due),
+        "hora": current_time
+    }
 
 # =========================================================
 # Carrega as variáveis do .env
