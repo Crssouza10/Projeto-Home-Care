@@ -142,6 +142,13 @@ class EmergencyContact(Base):
     notes = Column(Text, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)  # ou datetime.utcnow se mudar o import
 
+class PushSubscription(Base):
+    __tablename__ = "push_subscriptions"
+    
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    endpoint = Column(Text, nullable=False, unique=True)
+    subscription_info = Column(JSONB, nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
 
 # Criar tabelas
 try:
@@ -894,33 +901,44 @@ VAPID_CLAIMS = {"sub": "mailto:secretary.crs.virtual@gmail.com"}
 
 # 1. O Navegador envia sua assinatura para nós
 @app.post("/api/push/subscribe")
-async def subscribe(subscription: dict):
+async def subscribe(subscription: dict, db: Session = Depends(get_db)):
     try:
-        # Verifica se já existe para não duplicar
         endpoint = subscription.get('endpoint', '')
-        if endpoint and not any(s.get('endpoint') == endpoint for s in subscriptions):
-            subscriptions.append(subscription)
-            print(f"✅ Nova assinatura registrada: {endpoint[:30]}...")
+        if not endpoint:
+            return {"status": "erro", "msg": "Endpoint ausente"}, 400
+            
+        # Verifica se já existe para não duplicar
+        existing = db.query(PushSubscription).filter(PushSubscription.endpoint == endpoint).first()
+        if not existing:
+            new_sub = PushSubscription(
+                endpoint=endpoint,
+                subscription_info=subscription
+            )
+            db.add(new_sub)
+            db.commit()
+            print(f"✅ Nova assinatura salva no Banco: {endpoint[:30]}...")
         return {"status": "sucesso"}
     except Exception as e:
-        print(f"Erro ao assinar: {e}")
+        db.rollback()
+        print(f"Erro ao assinar no banco: {e}")
         return {"status": "erro"}, 500
 
 # 2. Endpoint para TESTE RÁPIDO (Dispara manualmente)
 @app.post("/api/teste-push")
-async def test_push():
-    if not subscriptions:
-        return {"msg": "Nenhum dispositivo inscrito ainda. Acesse o site no celular primeiro."}
+async def test_push(db: Session = Depends(get_db)):
+    subs_db = db.query(PushSubscription).all()
+    if not subs_db:
+        return {"msg": "Nenhum dispositivo inscrito no banco de dados ainda. Acesse o site no celular primeiro."}
     
     count = 0
-    for sub in subscriptions:
+    for sub in subs_db:
         try:
             # Envia a notificação
             webpush(
-                subscription_info=sub,
+                subscription_info=sub.subscription_info,
                 data=json.dumps({
                     "title": "🔔 Teste do Sistema!",
-                    "body": "As notificações push estão funcionando perfeitamente.",
+                    "body": "As notificações push estão funcionando perfeitamente (Via Banco de Dados).",
                     "icon": "https://cdn-icons-png.flaticon.com/512/3135/3135715.png"
                 }),
                 vapid_private_key=VAPID_PRIVATE_KEY,
@@ -929,9 +947,10 @@ async def test_push():
             count += 1
         except WebPushException as ex:
             print(f"Erro ao enviar push: {ex}")
-            # Se der erro 410 (Gone), removemos a assinatura inválida
+            # Se der erro 410 (Gone), removemos a assinatura inválida do Banco
             if "410" in str(ex):
-                subscriptions.remove(sub)
+                db.delete(sub)
+                db.commit()
             
     return {"msg": f"Tentativa de envio para {count} dispositivos."}
 
@@ -966,17 +985,19 @@ async def check_reminders(db: Session = Depends(get_db)):
         # Envia notificações
         sent = 0
         
-        # Alerta sobre ambiente Serverless (Vercel)
-        if not subscriptions:
-            print("⚠️ AVISO: Nenhuma subscription encontrada! Em Serverless (Vercel), variáveis globais limpam. Mova subscriptions para o Banco de Dados futuramente.")
+        subs_db = db.query(PushSubscription).all()
+        
+        # Alerta sobre ambiente
+        if not subs_db:
+            print("⚠️ AVISO: Nenhuma subscription encontrada no Banco de Dados!")
             return {"status": "ok", "msg": "Remédios encontrados, mas não há dispositivos inscritos.", "hora": current_time_str, "meds": len(meds_due)}
             
         for med in meds_due:
-            for sub in subscriptions:
+            for sub in subs_db:
                 try:
                     print(f"📤 Enviando push para {med.name}...")
                     webpush(
-                        subscription_info=sub,
+                        subscription_info=sub.subscription_info,
                         data=json.dumps({
                             "title": f"💊 {med.name}",
                             "body": f"Dosagem: {med.dosage}",
@@ -987,7 +1008,10 @@ async def check_reminders(db: Session = Depends(get_db)):
                     )
                     sent += 1
                 except Exception as e:
-                    print(f"❌ Erro ao enviar: {e}")
+                    print(f"❌ Erro ao enviar push para o endpoint: {e}")
+                    if "410" in str(e):
+                        db.delete(sub)
+                        db.commit()
         
         return {"status": "ok", "enviados": sent, "hora": current_time_str}
         
@@ -1001,10 +1025,6 @@ async def check_reminders(db: Session = Depends(get_db)):
 # Carrega as variáveis do .env
 # =========================================================
 load_dotenv()
-
-# Lista temporária para armazenar assinaturas (para teste rápido)
-# Em produção, salvaríamos isso no Banco de Dados
-subscriptions = [] 
 
 # Carrega as chaves VAPID
 VAPID_PUBLIC_KEY = os.getenv("VAPID_PUBLIC_KEY")
