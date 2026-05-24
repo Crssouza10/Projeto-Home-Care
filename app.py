@@ -1,4 +1,4 @@
-# ===== versão 1.02 - 2024-06-24 :00 ================================
+# ===== versão 1.03 - 2024-06-24 18:30 ================================
 from fastapi import FastAPI, HTTPException, Depends, status, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse, JSONResponse
@@ -78,6 +78,17 @@ class Medication(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
     end_date = Column(String(10), nullable=True)  # "YYYY-MM-DD" ou use Date
 
+# -------------------------------------------------------
+# MODELO PARA PUSH SUBSCRIPTIONS (TABELA NOVA)
+# -------------------------------------------------------
+class PushSubscription(Base):
+    __tablename__ = "push_subscriptions"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    user_id = Column(UUID(as_uuid=True), nullable=False, index=True)
+    endpoint = Column(Text, unique=True, nullable=False, index=True) # URL única do navegador
+    keys = Column(JSONB, nullable=False) # Chaves p256dh e auth
+    created_at = Column(DateTime, default=datetime.utcnow)
 
 class Prescription(Base):
     __tablename__ = "prescriptions"
@@ -902,29 +913,56 @@ VAPID_PUBLIC_KEY = os.getenv("VAPID_PUBLIC_KEY")
 VAPID_PRIVATE_KEY = os.getenv("VAPID_PRIVATE_KEY")
 VAPID_CLAIMS = {"sub": "mailto:secretary.crs.virtual@gmail.com"}
 
+# ===============================================================
 # 1. O Navegador envia sua assinatura para nós
+# O frontend deve enviar um POST para /api/push/subscribe com o objeto de assinatura do navegador
+# Exemplo de corpo da requisição (enviado pelo frontend):
+# =================================================================
 @app.post("/api/push/subscribe")
-async def subscribe(subscription: dict, db: Session = Depends(get_db)):
+async def subscribe_push(subscription_info: dict, db: Session = Depends(get_db)):
     try:
-        endpoint = subscription.get('endpoint', '')
-        if not endpoint:
-            return {"status": "erro", "msg": "Endpoint ausente"}, 400
-            
-        # Verifica se já existe para não duplicar
+        # Pega o endpoint único do navegador para evitar duplicatas
+        endpoint = subscription_info.get("endpoint")
+        keys = subscription_info.get("keys")
+        
+        # Precisamos saber quem é o usuário. 
+        # Opção 1: Passar user_id no corpo da requisição (frontend precisa enviar)
+        # Opção 2: Pegar do token (se tiver auth implementada).
+        # Para testarmos rápido, vamos tentar pegar do body ou usar um ID fixo se não vier.
+        # ⚠️ IMPORTANTE: Seu frontend deve enviar { ...subscription, user_id: "..." }
+        user_id = subscription_info.get("user_id") 
+        
+        if not user_id:
+            # Fallback temporário: se não vier user_id, usa o último usuário logado ou um fixo
+            # Mas o ideal é o frontend enviar.
+            print("⚠️ AVISO: user_id não recebido no subscribe.")
+            return {"status": "error", "msg": "Falta user_id na requisição"}
+
+        # Verifica se já existe
         existing = db.query(PushSubscription).filter(PushSubscription.endpoint == endpoint).first()
+        
         if not existing:
+            # Cria novo registro
             new_sub = PushSubscription(
+                user_id=user_id,
                 endpoint=endpoint,
-                subscription_info=subscription
+                keys=keys
             )
             db.add(new_sub)
             db.commit()
-            print(f"✅ Nova assinatura salva no Banco: {endpoint[:30]}...")
-        return {"status": "sucesso"}
+            print(f"✅ Subscription salva no Banco para user {user_id}")
+        else:
+            print(f"ℹ️ Subscription já existe para {endpoint}")
+
+        # (Opcional) Adiciona também na lista em memória para compatibilidade imediata
+        # subscriptions.append(subscription_info) 
+        
+        return {"status": "ok", "msg": "Inscrito com sucesso!"}
+        
     except Exception as e:
         db.rollback()
-        print(f"Erro ao assinar no banco: {e}")
-        return {"status": "erro"}, 500
+        print(f"❌ Erro ao salvar subscription: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 # 2. Endpoint para TESTE RÁPIDO (Dispara manualmente)
 @app.post("/api/teste-push")
@@ -962,10 +1000,11 @@ async def test_push(db: Session = Depends(get_db)):
 # Esta rota é chamada pelo cron job (ou serviço de agendamento) a cada minuto para 
 # verificar quais medicamentos estão programados para o horário atual e enviar as notificações push.
 # =========================================================
-@app.get("/api/check-reminders")  # ou /api/verificar-lembretes - use o nome que você tem
+@app.get("/api/check-reminders")
 async def check_reminders(db: Session = Depends(get_db)):
     """
     Verifica medicamentos que devem ser tomados AGORA (horário de Brasília)
+    e envia notificações push para os usuários
     """
     from datetime import timezone, timedelta
     
@@ -978,10 +1017,8 @@ async def check_reminders(db: Session = Depends(get_db)):
         current_time = now.strftime("%H:%M")
         
         print(f"⏰ [CRON] Horário em Brasília: {current_time}")
-        print(f"📋 Total de subscriptions ativas: {len(subscriptions)}")
         
         # Busca medicamentos com horário igual ao atual
-        # Ajuste os nomes das colunas conforme seu modelo real
         meds_due = db.query(Medication).filter(
             Medication.time == current_time,
             Medication.is_active == True
@@ -990,15 +1027,26 @@ async def check_reminders(db: Session = Depends(get_db)):
         print(f"💊 Medicamentos encontrados para {current_time}: {len(meds_due)}")
         
         for med in meds_due:
-            print(f"   - {med.name} | Dosagem: {med.dosage} | User: {med.user_id}")
+            print(f"   - {med.name} | Dosagem: {med.dosage}")
         
         if not meds_due:
             print(f"ℹ️ Nenhum medicamento agendado para {current_time}")
             return {
                 "status": "ok", 
                 "msg": "Nenhum remédio neste horário", 
-                "hora_brasi lia": current_time,
-                "hora_utc": datetime.now().strftime("%H:%M")
+                "hora_brasilia": current_time
+            }
+        
+        # 🔥 MUDANÇA: Busca subscriptions DO BANCO DE DADOS
+        all_subs = db.query(PushSubscription).all()
+        print(f"📱 Total de subscriptions no banco: {len(all_subs)}")
+        
+        if not all_subs:
+            print("⚠️ AVISO: Nenhuma subscription encontrada no banco!")
+            return {
+                "status": "ok",
+                "msg": "Nenhum usuário inscrito para receber notificações",
+                "hora_brasilia": current_time
             }
         
         # Envia notificações push
@@ -1006,17 +1054,18 @@ async def check_reminders(db: Session = Depends(get_db)):
         failed_count = 0
         
         for med in meds_due:
-            # Se não houver subscriptions, pula
-            if not subscriptions:
-                print("⚠️ AVISO: Nenhuma subscription registrada!")
-                continue
-            
-            for sub in subscriptions:
+            for sub_obj in all_subs:
+                # Monta o objeto no formato que a biblioteca pywebpush espera
+                sub_info = {
+                    "endpoint": sub_obj.endpoint,
+                    "keys": sub_obj.keys  # Já é JSONB, então já é um dict
+                }
+                
                 try:
-                    print(f"📤 Enviando push notification para: {med.name}")
+                    print(f"📤 Enviando push para {med.name}...")
                     
                     webpush(
-                        subscription_info=sub,
+                        subscription_info=sub_info,
                         data=json.dumps({
                             "title": f"💊 Hora de tomar: {med.name}",
                             "body": f"Dosagem: {med.dosage}",
@@ -1034,10 +1083,12 @@ async def check_reminders(db: Session = Depends(get_db)):
                 except WebPushException as ex:
                     failed_count += 1
                     print(f"❌ Erro WebPush: {ex}")
+                    
                     # Remove assinatura inválida (410 = Gone)
-                    if ex.status_code == 410 and sub in subscriptions:
-                        subscriptions.remove(sub)
-                        print("🗑️ Subscription removida (inválida)")
+                    if ex.status_code == 410:
+                        print(f"🗑️ Removendo subscription inválida: {sub_obj.endpoint}")
+                        db.delete(sub_obj)
+                        db.commit()
                         
                 except Exception as e:
                     failed_count += 1
@@ -1045,9 +1096,9 @@ async def check_reminders(db: Session = Depends(get_db)):
         
         resultado = {
             "status": "ok",
-            "hora_brasi lia": current_time,
-            "hora_utc": datetime.now().strftime("%H:%M"),
+            "hora_brasilia": current_time,
             "medicamentos_encontrados": len(meds_due),
+            "subscriptions_no_banco": len(all_subs),
             "notificacoes_enviadas": sent_count,
             "notificacoes_falhadas": failed_count
         }
@@ -1062,10 +1113,8 @@ async def check_reminders(db: Session = Depends(get_db)):
         return {
             "status": "error",
             "msg": str(e),
-            "hora_brasi lia": current_time if 'current_time' in locals() else "unknown"
+            "hora_brasilia": current_time if 'current_time' in locals() else "unknown"
         }
-  
-
 # =========================================================
 # Carrega as variáveis do .env
 # =========================================================
