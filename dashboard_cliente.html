@@ -1241,12 +1241,23 @@
                     <label class="form-label">Dosagem *</label>
                     <input type="text" class="form-input" id="med-dosage" placeholder="Ex: 500mg - 1 comprimido" required>
                 </div>
+
                 <div class="form-row">
                     <div class="form-group">
                         <label class="form-label">Horário *</label>
-                        <input type="time" class="form-input" id="med-time" required>
+                        <div class="time-grid" style="display: flex; gap: 10px; align-items: center;">
+                            <select id="med-hour" class="form-input" style="min-width: 70px;" required>
+                                <option value="">Hora</option>
+                            </select>
+                            <span style="font-size: 1.2rem;">:</span>
+                            <select id="med-minute" class="form-input" style="min-width: 70px;" required>
+                                <option value="">Min</option>
+                            </select>
+                        </div>
+                        <input type="hidden" id="med-time"> <!-- Mantém compatibilidade -->
                     </div>
                 </div>
+
                 <div class="form-group">
                     <label class="form-label">Dias da Semana *</label>
                     <div class="days-selector" id="med-days">
@@ -2127,7 +2138,7 @@
                 updateCounters();
             }
         }
-        
+   
         // ===== MODAIS =====
         function openMedModal(med = null) {
             const modal = document.getElementById('modal-medication');
@@ -2140,6 +2151,7 @@
                 document.getElementById('med-name').value = med.name || '';
                 document.getElementById('med-dosage').value = med.dosage || '';
                 document.getElementById('med-time').value = med.time || '';
+                fillTimeGrid(med.time);
                 
                 document.querySelectorAll('#med-days .day-chip').forEach(chip => {
                     const day = parseInt(chip.dataset.day);
@@ -2158,7 +2170,7 @@
             
             modal.classList.add('active');
         }
-        
+     
         function openApptModal(appt = null) {
             const modal = document.getElementById('modal-appointment');
             const title = document.getElementById('appt-modal-title');
@@ -2242,7 +2254,8 @@
                 }
             });
         });
-        
+
+
         // ===== SAVE FUNCTIONS =====
         async function saveMedication(e) {
             e.preventDefault();
@@ -2254,16 +2267,32 @@
             const id = document.getElementById('med-id').value;
             const days = Array.from(document.querySelectorAll('#med-days .day-chip.active')).map(chip => parseInt(chip.dataset.day));
             
+            // ✅ Obtém horário dos selects (formato 24h garantido: "HH:MM")
+            let timeValue = getFormattedTime();
+            if (!timeValue) {
+                // Fallback para compatibilidade com edição (input hidden)
+                timeValue = document.getElementById('med-time')?.value;
+            }
+
+            if (!timeValue) {
+                alert('⏰ Selecione hora e minuto!');
+                btn.disabled = false;
+                btn.textContent = originalText;
+                return;
+            }
+
             const payload = {
                 user_id: userId,
                 name: document.getElementById('med-name').value,
                 dosage: document.getElementById('med-dosage').value,
-                time: document.getElementById('med-time').value,
+                time: timeValue, // Formato garantido: "18:37"
                 days_of_week: days
             };
-            
+                
             try {
-                const url = id ? `${API_URL}/api/medications/${id}` : `${API_URL}/api/cliente/${userId}/medications`;
+                const url = id 
+                    ? `${API_URL}/api/medications/${id}` 
+                    : `${API_URL}/api/cliente/${userId}/medications`;
                 const method = id ? 'PUT' : 'POST';
                 
                 const response = await fetch(url, {
@@ -2282,13 +2311,13 @@
                 loadMedications();
             } catch (error) {
                 showToast('❌ ' + error.message, true);
-                console.error(error);
+                console.error('Erro ao salvar medicamento:', error);
             } finally {
                 btn.disabled = false;
                 btn.textContent = originalText;
             }
         }
-        
+
         async function saveAppointment(e) {
             e.preventDefault();
             const btn = e.target.querySelector('.btn-submit');
@@ -2692,7 +2721,116 @@
             console.error('Erro no Push:', err);
         }
     }
+    
+    // Popular selects de hora e minuto
+    function populateTimeSelectors() {
+        const hourSelect = document.getElementById('med-hour');
+        const minuteSelect = document.getElementById('med-minute');
+        
+        // Horas 00-23
+        for (let h = 0; h < 24; h++) {
+            const option = document.createElement('option');
+            option.value = h.toString().padStart(2, '0');
+            option.textContent = h.toString().padStart(2, '0') + 'h';
+            hourSelect.appendChild(option);
+        }
+        
+        // Minutos 00-59
+        for (let m = 0; m < 60; m++) {
+            const option = document.createElement('option');
+            option.value = m.toString().padStart(2, '0');
+            option.textContent = m.toString().padStart(2, '0');
+            minuteSelect.appendChild(option);
+        }
+    }
 
+    // Popular selects de hora e minuto (formato 24h garantido)
+    function populateTimeGrid() {
+        const hourSelect = document.getElementById('med-hour');
+        const minuteSelect = document.getElementById('med-minute');
+        
+        if (!hourSelect || !minuteSelect) return;
+        
+        // Limpa opções existentes (exceto a primeira)
+        hourSelect.innerHTML = '<option value="">Hora</option>';
+        minuteSelect.innerHTML = '<option value="">Min</option>';
+        
+        // Horas 00-23
+        for (let h = 0; h < 24; h++) {
+            const val = h.toString().padStart(2, '0');
+            hourSelect.innerHTML += `<option value="${val}">${val}h</option>`;
+        }
+        
+        // Minutos 00-59
+        for (let m = 0; m < 60; m++) {
+            const val = m.toString().padStart(2, '0');
+            minuteSelect.innerHTML += `<option value="${val}">${val}</option>`;
+        }
+    }
+
+    // Obtém horário formatado HH:MM a partir dos selects
+    function getFormattedTime() {
+        const hour = document.getElementById('med-hour')?.value;
+        const minute = document.getElementById('med-minute')?.value;
+        
+        if (!hour || !minute) return null;
+        return `${hour}:${minute}`; // Ex: "18:37"
+    }
+
+    // Preenche os selects com um horário existente (para edição)
+    function fillTimeGrid(timeString) {
+        if (!timeString) return;
+        const [hour, minute] = timeString.split(':');
+        const hourSelect = document.getElementById('med-hour');
+        const minuteSelect = document.getElementById('med-minute');
+        const hiddenInput = document.getElementById('med-time');
+        
+        if (hourSelect) hourSelect.value = hour;
+        if (minuteSelect) minuteSelect.value = minute;
+        if (hiddenInput) hiddenInput.value = timeString;
+    }
+
+    // Executa ao carregar a página
+    document.addEventListener('DOMContentLoaded', () => {
+        populateTimeGrid();
+        
+        // Sincroniza selects com o input hidden quando mudam
+        const hour = document.getElementById('med-hour');
+        const minute = document.getElementById('med-minute');
+        const hidden = document.getElementById('med-time');
+        
+        if (hour && minute && hidden) {
+            [hour, minute].forEach(el => {
+                el.addEventListener('change', () => {
+                    const time = getFormattedTime();
+                    if (time) hidden.value = time;
+                });
+            });
+        }
+    });
+
+    // Executar quando a página carregar
+    document.addEventListener('DOMContentLoaded', populateTimeSelectors);
+
+    // Função para obter o horário formatado (HH:MM)
+    function getMedicationTime() {
+        const hour = document.getElementById('med-hour').value;
+        const minute = document.getElementById('med-minute').value;
+        
+        if (!hour || !minute) {
+            alert('Selecione hora e minuto!');
+            return null;
+        }
+        
+        return `${hour}:${minute}`; // Formato: "18:37"
+    }
+
+    // Função para preencher os selects com um horário existente
+    function setTimeSelectors(timeString) {
+        const [hour, minute] = timeString.split(':');
+        document.getElementById('med-hour').value = hour;
+        document.getElementById('med-minute').value = minute;
+    }
     // Função auxiliar para converter a  *****
     function urlB64ToUint8Array(base64String) {
         const padding = '='.repeat((4 - base64String.length % 4) % 4);
