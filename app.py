@@ -76,6 +76,7 @@ class Medication(Base):
     is_active = Column(Boolean, default=True)
     is_continuous = Column(Boolean, default=False)
     created_at = Column(DateTime, default=datetime.utcnow)
+    end_date = Column(String(10), nullable=True)  # "YYYY-MM-DD" ou use Date
 
 
 class Prescription(Base):
@@ -178,7 +179,7 @@ class MedicationCreate(BaseModel):
     user_id: uuid.UUID
     name: str
     dosage: str
-    time: time
+    time: str
     days_of_week: List[int] = [0,1,2,3,4,5,6]
     is_continuous: bool = False
     end_date: Optional[str] = None
@@ -402,7 +403,7 @@ async def create_medication(user_id: str, med: MedicationCreate, db: Session = D
         time=med.time,
         days_of_week=med.days_of_week,
         is_continuous=getattr(med, 'is_continuous', False),
-        end_date = Column(Date, nullable=True)
+        end_date=end_date  # ← Apenas o VALOR da variável
     )
     
     db.add(nova_med)
