@@ -74,6 +74,7 @@ class Medication(Base):
     time = Column(Time, nullable=False)
     days_of_week = Column(JSONB, default=[0,1,2,3,4,5,6])
     is_active = Column(Boolean, default=True)
+    is_continuous = Column(Boolean, default=False)
     created_at = Column(DateTime, default=datetime.utcnow)
 
 
