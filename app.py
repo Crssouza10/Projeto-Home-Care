@@ -941,15 +941,18 @@ async def check_reminders(db: Session = Depends(get_db)):
     print("🔔 [CRON] INICIANDO VERIFICAÇÃO...")
     
     try:
-        # Pega hora atual
-        now = datetime.now()
-        current_time = now.strftime("%H:%M")
-        print(f"⏰ Hora atual (servidor): {current_time}")
-        print(f"📋 Total de subscriptions: {len(subscriptions)}")
+        # Ajuste de Fuso Horário para Brasília (UTC-3), já que o Vercel roda em UTC
+        from datetime import timezone, timedelta
+        now_br = datetime.now(timezone(timedelta(hours=-3)))
+        current_time_str = now_br.strftime("%H:%M")
+        print(f"⏰ Hora atual (Brasília): {current_time_str}")
+        print(f"📋 Total de subscriptions em memória: {len(subscriptions)}")
         
-        # Busca medicamentos
+        # Busca medicamentos (Usando extract para ignorar segundos e comparar só HH:MM)
+        from sqlalchemy import extract
         meds_due = db.query(Medication).filter(
-            Medication.time == current_time,
+            extract('hour', Medication.time) == now_br.hour,
+            extract('minute', Medication.time) == now_br.minute,
             Medication.is_active == True
         ).all()
         
@@ -958,10 +961,16 @@ async def check_reminders(db: Session = Depends(get_db)):
             print(f"   - {med.name} ({med.dosage})")
         
         if not meds_due:
-            return {"status": "ok", "msg": "Nenhum remédio neste horário", "hora": current_time}
+            return {"status": "ok", "msg": "Nenhum remédio neste horário", "hora": current_time_str}
         
         # Envia notificações
         sent = 0
+        
+        # Alerta sobre ambiente Serverless (Vercel)
+        if not subscriptions:
+            print("⚠️ AVISO: Nenhuma subscription encontrada! Em Serverless (Vercel), variáveis globais limpam. Mova subscriptions para o Banco de Dados futuramente.")
+            return {"status": "ok", "msg": "Remédios encontrados, mas não há dispositivos inscritos.", "hora": current_time_str, "meds": len(meds_due)}
+            
         for med in meds_due:
             for sub in subscriptions:
                 try:
@@ -980,10 +989,12 @@ async def check_reminders(db: Session = Depends(get_db)):
                 except Exception as e:
                     print(f"❌ Erro ao enviar: {e}")
         
-        return {"status": "ok", "enviados": sent, "hora": current_time}
+        return {"status": "ok", "enviados": sent, "hora": current_time_str}
         
     except Exception as e:
         print(f"💥 ERRO GERAL: {e}")
+        import traceback
+        traceback.print_exc()
         return {"status": "error", "msg": str(e)}
 
 # =========================================================
