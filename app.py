@@ -1,4 +1,4 @@
-# ===== versão 1.00
+# ===== versão 1.01
 from fastapi import FastAPI, HTTPException, Depends, status, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse, JSONResponse
@@ -955,72 +955,114 @@ async def test_push(db: Session = Depends(get_db)):
             
     return {"msg": f"Tentativa de envio para {count} dispositivos."}
 
+# =========================================================
 # 3. AGENDADOR AUTOMÁTICO (O "Cérebro" que roda a cada minuto)
-@app.get("/api/check-reminders")  # ou /api/verificar-lembretes
+# Esta rota é chamada pelo cron job (ou serviço de agendamento) a cada minuto para 
+# verificar quais medicamentos estão programados para o horário atual e enviar as notificações push.
+# =========================================================
+@app.get("/api/check-reminders")  # ou /api/verificar-lembretes - use o nome que você tem
 async def check_reminders(db: Session = Depends(get_db)):
-    print("🔔 [CRON] INICIANDO VERIFICAÇÃO...")
+    """
+    Verifica medicamentos que devem ser tomados AGORA (horário de Brasília)
+    """
+    from datetime import timezone, timedelta
+    
+    print("🔔 [CRON] INICIANDO VERIFICAÇÃO DE MEDICAMENTOS...")
     
     try:
-        # Ajuste de Fuso Horário para Brasília (UTC-3), já que o Vercel roda em UTC
-        from datetime import timezone, timedelta
-        now_br = datetime.now(timezone(timedelta(hours=-3)))
-        current_time_str = now_br.strftime("%H:%M")
-        print(f"⏰ Hora atual (Brasília): {current_time_str}")
-        print(f"📋 Total de subscriptions em memória: {len(subscriptions)}")
+        # ✅ CORREÇÃO: Usa horário de Brasília (UTC-3)
+        brasilia_tz = timezone(timedelta(hours=-3))
+        now = datetime.now(brasilia_tz)
+        current_time = now.strftime("%H:%M")
         
-        # Busca medicamentos (Usando extract para ignorar segundos e comparar só HH:MM)
-        from sqlalchemy import extract
+        print(f"⏰ [CRON] Horário em Brasília: {current_time}")
+        print(f"📋 Total de subscriptions ativas: {len(subscriptions)}")
+        
+        # Busca medicamentos com horário igual ao atual
+        # Ajuste os nomes das colunas conforme seu modelo real
         meds_due = db.query(Medication).filter(
-            extract('hour', Medication.time) == now_br.hour,
-            extract('minute', Medication.time) == now_br.minute,
+            Medication.time == current_time,
             Medication.is_active == True
         ).all()
         
-        print(f"💊 Medicamentos encontrados: {len(meds_due)}")
+        print(f"💊 Medicamentos encontrados para {current_time}: {len(meds_due)}")
+        
         for med in meds_due:
-            print(f"   - {med.name} ({med.dosage})")
+            print(f"   - {med.name} | Dosagem: {med.dosage} | User: {med.user_id}")
         
         if not meds_due:
-            return {"status": "ok", "msg": "Nenhum remédio neste horário", "hora": current_time_str}
+            print(f"ℹ️ Nenhum medicamento agendado para {current_time}")
+            return {
+                "status": "ok", 
+                "msg": "Nenhum remédio neste horário", 
+                "hora_brasi lia": current_time,
+                "hora_utc": datetime.now().strftime("%H:%M")
+            }
         
-        # Envia notificações
-        sent = 0
+        # Envia notificações push
+        sent_count = 0
+        failed_count = 0
         
-        subs_db = db.query(PushSubscription).all()
-        
-        # Alerta sobre ambiente
-        if not subs_db:
-            print("⚠️ AVISO: Nenhuma subscription encontrada no Banco de Dados!")
-            return {"status": "ok", "msg": "Remédios encontrados, mas não há dispositivos inscritos.", "hora": current_time_str, "meds": len(meds_due)}
-            
         for med in meds_due:
-            for sub in subs_db:
+            # Se não houver subscriptions, pula
+            if not subscriptions:
+                print("⚠️ AVISO: Nenhuma subscription registrada!")
+                continue
+            
+            for sub in subscriptions:
                 try:
-                    print(f"📤 Enviando push para {med.name}...")
+                    print(f"📤 Enviando push notification para: {med.name}")
+                    
                     webpush(
-                        subscription_info=sub.subscription_info,
+                        subscription_info=sub,
                         data=json.dumps({
-                            "title": f"💊 {med.name}",
+                            "title": f"💊 Hora de tomar: {med.name}",
                             "body": f"Dosagem: {med.dosage}",
-                            "icon": "https://cdn-icons-png.flaticon.com/512/3135/3135715.png"
+                            "icon": "https://cdn-icons-png.flaticon.com/512/3135/3135715.png",
+                            "tag": f"med-{med.id}-{current_time}",
+                            "med_id": str(med.id) if hasattr(med, 'id') else None
                         }),
                         vapid_private_key=VAPID_PRIVATE_KEY,
                         vapid_claims=VAPID_CLAIMS
                     )
-                    sent += 1
+                    
+                    sent_count += 1
+                    print(f"✅ Push enviado com sucesso!")
+                    
+                except WebPushException as ex:
+                    failed_count += 1
+                    print(f"❌ Erro WebPush: {ex}")
+                    # Remove assinatura inválida (410 = Gone)
+                    if ex.status_code == 410 and sub in subscriptions:
+                        subscriptions.remove(sub)
+                        print("🗑️ Subscription removida (inválida)")
+                        
                 except Exception as e:
-                    print(f"❌ Erro ao enviar push para o endpoint: {e}")
-                    if "410" in str(e):
-                        db.delete(sub)
-                        db.commit()
+                    failed_count += 1
+                    print(f"❌ Erro geral ao enviar: {e}")
         
-        return {"status": "ok", "enviados": sent, "hora": current_time_str}
+        resultado = {
+            "status": "ok",
+            "hora_brasi lia": current_time,
+            "hora_utc": datetime.now().strftime("%H:%M"),
+            "medicamentos_encontrados": len(meds_due),
+            "notificacoes_enviadas": sent_count,
+            "notificacoes_falhadas": failed_count
+        }
+        
+        print(f"📊 [CRON] RESULTADO FINAL: {resultado}")
+        return resultado
         
     except Exception as e:
-        print(f"💥 ERRO GERAL: {e}")
+        print(f"💥 [CRON] ERRO CRÍTICO: {e}")
         import traceback
         traceback.print_exc()
-        return {"status": "error", "msg": str(e)}
+        return {
+            "status": "error",
+            "msg": str(e),
+            "hora_brasi lia": current_time if 'current_time' in locals() else "unknown"
+        }
+  
 
 # =========================================================
 # Carrega as variáveis do .env
