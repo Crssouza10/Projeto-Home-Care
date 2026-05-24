@@ -1,4 +1,4 @@
-# ===== versão 1.02 - 2024-06-24 =====
+# ===== versão 1.02 - 2024-06-24 :00 ================================
 from fastapi import FastAPI, HTTPException, Depends, status, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse, JSONResponse
@@ -180,7 +180,8 @@ class MedicationCreate(BaseModel):
     dosage: str
     time: time
     days_of_week: List[int] = [0,1,2,3,4,5,6]
-    is_continuous: bool = False  
+    is_continuous: bool = False
+    end_date: Optional[str] = None
 
 class MedicationResponse(BaseModel):
     id: uuid.UUID
@@ -401,7 +402,7 @@ async def create_medication(user_id: str, med: MedicationCreate, db: Session = D
         time=med.time,
         days_of_week=med.days_of_week,
         is_continuous=getattr(med, 'is_continuous', False),
-        end_date=end_date
+        end_date = Column(Date, nullable=True)
     )
     
     db.add(nova_med)
