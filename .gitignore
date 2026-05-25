@@ -1,0 +1,52 @@
+# ==========================================
+# 🐍 PYTHON & VIRTUAL ENV
+# ==========================================
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+dist/
+*.egg-info/
+*.egg
+pip-log.txt
+venv/
+.venv/
+env/
+ENV/
+
+# ==========================================
+# 🔐 SEGURANÇA (NUNCA COMMITAR ISSO)
+# ==========================================
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# ==========================================
+# 💻 EDITORES & OS
+# ==========================================
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ==========================================
+# 🚀 VERCEL & BUILD
+# ==========================================
+.vercel/
+.next/
+node_modules/
+*.log
+npm-debug.log*
+
+# ==========================================
+# 📦 PROJETO (Opcionais)
+# ==========================================
+# Se quiser ignorar scripts de uso único, descomente:
+# gerar_chaves.py
