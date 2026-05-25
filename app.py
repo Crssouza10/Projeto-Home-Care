@@ -1,4 +1,4 @@
-# ===== versão 1.03 - 2024-06-24 19:30 ================================
+# ===== versão 1.03 - 2024-06-25 17:30 ================================
 from fastapi import FastAPI, HTTPException, Depends, status, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse, JSONResponse
