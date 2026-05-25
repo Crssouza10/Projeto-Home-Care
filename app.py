@@ -86,8 +86,8 @@ class PushSubscription(Base):
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     user_id = Column(UUID(as_uuid=True), nullable=False, index=True)
-    endpoint = Column(Text, unique=True, nullable=False, index=True) # URL única do navegador
-    keys = Column(JSONB, nullable=False) # Chaves p256dh e auth
+    endpoint = Column(Text, unique=True, nullable=False, index=True)
+    keys = Column(JSONB, nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow)
 
 class Prescription(Base):
@@ -154,20 +154,6 @@ class EmergencyContact(Base):
     email = Column(String(150), nullable=True)
     notes = Column(Text, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)  # ou datetime.utcnow se mudar o import
-
-class PushSubscription(Base):
-    __tablename__ = "push_subscriptions"
-    
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    endpoint = Column(Text, nullable=False, unique=True)
-    subscription_info = Column(JSONB, nullable=False)
-    created_at = Column(DateTime, default=datetime.utcnow)
-
-# Criar tabelas
-try:
-    Base.metadata.create_all(bind=engine)
-except Exception as e:
-    print(f"Erro ao criar tabelas na inicialização (Vercel): {e}")
 
 # ==================== PYDANTIC SCHEMAS ====================
 
