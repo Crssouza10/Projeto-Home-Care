@@ -876,217 +876,139 @@ async def delete_emergency_contact(contact_id: str, db: Session = Depends(get_db
 
 @app.get("/manifest.json")
 async def get_manifest():
-    return FileResponse("manifest.json", media_type="application/manifest+json")
-
-@app.get("/sw.js")
-async def get_service_worker():
-    return FileResponse("sw.js", media_type="application/javascript")
-
-# 
-# ==========================================================
-#  ROTAS DE NOTIFICAÇÃO PUSH (NOVO CÓDIGO)
+    return FileResponse("manifest.json", media_type="application/manifest+json")# ==========================================================
+#  INTEGRAÇÃO WHATSAPP BUSINESS API (META)
 # ==========================================================
 import os
 import json
-from pywebpush import webpush, WebPushException
+import requests
+import re
 
-# Lista temporária para armazenar assinaturas (para teste rápido)
-# Em produção, salvaríamos isso no Banco de Dados
-subscriptions = [] 
-
-# Carrega as chaves VAPID das variáveis de ambiente do Vercel
-VAPID_PUBLIC_KEY = os.getenv("VAPID_PUBLIC_KEY")
-VAPID_PRIVATE_KEY = os.getenv("VAPID_PRIVATE_KEY")
-VAPID_CLAIMS = {"sub": "mailto:secretary.crs.virtual@gmail.com"}
-
-# ===============================================================
-# 1. O Navegador envia sua assinatura para nós
-# O frontend deve enviar um POST para /api/push/subscribe com o objeto de assinatura do navegador
-# Exemplo de corpo da requisição (enviado pelo frontend):
-# =================================================================
-@app.post("/api/push/subscribe")
-async def subscribe_push(subscription_info: dict, db: Session = Depends(get_db)):
-    try:
-        # Pega o endpoint único do navegador para evitar duplicatas
-        endpoint = subscription_info.get("endpoint")
-        keys = subscription_info.get("keys")
-        
-        # Precisamos saber quem é o usuário. 
-        # Opção 1: Passar user_id no corpo da requisição (frontend precisa enviar)
-        # Opção 2: Pegar do token (se tiver auth implementada).
-        # Para testarmos rápido, vamos tentar pegar do body ou usar um ID fixo se não vier.
-        # ⚠️ IMPORTANTE: Seu frontend deve enviar { ...subscription, user_id: "..." }
-        user_id = subscription_info.get("user_id") 
-        
-        if not user_id:
-            # Fallback temporário: se não vier user_id, usa o último usuário logado ou um fixo
-            # Mas o ideal é o frontend enviar.
-            print("⚠️ AVISO: user_id não recebido no subscribe.")
-            return {"status": "error", "msg": "Falta user_id na requisição"}
-
-        # Verifica se já existe
-        existing = db.query(PushSubscription).filter(PushSubscription.endpoint == endpoint).first()
-        
-        if not existing:
-            # Cria novo registro
-            new_sub = PushSubscription(
-                user_id=user_id,
-                endpoint=endpoint,
-                keys=keys
-            )
-            db.add(new_sub)
-            db.commit()
-            print(f"✅ Subscription salva no Banco para user {user_id}")
-        else:
-            print(f"ℹ️ Subscription já existe para {endpoint}")
-
-        # (Opcional) Adiciona também na lista em memória para compatibilidade imediata
-        # subscriptions.append(subscription_info) 
-        
-        return {"status": "ok", "msg": "Inscrito com sucesso!"}
-        
-    except Exception as e:
-        db.rollback()
-        print(f"❌ Erro ao salvar subscription: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
-
-# 2. Endpoint para TESTE RÁPIDO (Dispara manualmente)
-@app.post("/api/teste-push")
-async def test_push(db: Session = Depends(get_db)):
-    subs_db = db.query(PushSubscription).all()
-    if not subs_db:
-        return {"msg": "Nenhum dispositivo inscrito no banco de dados ainda. Acesse o site no celular primeiro."}
+# Função auxiliar para enviar WhatsApp
+def enviar_whatsapp(telefone: str, nome_remedio: str, dosagem: str) -> bool:
+    token = os.getenv("WHATSAPP_TOKEN")
+    phone_id = os.getenv("WHATSAPP_PHONE_ID")
     
-    count = 0
-    for sub in subs_db:
-        try:
-            # Envia a notificação
-            webpush(
-                subscription_info=sub.subscription_info,
-                data=json.dumps({
-                    "title": "🔔 Teste do Sistema!",
-                    "body": "As notificações push estão funcionando perfeitamente (Via Banco de Dados).",
-                    "icon": "https://cdn-icons-png.flaticon.com/512/3135/3135715.png"
-                }),
-                vapid_private_key=VAPID_PRIVATE_KEY,
-                vapid_claims=VAPID_CLAIMS
-            )
-            count += 1
-        except WebPushException as ex:
-            print(f"Erro ao enviar push: {ex}")
-            # Se der erro 410 (Gone), removemos a assinatura inválida do Banco
-            if "410" in str(ex):
-                db.delete(sub)
-                db.commit()
-            
-    return {"msg": f"Tentativa de envio para {count} dispositivos."}
+    if not token or not phone_id:
+        print("⚠️ WHATSAPP_TOKEN ou WHATSAPP_PHONE_ID ausentes no .env do Vercel!")
+        return False
+        
+    if not telefone:
+        return False
+        
+    # 1. Normalização do Telefone Brasileiro
+    # Remove qualquer caractere que não seja número
+    nums = re.sub(r'\D', '', telefone)
+    
+    # Se for um número brasileiro local (ex: 61993683464), adiciona o DDI 55
+    if len(nums) == 10 or len(nums) == 11:
+        nums = "55" + nums
+        
+    url = f"https://graph.facebook.com/v19.0/{phone_id}/messages"
+    headers = {
+        "Authorization": f"Bearer {token}",
+        "Content-Type": "application/json"
+    }
+    
+    # 2. Monta a Mensagem
+    from datetime import timezone, timedelta
+    hora_atual = datetime.now(timezone(timedelta(hours=-3))).strftime("%H:%M")
+    
+    data = {
+        "messaging_product": "whatsapp",
+        "to": nums,
+        "type": "text",
+        "text": {
+            "body": f"💊 *CR$ HOME CARE AI*\n\nOlá! São {hora_atual}.\nEstá na hora do medicamento:\n\n👉 *{nome_remedio}*\n⚖️ Dosagem: {dosagem}\n\nCuide-se!"
+        }
+    }
+    
+    # 3. Dispara a requisição HTTP para a Meta
+    try:
+        response = requests.post(url, headers=headers, json=data)
+        if response.status_code in [200, 201]:
+            print(f"✅ WhatsApp enviado com sucesso para {nums}")
+            return True
+        else:
+            print(f"❌ Erro da API WhatsApp para {nums}: {response.text}")
+            return False
+    except Exception as e:
+        print(f"❌ Falha de conexão WhatsApp: {e}")
+        return False
+
+# Rota fictícia para o Frontend não quebrar caso ainda tente enviar Web Push
+@app.post("/api/push/subscribe")
+async def dummy_subscribe():
+    return {"status": "ok", "msg": "Web Push desativado. Usando WhatsApp."}
+
+# 2. Endpoint para TESTE RÁPIDO DO WHATSAPP (Dispara manualmente)
+@app.post("/api/teste-push")
+async def test_whatsapp(db: Session = Depends(get_db)):
+    # Pega o primeiro usuário apenas para teste
+    user = db.query(User).filter(User.phone.isnot(None)).first()
+    if not user:
+        return {"msg": "Nenhum usuário com telefone cadastrado no banco."}
+        
+    enviado = enviar_whatsapp(user.phone, "Teste de Sistema", "1 Gota")
+    
+    if enviado:
+        return {"msg": f"WhatsApp de teste enviado para {user.phone} com sucesso!"}
+    else:
+        return {"msg": "Falha ao enviar WhatsApp. Verifique os logs do Vercel e as variáveis de ambiente."}
 
 # =========================================================
 # 3. AGENDADOR AUTOMÁTICO (O "Cérebro" que roda a cada minuto)
-# Esta rota é chamada pelo cron job (ou serviço de agendamento) a cada minuto para 
-# verificar quais medicamentos estão programados para o horário atual e enviar as notificações push.
 # =========================================================
 @app.get("/api/check-reminders")
 async def check_reminders(db: Session = Depends(get_db)):
     """
     Verifica medicamentos que devem ser tomados AGORA (horário de Brasília)
-    e envia notificações push para os usuários
+    e envia mensagens no WhatsApp para os usuários.
     """
     from datetime import timezone, timedelta
     
-    print("🔔 [CRON] INICIANDO VERIFICAÇÃO DE MEDICAMENTOS...")
+    print("🔔 [CRON] INICIANDO VERIFICAÇÃO DE MEDICAMENTOS (WHATSAPP)...")
     
     try:
-        # ✅ CORREÇÃO: Usa horário de Brasília (UTC-3)
         brasilia_tz = timezone(timedelta(hours=-3))
         now = datetime.now(brasilia_tz)
         current_time = now.strftime("%H:%M")
         
         print(f"⏰ [CRON] Horário em Brasília: {current_time}")
         
-        # Busca medicamentos com horário igual ao atual
+        # Busca medicamentos
         meds_due = db.query(Medication).filter(
             Medication.time == current_time,
             Medication.is_active == True
         ).all()
         
-        print(f"💊 Medicamentos encontrados para {current_time}: {len(meds_due)}")
-        
-        for med in meds_due:
-            print(f"   - {med.name} | Dosagem: {med.dosage}")
-        
         if not meds_due:
             print(f"ℹ️ Nenhum medicamento agendado para {current_time}")
-            return {
-                "status": "ok", 
-                "msg": "Nenhum remédio neste horário", 
-                "hora_brasilia": current_time
-            }
-        
-        # 🔥 MUDANÇA: Busca subscriptions DO BANCO DE DADOS
-        all_subs = db.query(PushSubscription).all()
-        print(f"📱 Total de subscriptions no banco: {len(all_subs)}")
-        
-        if not all_subs:
-            print("⚠️ AVISO: Nenhuma subscription encontrada no banco!")
-            return {
-                "status": "ok",
-                "msg": "Nenhum usuário inscrito para receber notificações",
-                "hora_brasilia": current_time
-            }
-        
-        # Envia notificações push
+            return {"status": "ok", "msg": "Nenhum remédio neste horário", "hora_brasilia": current_time}
+            
         sent_count = 0
         failed_count = 0
         
+        # Para cada medicamento, busca o usuário dono dele e manda WhatsApp
         for med in meds_due:
-            for sub_obj in all_subs:
-                # Monta o objeto no formato que a biblioteca pywebpush espera
-                sub_info = {
-                    "endpoint": sub_obj.endpoint,
-                    "keys": sub_obj.keys  # Já é JSONB, então já é um dict
-                }
-                
-                try:
-                    print(f"📤 Enviando push para {med.name}...")
-                    
-                    webpush(
-                        subscription_info=sub_info,
-                        data=json.dumps({
-                            "title": f"💊 Hora de tomar: {med.name}",
-                            "body": f"Dosagem: {med.dosage}",
-                            "icon": "https://cdn-icons-png.flaticon.com/512/3135/3135715.png",
-                            "tag": f"med-{med.id}-{current_time}",
-                            "med_id": str(med.id) if hasattr(med, 'id') else None
-                        }),
-                        vapid_private_key=VAPID_PRIVATE_KEY,
-                        vapid_claims=VAPID_CLAIMS
-                    )
-                    
+            user = db.query(User).filter(User.id == med.user_id).first()
+            if user and user.phone:
+                print(f"📤 Enviando WhatsApp para {user.full_name} ({user.phone}) - Remédio: {med.name}")
+                sucesso = enviar_whatsapp(user.phone, med.name, med.dosage)
+                if sucesso:
                     sent_count += 1
-                    print(f"✅ Push enviado com sucesso!")
-                    
-                except WebPushException as ex:
+                else:
                     failed_count += 1
-                    print(f"❌ Erro WebPush: {ex}")
-                    
-                    # Remove assinatura inválida (410 = Gone)
-                    if ex.status_code == 410:
-                        print(f"🗑️ Removendo subscription inválida: {sub_obj.endpoint}")
-                        db.delete(sub_obj)
-                        db.commit()
-                        
-                except Exception as e:
-                    failed_count += 1
-                    print(f"❌ Erro geral ao enviar: {e}")
-        
+            else:
+                print(f"⚠️ Usuário não encontrado ou sem telefone para o medicamento {med.name}")
+                failed_count += 1
+                
         resultado = {
             "status": "ok",
             "hora_brasilia": current_time,
             "medicamentos_encontrados": len(meds_due),
-            "subscriptions_no_banco": len(all_subs),
-            "notificacoes_enviadas": sent_count,
-            "notificacoes_falhadas": failed_count
+            "whatsapp_enviados": sent_count,
+            "whatsapp_falhados": failed_count
         }
         
         print(f"📊 [CRON] RESULTADO FINAL: {resultado}")
@@ -1096,20 +1018,12 @@ async def check_reminders(db: Session = Depends(get_db)):
         print(f"💥 [CRON] ERRO CRÍTICO: {e}")
         import traceback
         traceback.print_exc()
-        return {
-            "status": "error",
-            "msg": str(e),
-            "hora_brasilia": current_time if 'current_time' in locals() else "unknown"
-        }
+        return {"status": "error", "msg": str(e)}
+
 # =========================================================
 # Carrega as variáveis do .env
 # =========================================================
 load_dotenv()
-
-# Carrega as chaves VAPID
-VAPID_PUBLIC_KEY = os.getenv("VAPID_PUBLIC_KEY")
-VAPID_PRIVATE_KEY = os.getenv("VAPID_PRIVATE_KEY")
-VAPID_CLAIMS = {"sub": "mailto:secretary.crs.virtual@gmail.com"}
 
 # =========================================================
 # INICIALIZAÇÃO
