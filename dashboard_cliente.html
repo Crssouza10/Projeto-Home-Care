@@ -1949,7 +1949,7 @@
             // ==========================================
             // Se o status é 'rescheduled', mostra o botão amarelo FIXO
             if (status === 'rescheduled') {
-                return `<button disabled style="width:100%; margin-top:10px; padding:14px; background:#f59e0b; color:white; border:none; border-radius:12px; font-weight:800; font-size:1.1rem; cursor:default;">
+                return `<button onclick="handleMedAction('${med.id}', 'take')" style="width:100%; margin-top:10px; padding:14px; background:#f59e0b; color:white; border:none; border-radius:12px; font-weight:800; font-size:1.1rem; cursor:pointer;">
                     🔄 Reagendado para ${horaMed}
                 </button>`;
             }
@@ -3312,6 +3312,7 @@
                     
                     console.log('✅ Medicamento confirmado:', medId);
                     showToast('✅ Medicamento confirmado como tomado!');
+                    setTimeout(() => location.reload(), 1000);
                 } else {
                     // ❌ NÃO TOMEI
                     console.log('❌ Medicamento não tomado:', medId);
