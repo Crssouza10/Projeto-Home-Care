@@ -1,52 +1,13 @@
-# ==========================================
-# 🐍 PYTHON & VIRTUAL ENV
-# ==========================================
+# No PowerShell ou Git Bash:
+cd "C:\Users\carlo\OneDrive\Documentos\Python\Projeto Home Care"
+
+# Cria o .gitignore
+@"
 __pycache__/
-*.py[cod]
-*$py.class
-*.so
-.Python
-build/
-dist/
-*.egg-info/
-*.egg
-pip-log.txt
-venv/
-.venv/
-env/
-ENV/
-
-# ==========================================
-# 🔐 SEGURANÇA (NUNCA COMMITAR ISSO)
-# ==========================================
+*.pyc
 .env
-.env.*
-!.env.example
-*.pem
-*.key
-
-# ==========================================
-# 💻 EDITORES & OS
-# ==========================================
-.vscode/
-.idea/
-*.swp
-*.swo
-.DS_Store
-Thumbs.db
-desktop.ini
-
-# ==========================================
-# 🚀 VERCEL & BUILD
-# ==========================================
-.vercel/
-.next/
+venv/
 node_modules/
-*.log
-npm-debug.log*
-
-# ==========================================
-# 📦 PROJETO (Opcionais)
-# ==========================================
-# Se quiser ignorar scripts de uso único, descomente:
-# gerar_chaves.py
+.DS_Store
+static/audio/*.mp3
+"@ | Out-File -FilePath .gitignore -Encoding UTF8

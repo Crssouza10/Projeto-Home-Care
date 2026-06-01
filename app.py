@@ -21,27 +21,42 @@ import os
 import json
 from pywebpush import webpush, WebPushException
 from dotenv import load_dotenv
+from gtts import gTTS
+import os
+import uuid
+# =========================================================
+from fastapi.staticfiles import StaticFiles
+from fastapi import FastAPI
+import os
+from fastapi import HTTPException
+from typing import Optional, List  
 
-# Carregar variáveis de ambiente ********
-
-load_dotenv()
-
+# =========================================================
+# ✅ CRIE O APP APENAS UMA VEZ (COM TODAS AS CONFIGURAÇÕES)
+# =========================================================
 app = FastAPI(
     title="CR$ HOME CARE AI",
     description="Sistema de Cuidado Domiciliar Inteligente",
     version="1.0.0"
 )
 
-# CORS
+# ✅ CORS (depois de criar o app)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # ✅ Permite QUALQUER origem (desenvolvimento)
+    allow_origins=["*"],
     allow_credentials=True,
-    allow_methods=["*", "POST", "GET", "PUT", "DELETE"],  # ✅ Todos os métodos
+    allow_methods=["*", "POST", "GET", "PUT", "DELETE"],
     allow_headers=["*"],
 )
 
-# Configuração do Banco de Dados
+# ✅ MOUNT DOS ARQUIVOS ESTÁTICOS (DEPOIS DO APP E CORS)
+os.makedirs("static/audio", exist_ok=True)
+app.mount("/static", StaticFiles(directory="static"), name="static")
+
+# ✅ CARREGAR VARIÁVEIS DE AMBIENTE
+load_dotenv()
+
+# ✅ BANCO DE DADOS (mantenha sua configuração existente)
 DATABASE_URL = os.getenv("DATABASE_URL")
 if DATABASE_URL and DATABASE_URL.startswith("postgres://"):
     DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
@@ -181,14 +196,24 @@ class MedicationCreate(BaseModel):
     is_continuous: bool = False
     end_date: Optional[str] = None
 
+from typing import Optional, List  # ✅ Certifique-se que este import existe no topo do arquivo
+
 class MedicationResponse(BaseModel):
     id: uuid.UUID
     user_id: uuid.UUID
     name: str
     dosage: str
     time: time
-    days_of_week: list
-    is_active: bool
+    days_of_week: List[int]  # ✅ Tipo correto: lista de inteiros
+    periodo: Optional[str] = None
+    
+    # ✅ CAMPOS QUE ESTAVAM FALTANDO (CRÍTICOS PARA O FLUXO DE 7 ESTADOS):
+    taken_status: Optional[str] = "pending"  # "pending", "taken", "rescheduled", "not_taken"
+    is_active: Optional[bool] = True          # ✅ Torna opcional com valor padrão
+    reminder_count: Optional[int] = 0
+    responsible_notified: Optional[bool] = False
+    last_taken_date: Optional[date] = None
+    
     model_config = ConfigDict(from_attributes=True)
 
 class AppointmentCreate(BaseModel):
@@ -353,6 +378,40 @@ async def cliente_login(credentials: dict, db: Session = Depends(get_db)):
         }
     }
 
+# ========================================================
+# NOVA ROTA: Gerar Áudio TTS (Sem Google Cloud Key!)
+# ========================================================
+@app.post("/api/generate-audio")
+async def generate_audio(request: dict):
+    try:
+        # 1. Extrair dados do medicamento
+        medication = request.get("medication", "Seu medicamento")
+        dosage = request.get("dosage", "conforme prescrição")
+        instructions = request.get("instructions", "")
+        
+        # 2. Montar a mensagem (Texto para Fala)
+        # Ex: "Atenção! Hora de tomar Dipirona, 500mg. 1 comprimido."
+        text = f"Atenção! Lembrete de medicamento. Hora de tomar: {medication}, {dosage}. {instructions}"
+        
+        # 3. Gerar o áudio com gTTS (Google Text-to-Speech)
+        tts = gTTS(text=text, lang='pt-br', slow=False)
+        
+        # 4. Salvar arquivo
+        filename = f"audio_{uuid.uuid4().hex}.mp3"
+        # Garanta que a pasta static/audio existe
+        os.makedirs("static/audio", exist_ok=True)
+        filepath = f"static/audio/{filename}"
+        
+        tts.save(filepath)
+        
+        # 5. Retornar a URL para o Frontend tocar
+        # Supondo que sua API roda na raiz, o link será /static/audio/filename.mp3
+        audio_url = f"/static/audio/{filename}"
+        
+        return {"status": "success", "url": audio_url, "message": "Áudio gerado com sucesso!"}
+
+    except Exception as e:
+        return {"status": "error", "message": str(e)}
 # =========================================================
 # 💊 CRUD MEDICAÇÕES
 # =========================================================
@@ -409,18 +468,83 @@ async def create_medication(user_id: str, med: MedicationCreate, db: Session = D
     
     return {"status": "sucesso", "id": str(nova_med.id)}
 
+# =========================================================
+#  ROTAS DE ESTADO DO MEDICAMENTO (FLUXO DE 7 ESTADOS)
+# =========================================================
+
 @app.post("/api/medications/{med_id}/take")
-async def mark_medication_taken(med_id: str, db: Session = Depends(get_db)):
+async def mark_taken(med_id: str):
+    """Estado 3 ou 6: Marca como tomado e encerra monitoramento do dia"""
+    db = SessionLocal()
     try:
-        med_uuid = uuid.UUID(med_id)
-    except ValueError:
-        raise HTTPException(status_code=400, detail="ID inválido")
-    
-    med = db.query(Medication).get(med_uuid)
-    if not med:
-        raise HTTPException(status_code=404, detail="Medicação não encontrada")
-    
-    return {"status": "sucesso", "mensagem": "Medicação registrada como tomada"}
+        med = db.query(Medication).filter(Medication.id == med_id).first()
+        if not med: raise HTTPException(404, "Medicamento não encontrado")
+        
+        med.taken_status = "taken"
+        med.last_taken_date = datetime.now().date()
+        med.reminder_count = 0
+        med.responsible_notified = False
+        db.commit()
+        
+        return {"status": "success", "message": "✅ Registrado como tomado"}
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(500, str(e))
+    finally:
+        db.close()
+
+@app.put("/api/medications/{med_id}/reschedule")
+async def reschedule_medication(med_id: str, new_time: str):
+    """Estado 4: Reagenda e muda status para aguardar novo horário"""
+    db = SessionLocal()
+    try:
+        med = db.query(Medication).filter(Medication.id == med_id).first()
+        if not med: raise HTTPException(404, "Medicamento não encontrado")
+        
+        h, m = map(int, new_time.split(":"))
+        if not (0 <= h <= 23 and 0 <= m <= 59):
+            raise ValueError("Horário inválido")
+            
+        med.time = time(h, m)
+        med.taken_status = "rescheduled"
+        med.reminder_count = 0
+        db.commit()
+        
+        return {"status": "success", "new_time": f"{h:02d}:{m:02d}"}
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(400 if "inválido" in str(e) else 500, str(e))
+    finally:
+        db.close()
+
+@app.post("/api/medications/{med_id}/not-taken")
+async def mark_not_taken(med_id: str):
+    """Estado 7: Não tomado no reagendamento -> Aciona responsável"""
+    db = SessionLocal()
+    try:
+        med = db.query(Medication).filter(Medication.id == med_id).first()
+        if not med: raise HTTPException(404, "Medicamento não encontrado")
+        
+        med.taken_status = "not_taken"
+        med.responsible_notified = True
+        med.reminder_count += 1
+        db.commit()
+        
+        #  Dispara notificação (assíncrono para não travar UI)
+        asyncio.create_task(notify_responsible_async(med))
+        
+        return {"status": "success", "message": "❌ Não tomado. Responsável acionado."}
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(500, str(e))
+    finally:
+        db.close()
+
+async def notify_responsible_async(medication):
+    """Placeholder para integração com WhatsApp/SMS (Twilio, Z-API, etc)"""
+    print(f"📱 [MOCK] ACIONANDO RESPONSÁVEL: {medication.name} não tomou {medication.name} às {medication.time}")
+    # TODO: Integrar com API de mensagem aqui
+    # await whatsapp_api.send(f"⚠️ Alerta: {medication.name} não foi tomado.")
 
 # =========================================================
 # 📅 CRUD CONSULTAS
@@ -876,7 +1000,8 @@ async def delete_emergency_contact(contact_id: str, db: Session = Depends(get_db
 
 @app.get("/manifest.json")
 async def get_manifest():
-    return FileResponse("manifest.json", media_type="application/manifest+json")# ==========================================================
+    return FileResponse("manifest.json", media_type="application/manifest+json")
+# ==========================================================
 #  INTEGRAÇÃO WHATSAPP BUSINESS API (META)
 # ==========================================================
 import os
@@ -1025,6 +1150,211 @@ async def check_reminders(db: Session = Depends(get_db)):
 # =========================================================
 load_dotenv()
 
+
+from fastapi import HTTPException
+# =========================================================
+# Endpoint para confirmar tomada do 
+# =========================================================
+@app.post("/api/medications/{med_id}/confirm-taken")
+async def confirm_medication_taken(med_id: str, status: str = "taken"):
+    """
+    status: 'taken' ou 'not_taken'
+    """
+    db = SessionLocal()
+    try:
+        med = db.query(Medication).filter(Medication.id == med_id).first()
+        if not med:
+            raise HTTPException(status_code=404, detail="Medicamento não encontrado")
+        
+        # Atualiza status
+        med.taken_status = status
+        med.last_taken_date = datetime.now().date()
+        
+        if status == "taken":
+            med.reminder_count = 0
+        elif status == "not_taken":
+            med.reminder_count += 1
+            med.responsible_notified = True
+        
+        # Cria log
+        from sqlalchemy import text
+        log_query = text("""
+            INSERT INTO medication_logs 
+            (medication_id, client_id, scheduled_time, actual_time, status, notes)
+            VALUES (:med_id, :client_id, :sched_time, NOW(), :status, :notes)
+        """)
+        
+        db.execute(log_query, {
+            "med_id": med_id,
+            "client_id": str(med.user_id),
+            "sched_time": med.time,
+            "status": status,
+            "notes": f"Reminder #{med.reminder_count}" if status == "not_taken" else ""
+        })
+        
+        db.commit()
+        
+        # Se não tomou, notificar responsável
+        if status == "not_taken":
+            await notify_responsible(med, db)
+        
+        return {
+            "status": "success",
+            "message": f"Medicamento {status} registrado",
+            "medication": {
+                "name": med.name,
+                "taken_status": med.taken_status,
+                "reminder_count": med.reminder_count
+            }
+        }
+    finally:
+        db.close()
+
+# =========================================================
+# Endpoint para reagendar medicamento
+# =========================================================
+@app.put("/api/medications/{med_id}/reschedule")
+async def reschedule_medication(med_id: str, new_time: str):
+    """
+    Reagenda medicamento para novo horário
+    new_time: formato "HH:MM" (ex: "14:30")
+    """
+    db = SessionLocal()
+    try:
+        # Busca o medicamento
+        med = db.query(Medication).filter(Medication.id == med_id).first()
+        if not med:
+            raise HTTPException(status_code=404, detail="Medicamento não encontrado")
+        
+        # Converte "HH:MM" para time
+        try:
+            hour, minute = map(int, new_time.split(":"))
+            if not (0 <= hour <= 23 and 0 <= minute <= 59):
+                raise ValueError("Hora inválida")
+        except ValueError as e:
+            raise HTTPException(status_code=400, detail=f"Horário inválido: {e}")
+        
+        # Atualiza o horário
+        med.time = time(hour, minute)
+        
+        # Reseta status para pending (aguardando tomada)
+        med.taken_status = "pending"
+        med.reminder_count = 0
+        med.responsible_notified = False
+        
+        db.commit()
+        db.refresh(med)
+        
+        print(f"✅ Medicamento {med.name} reagendado para {new_time}")
+        
+        return {
+            "status": "success",
+            "message": f"Medicamento reagendado para {new_time}",
+            "medication": {
+                "id": str(med.id),
+                "name": med.name,
+                "new_time": f"{hour:02d}:{minute:02d}"
+            }
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        db.rollback()
+        print(f"❌ Erro ao reagendar: {e}")
+        raise HTTPException(status_code=500, detail=f"Erro interno: {str(e)}")
+    finally:
+        db.close()
+
+# Endpoint para registrar "não tomou"
+@app.post("/api/medications/{med_id}/not-taken")
+async def mark_not_taken(med_id: str):
+    """
+    Marca medicamento como não tomado e notifica responsável
+    """
+    db = SessionLocal()
+    try:
+        med = db.query(Medication).filter(Medication.id == med_id).first()
+        if not med:
+            raise HTTPException(status_code=404, detail="Medicamento não encontrado")
+        
+        # Atualiza contador
+        med.reminder_count = (med.reminder_count or 0) + 1
+        med.taken_status = "not_taken"
+        med.responsible_notified = True
+        
+        # Cria log
+        from sqlalchemy import text
+        log_query = text("""
+            INSERT INTO medication_logs 
+            (medication_id, client_id, scheduled_time, actual_time, status, responsible_notified)
+            VALUES (:med_id, :client_id, :sched_time, NOW(), 'not_taken', TRUE)
+        """)
+        
+        db.execute(log_query, {
+            "med_id": med_id,
+            "client_id": str(med.user_id),
+            "sched_time": med.time
+        })
+        
+        db.commit()
+        
+        # Notifica responsável (implementar depois)
+        # await notify_responsible(med, db)
+        
+        return {
+            "status": "success",
+            "message": "Responsável notificado",
+            "reminder_count": med.reminder_count
+        }
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        db.close()
+
+# =========================================================
+# Função para notificar responsável
+async def notify_responsible(medication, db):
+    """
+    Envia notificação ao responsável quando paciente não toma remédio
+    """
+    try:
+        # Busca responsável do cliente
+        from sqlalchemy import text
+        resp_query = text("""
+            SELECT name, phone 
+            FROM responsibles 
+            WHERE client_id = :client_id 
+            LIMIT 1
+        """)
+        
+        result = db.execute(resp_query, {"client_id": str(medication.user_id)}).first()
+        
+        if result:
+            resp_name = result[0]
+            resp_phone = result[1]
+            
+            # Mensagem para o responsável
+            message = (
+                f"⚠️ ALERTA DE MEDICAMENTO\n\n"
+                f"Paciente: {medication.name}\n"
+                f"Medicamento: {medication.name}\n"
+                f"Horário previsto: {medication.time.strftime('%H:%M')}\n\n"
+                f"O paciente NÃO tomou o medicamento no horário.\n"
+                f"Por favor, verifique!"
+            )
+            
+            # Aqui você pode integrar com WhatsApp/SMS
+            print(f"📱 Notificando responsável {resp_name}: {message}")
+            
+            # Opcional: Enviar via WhatsApp (Twilio, Z-API, etc)
+            # await send_whatsapp_message(resp_phone, message)
+            
+            return {"status": "sent", "to": resp_name}
+        
+    except Exception as e:
+        print(f"❌ Erro ao notificar responsável: {e}")
+        return None
 # =========================================================
 # INICIALIZAÇÃO
 # =========================================================

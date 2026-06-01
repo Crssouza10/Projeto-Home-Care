@@ -5,6 +5,13 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Minha Saúde - CR$ HOME CARE AI</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <!-- PWA Meta Tags -->
+    <meta name="theme-color" content="#00D4FF">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="HomeCare">
+    <link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/3135/3135715.png">
+    <link rel="manifest" href="/manifest.json">
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Inter', sans-serif; }
         
@@ -1029,23 +1036,151 @@
         button, .card-icon-btn, .tab { touch-action: manipulation; -webkit-user-select: none; }
         html { scroll-behavior: smooth; -webkit-overflow-scrolling: touch; }
         input, select, textarea { font-size: 16px !important; }        
- 
 
+        /* ===== MODO SÊNIOR (ACESSIBILIDADE) ===== */
+        .btn-senior-toggle {
+            background: linear-gradient(135deg, #6366f1, #4f46e5);
+            border: 2px solid rgba(255,255,255,0.3);
+            color: white;
+            padding: 8px 12px;
+            border-radius: 10px;
+            font-weight: 700;
+            cursor: pointer;
+            font-size: 0.85rem;
+            transition: all 0.3s;
+            white-space: nowrap;
+            flex-shrink: 0; /* ✅ Impede que o botão encolha */
+        }
+        .btn-senior-toggle:hover { transform: scale(1.05); }
+        .btn-senior-toggle.active {
+            background: linear-gradient(135deg, #f59e0b, #d97706);
+            border-color: #fbbf24;
+        }
+
+        /* Overrides quando o modo está ativo */
+        body.modo-senior {
+            font-size: 1.4rem !important;
+            line-height: 1.6 !important;
+        }
+        body.modo-senior .header-info h2 { font-size: 2rem !important; }
+        body.modo-senior .user-name { font-size: 1.2rem !important; }
+        body.modo-senior .header-stat-value { font-size: 1.6rem !important; }
+        body.modo-senior .header-stat-label { font-size: 0.9rem !important; }
+
+        body.modo-senior .med-card, body.modo-senior .appt-card, body.modo-senior .resp-card, body.modo-senior .contact-card {
+            padding: 24px !important;
+            margin-bottom: 20px !important;
+            border: 3px solid #00D4FF !important;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.5) !important;
+        }
+        body.modo-senior .med-name, body.modo-senior .resp-name, body.modo-senior .med-dosage {
+            font-size: 1.5rem !important;
+            font-weight: 800 !important;
+            color: #111827 !important;
+        }
+        body.modo-senior .med-days { font-size: 1.1rem !important; }
+
+        body.modo-senior .btn-taken, body.modo-senior .btn-later, body.modo-senior .btn-whatsapp, body.modo-senior .btn-call {
+            padding: 18px !important;
+            font-size: 1.4rem !important;
+            font-weight: 800 !important;
+            min-height: 60px !important;
+            border-radius: 16px !important;
+        }
+        body.modo-senior .card-icon-btn {
+            width: 52px !important;
+            height: 52px !important;
+            font-size: 1.5rem !important;
+            border-width: 2px !important;
+        }
+
+        body.modo-senior .tab { padding: 16px 12px !important; font-size: 1.1rem !important; min-height: 56px !important; }
+        body.modo-senior .form-input, body.modo-senior .form-select, body.modo-senior .form-textarea {
+            padding: 16px !important; font-size: 1.3rem !important;
+        }
+        body.modo-senior .btn-submit { padding: 18px !important; font-size: 1.3rem !important; }
+        body.modo-senior .calendar-day { font-size: 1.2rem !important; min-height: 44px !important; }
+        body.modo-senior .calendar-day-header { font-size: 1rem !important; }
+
+        /* ✅ CORREÇÃO MOBILE: Botão alinhado no header */
+        @media (max-width: 768px) {
+            .header-right {
+                display: flex;
+                flex-wrap: wrap;
+                gap: 8px;
+                align-items: center;
+                justify-content: flex-end;
+            }
+            
+            .btn-senior-toggle {
+                order: 0; /* Mantém na ordem natural */
+                width: auto;
+                margin: 0;
+                padding: 6px 10px;
+                font-size: 0.75rem;
+            }
+            
+            body.modo-senior .header { 
+                flex-wrap: wrap; 
+                gap: 8px; 
+            }
+            
+            body.modo-senior .med-actions { gap: 12px !important; }
+        }
+
+        
     </style>
 </head>
+
 <body>
+    <!-- BOTÃO DE TESTE DO ÁUDIO -->
+    <button onclick="testarAudio()" style="
+        padding: 15px 30px;
+        background: #4CAF50;
+        color: white;
+        border: none;
+        border-radius: 8px;
+        font-size: 16px;
+        cursor: pointer;
+        margin: 20px;
+        position: fixed;
+        top: 10px;
+        right: 10px;
+        z-index: 9999;
+    ">
+        🔊 Testar Áudio
+    </button>
+
+    <!-- RESTANTE DO SEU HTML AQUI -->
     <div class="grid-bg"></div>
     
     <!-- HEADER -->
+
     <header class="header">
         <div class="header-left">
             <div class="header-avatar">👤</div>
             <div class="header-info">
-                <h2 id="greeting">Boa tarde!</h2>
+                <h2 id="greeting">Boa noite!</h2>
                 <div class="user-name" id="user-name">Eliane Amorzinho</div>
             </div>
         </div>
         <div class="header-right">
+            <!-- ✅ BOTÃO DE INSTALAÇÃO PWA -->
+            <button id="install-btn" class="btn-install" style="display:none;" onclick="installPWA()">
+                📲 Instalar
+            </button>
+
+            <!-- ✅ BOTÃO MODO SÊNIOR -->
+            <button id="btn-modo-senior" class="btn-senior-toggle" onclick="toggleModoSenior()">👵 Modo Sênior</button>
+            
+            <div class="header-stat" onclick="showTodayCommitments()">
+                <div class="header-stat-icon">📋</div>
+                <div>
+                    <div class="header-stat-value" id="today-commitments">0</div>
+                    <div class="header-stat-label">Compromissos para hoje</div>
+                </div>
+            </div>            
+            
             <div class="header-stat" onclick="showTodayCommitments()">
                 <div class="header-stat-icon">📋</div>
                 <div>
@@ -1054,7 +1189,7 @@
                 </div>
             </div>
             <div class="header-date">
-                <div class="day" id="current-day">16</div>
+                <div class="day" id="current-day">19</div>
                 <div class="month-year" id="current-month">Maio 2026</div>
             </div>
             <button class="btn-logout" onclick="handleLogout()">Sair</button>
@@ -1126,12 +1261,23 @@
                     <label class="form-label">Dosagem *</label>
                     <input type="text" class="form-input" id="med-dosage" placeholder="Ex: 500mg - 1 comprimido" required>
                 </div>
+
                 <div class="form-row">
                     <div class="form-group">
                         <label class="form-label">Horário *</label>
-                        <input type="time" class="form-input" id="med-time" required>
+                        <div class="time-grid" style="display: flex; gap: 10px; align-items: center;">
+                            <select id="med-hour" class="form-input" style="min-width: 70px;" required>
+                                <option value="">Hora</option>
+                            </select>
+                            <span style="font-size: 1.2rem;">:</span>
+                            <select id="med-minute" class="form-input" style="min-width: 70px;" required>
+                                <option value="">Min</option>
+                            </select>
+                        </div>
+                        <input type="hidden" id="med-time"> <!-- Mantém compatibilidade -->
                     </div>
                 </div>
+
                 <div class="form-group">
                     <label class="form-label">Dias da Semana *</label>
                     <div class="days-selector" id="med-days">
@@ -2012,7 +2158,7 @@
                 updateCounters();
             }
         }
-        
+   
         // ===== MODAIS =====
         function openMedModal(med = null) {
             const modal = document.getElementById('modal-medication');
@@ -2025,6 +2171,7 @@
                 document.getElementById('med-name').value = med.name || '';
                 document.getElementById('med-dosage').value = med.dosage || '';
                 document.getElementById('med-time').value = med.time || '';
+                fillTimeGrid(med.time);
                 
                 document.querySelectorAll('#med-days .day-chip').forEach(chip => {
                     const day = parseInt(chip.dataset.day);
@@ -2043,7 +2190,7 @@
             
             modal.classList.add('active');
         }
-        
+     
         function openApptModal(appt = null) {
             const modal = document.getElementById('modal-appointment');
             const title = document.getElementById('appt-modal-title');
@@ -2127,7 +2274,8 @@
                 }
             });
         });
-        
+
+
         // ===== SAVE FUNCTIONS =====
         async function saveMedication(e) {
             e.preventDefault();
@@ -2139,16 +2287,32 @@
             const id = document.getElementById('med-id').value;
             const days = Array.from(document.querySelectorAll('#med-days .day-chip.active')).map(chip => parseInt(chip.dataset.day));
             
+            // ✅ Obtém horário dos selects (formato 24h garantido: "HH:MM")
+            let timeValue = getFormattedTime();
+            if (!timeValue) {
+                // Fallback para compatibilidade com edição (input hidden)
+                timeValue = document.getElementById('med-time')?.value;
+            }
+
+            if (!timeValue) {
+                alert('⏰ Selecione hora e minuto!');
+                btn.disabled = false;
+                btn.textContent = originalText;
+                return;
+            }
+
             const payload = {
                 user_id: userId,
                 name: document.getElementById('med-name').value,
                 dosage: document.getElementById('med-dosage').value,
-                time: document.getElementById('med-time').value,
+                time: timeValue, // Formato garantido: "18:37"
                 days_of_week: days
             };
-            
+                
             try {
-                const url = id ? `${API_URL}/api/medications/${id}` : `${API_URL}/api/cliente/${userId}/medications`;
+                const url = id 
+                    ? `${API_URL}/api/medications/${id}` 
+                    : `${API_URL}/api/cliente/${userId}/medications`;
                 const method = id ? 'PUT' : 'POST';
                 
                 const response = await fetch(url, {
@@ -2167,13 +2331,13 @@
                 loadMedications();
             } catch (error) {
                 showToast('❌ ' + error.message, true);
-                console.error(error);
+                console.error('Erro ao salvar medicamento:', error);
             } finally {
                 btn.disabled = false;
                 btn.textContent = originalText;
             }
         }
-        
+
         async function saveAppointment(e) {
             e.preventDefault();
             const btn = e.target.querySelector('.btn-submit');
@@ -2418,33 +2582,490 @@
             if (med) openMedModal(med);
         }
         
+        //<!-- ============================================ -->
+        // <!-- 🧠 SCRIPT PRINCIPAL - DASHBOARD CLIENTE -->
+        //<!-- ============================================ -->
+    
+        // ===== FUNÇÕES DE EDIÇÃO =====
         function editAppt(id) {
-            // ✅ CORREÇÃO: Buscar nos dados carregados
-            const appt = appointmentsData.find(a => a.id === id);
-            console.log('✏️ Editando consulta:', appt);
-            if (appt) {
-                openApptModal(appt);
-            } else {
-                showToast('❌ Consulta não encontrada', true);
-            }
+            const appt = appointmentsData?.find(a => a.id === id);
+            if (appt) openApptModal(appt);
+            else showToast('❌ Consulta não encontrada', true);
         }
-        
+
         function editResp(id) {
-            const resp = responsiblesData.find(r => r.id === id);
+            const resp = responsiblesData?.find(r => r.id === id);
             if (resp) openRespModal(resp);
         }
-        
+
         function editContact(id) {
-            const contact = contactsData.find(c => c.id === id);
+            const contact = contactsData?.find(c => c.id === id);
             if (contact) openContactModal(contact);
         }
-        
+
+        // ===== TOAST NOTIFICATIONS =====
         function showToast(msg, isError = false) { 
             const toast = document.getElementById('toast'); 
+            if (!toast) return;
             toast.textContent = msg; 
             toast.className = 'toast show' + (isError ? ' error' : '');
             setTimeout(() => toast.classList.remove('show'), 3000); 
         }
+
+        // ===== 🔊 ÁUDIO DE NOTIFICAÇÃO (PH4-04) =====
+        async function tocarNotificacaoMedicamento(medicationData) {
+            try {
+                console.log('🔔 Gerando áudio para:', medicationData);
+                
+                const response = await fetch('http://localhost:8000/api/generate-audio', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        medication: medicationData.nome || medicationData.medication || 'Medicamento',
+                        dosage: medicationData.dosagem || medicationData.dosage || '',
+                        instructions: medicationData.instrucoes || medicationData.instructions || ''
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (data.status === 'success' && data.url) {
+                    const audio = new Audio('http://localhost:8000' + data.url);
+                    audio.volume = 1.0; // Volume máximo para idosos
+                    await audio.play();
+                    console.log('✅ Áudio tocando:', data.url);
+                    mostrarNotificacaoVisual(medicationData);
+                }
+            } catch (error) {
+                console.error('❌ Erro ao tocar áudio:', error);
+                tocarBeep(); // Fallback
+            }
+        }
+
+        function mostrarNotificacaoVisual(med) {
+            // Notificação do sistema
+            if ('Notification' in window && Notification.permission === 'granted') {
+                new Notification('⏰ Hora do Medicamento!', {
+                    body: `${med.nome || med.medication} - ${med.dosagem || med.dosage}`,
+                    icon: '/icon-192x192.png',
+                    requireInteraction: true,
+                    tag: 'medicamento'
+                });
+            }
+            
+            // Alerta visual na página
+            const alerta = document.createElement('div');
+            alerta.style.cssText = `
+                position: fixed; top: 20px; right: 20px;
+                background: #ff6b6b; color: white; padding: 20px;
+                border-radius: 10px; box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+                z-index: 10000; font-size: 18px; animation: slideIn 0.5s ease;
+            `;
+            alerta.innerHTML = `
+                <strong>⏰ LEMBRETE DE MEDICAMENTO</strong><br>
+                ${med.nome || med.medication}<br>
+                <small>${med.dosagem || med.dosage}</small>
+            `;
+            document.body.appendChild(alerta);
+            setTimeout(() => alerta.remove(), 10000);
+        }
+
+        function tocarBeep() {
+            try {
+                const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                const oscillator = audioContext.createOscillator();
+                const gainNode = audioContext.createGain();
+                oscillator.connect(gainNode);
+                gainNode.connect(audioContext.destination);
+                oscillator.frequency.value = 800;
+                oscillator.type = 'sine';
+                gainNode.gain.value = 0.5;
+                oscillator.start();
+                setTimeout(() => oscillator.stop(), 500);
+            } catch (e) { console.warn('Beep fallback falhou:', e); }
+        }
+
+        // Botão de teste (opcional - pode remover depois)
+        function testarAudio() {
+            tocarNotificacaoMedicamento({
+                nome: 'Dipirona',
+                dosagem: '500mg - 1 comprimido',
+                instrucoes: 'Tomar com água'
+            });
+        }
+
+        // ===== PWA REGISTRATION =====
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/sw.js')
+                    .then(reg => console.log('[PWA] SW registrado:', reg.scope))
+                    .catch(err => console.log('[PWA] Erro ao registrar SW:', err));
+            });
+        }
+
+        // ===== PWA INSTALL PROMPT =====
+        let deferredPrompt = null;
+        const installBtn = document.getElementById('install-btn');
+
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            deferredPrompt = e;
+            if (installBtn) installBtn.style.display = 'inline-flex';
+        });
+
+        function installPWA() {
+            if (!deferredPrompt) {
+                showToast('❌ Instalação não disponível', true);
+                return;
+            }
+            deferredPrompt.prompt();
+            deferredPrompt.userChoice.then(choice => {
+                showToast(choice.outcome === 'accepted' ? '✅ App instalado!' : 'ℹ️ Cancelado');
+                deferredPrompt = null;
+                if (installBtn) installBtn.style.display = 'none';
+            });
+        }
+
+        window.addEventListener('appinstalled', () => {
+            if (installBtn) installBtn.style.display = 'none';
+            deferredPrompt = null;
+            showToast('🎉 PWA instalado!');
+        });
+
+        // ===== MODO SÊNIOR =====
+        function toggleModoSenior() {
+            document.body.classList.toggle('modo-senior');
+            const isSenior = document.body.classList.contains('modo-senior');
+            localStorage.setItem('modoSenior', isSenior);
+            updateSeniorButtonUI();
+        }
+
+        function updateSeniorButtonUI() {
+            const btn = document.getElementById('btn-modo-senior');
+            if (!btn) return;
+            const isSenior = localStorage.getItem('modoSenior') === 'true';
+            if (isSenior) {
+                document.body.classList.add('modo-senior');
+                btn.textContent = '🔙 Modo Normal';
+                btn.classList.add('active');
+            } else {
+                document.body.classList.remove('modo-senior');
+                btn.textContent = '👵 Modo Sênior';
+                btn.classList.remove('active');
+            }
+        }
+
+        // ===== SELETORES DE TEMPO (UNIFICADO) =====
+        function populateTimeGrid() {
+            const hourSelect = document.getElementById('med-hour');
+            const minuteSelect = document.getElementById('med-minute');
+            if (!hourSelect || !minuteSelect) return;
+            
+            hourSelect.innerHTML = '<option value="">Hora</option>';
+            minuteSelect.innerHTML = '<option value="">Min</option>';
+            
+            for (let h = 0; h < 24; h++) {
+                const val = h.toString().padStart(2, '0');
+                hourSelect.innerHTML += `<option value="${val}">${val}h</option>`;
+            }
+            for (let m = 0; m < 60; m++) {
+                const val = m.toString().padStart(2, '0');
+                minuteSelect.innerHTML += `<option value="${val}">${val}</option>`;
+            }
+        }
+
+        function getFormattedTime() {
+            const hour = document.getElementById('med-hour')?.value;
+            const minute = document.getElementById('med-minute')?.value;
+            return (hour && minute) ? `${hour}:${minute}` : null;
+        }
+
+        function fillTimeGrid(timeString) {
+            if (!timeString) return;
+            const [hour, minute] = timeString.split(':');
+            const hourSelect = document.getElementById('med-hour');
+            const minuteSelect = document.getElementById('med-minute');
+            const hiddenInput = document.getElementById('med-time');
+            
+            if (hourSelect) hourSelect.value = hour;
+            if (minuteSelect) minuteSelect.value = minute;
+            if (hiddenInput) hiddenInput.value = timeString;
+        }
+
+        // ===== PUSH NOTIFICATIONS =====
+        const publicVapidKey = "BIzgm94atwuSIR4zWILE8bzmGEd5cpUFPG1KM4FkLkdEtfz4-D7avNa9QpUzZ81v3e74kFWtF_Uyh5b_ivc2rzs";
+
+        function urlB64ToUint8Array(base64String) {
+            const padding = '='.repeat((4 - base64String.length % 4) % 4);
+            const base64 = (base64String + padding).replace(/\-/g, '+').replace(/_/g, '/');
+            const rawData = window.atob(base64);
+            const outputArray = new Uint8Array(rawData.length);
+            for (let i = 0; i < rawData.length; ++i) {
+                outputArray[i] = rawData.charCodeAt(i);
+            }
+            return outputArray;
+        }
+
+        async function registerPush() {
+            const currentUser = JSON.parse(localStorage.getItem('user'));
+            if (!currentUser?.id) return;
+            if (!('serviceWorker' in navigator) || !('PushManager' in window)) return;
+
+            try {
+                const registration = await navigator.serviceWorker.ready;
+                const permission = await Notification.requestPermission();
+                
+                if (permission === 'granted') {
+                    const subscription = await registration.pushManager.subscribe({
+                        userVisibleOnly: true,
+                        applicationServerKey: urlB64ToUint8Array(publicVapidKey)
+                    });
+                    
+                    await fetch('/api/push/subscribe', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            ...subscription.toJSON(),
+                            user_id: currentUser.id
+                        })
+                    });
+                    console.log('✅ Assinatura Push enviada!');
+                }
+            } catch (err) {
+                console.error('❌ Erro no Push:', err);
+            }
+        }
+
+        // ===== INICIALIZAÇÃO (DOMContentLoaded) =====
+        document.addEventListener('DOMContentLoaded', () => {
+            // Carregar preferência do Modo Sênior
+            updateSeniorButtonUI();
+            
+            // Popular seletores de tempo
+            populateTimeGrid();
+            
+            // Sincronizar selects com input hidden
+            const hour = document.getElementById('med-hour');
+            const minute = document.getElementById('med-minute');
+            const hidden = document.getElementById('med-time');
+            
+            if (hour && minute && hidden) {
+                [hour, minute].forEach(el => {
+                    el.addEventListener('change', () => {
+                        const time = getFormattedTime();
+                        if (time) hidden.value = time;
+                    });
+                });
+            }
+            
+            // Registrar Push (se permitido)
+            if ('Notification' in window) {
+                registerPush();
+            }
+        });
+        </script>
+        <!-- BOTÃO DE TESTE DE ÁUDIO (Remova após testar) 
+        <button onclick="testarAudio()" style="
+            position: fixed;
+            top: 10px;
+            right: 10px;
+            z-index: 9999;
+            padding: 15px 20px;
+            background: #ff6b6b;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            cursor: pointer;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+        ">
+            🔊 TESTAR ÁUDIO
+        </button>  -->
+        <!-- ======================================================================================================= -->
+    <!-- ============================================ -->
+    <!-- 🔊 VERIFICADOR AUTOMÁTICO DE HORÁRIO -->
+    <!-- ============================================ -->
+    <script>
+    // 🔊 FUNÇÃO PARA GERAR E TOCAR ÁUDIO
+    async function tocarAlertaMedicamento(nome, dosagem, instrucoes) {
+        try {
+            console.log('🔔 Gerando áudio para:', nome);
+            
+            const response = await fetch('http://localhost:8000/api/generate-audio', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    medication: nome || 'Medicamento',
+                    dosage: dosagem || '',
+                    instructions: instrucoes || ''
+                })
+            });
+            
+            const data = await response.json();
+            
+            if (data.status === 'success' && data.url) {
+                const audio = new Audio('http://localhost:8000' + data.url);
+                audio.volume = 1.0;
+                await audio.play();
+                console.log('✅ Áudio tocando:', nome);
+                
+                // Notificação visual
+                mostrarNotificacaoVisual(nome, dosagem);
+            }
+        } catch (error) {
+            console.error('❌ Erro ao tocar áudio:', error);
+        }
+    }
+
+    // 🔔 NOTIFICAÇÃO VISUAL
+    function mostrarNotificacaoVisual(nome, dosagem) {
+        const alerta = document.createElement('div');
+        alerta.style.cssText = `
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: white;
+            padding: 40px;
+            border-radius: 20px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+            z-index: 10000;
+            text-align: center;
+            animation: slideIn 0.5s ease;
+        `;
+        alerta.innerHTML = `
+            <h2 style="color: #ff6b6b; margin: 0 0 20px 0;">⏰ HORA DO MEDICAMENTO!</h2>
+            <h3 style="color: #333; margin: 0 0 10px 0;">${nome}</h3>
+            <p style="color: #666; font-size: 18px;">${dosagem}</p>
+            <button onclick="this.parentElement.remove()" style="
+                margin-top: 20px;
+                padding: 10px 30px;
+                background: #4CAF50;
+                color: white;
+                border: none;
+                border-radius: 8px;
+                font-size: 16px;
+                cursor: pointer;
+            ">✅ Tomei!</button>
+        `;
+        document.body.appendChild(alerta);
+        
+        if ('Notification' in window && Notification.permission === 'granted') {
+            new Notification('⏰ Hora do Medicamento!', {
+                body: `${nome} - ${dosagem}`,
+                icon: '/icon-192x192.png',
+                requireInteraction: true
+            });
+        }
+    }
+
+    // ⏰ VERIFICADOR DE HORÁRIO - BUSCA DADOS DA API
+    async function verificarHorarioMedicamentos() {
+        try {
+            const agora = new Date();
+            const horaAtual = agora.toLocaleTimeString('pt-BR', { 
+                hour: '2-digit', 
+                minute: '2-digit' 
+            });
+            
+            console.log('⏰ Verificando horários... Hora atual:', horaAtual);
+            
+            // Busca medicamentos da API
+            const userId = '4bb47caf-45df-4595-8d19-309369a015ee';
+            const response = await fetch(`http://localhost:8000/api/cliente/${userId}/medications`);
+            const medicamentos = await response.json();
+            
+            console.log(`📋 Total de medicamentos: ${medicamentos.length}`);
+            
+            medicamentos.forEach((med) => {
+                // Extrai hora do campo "time" (formato: "11:50:00")
+                const timeCompleto = med.time || '';
+                const [hora, minuto, segundo] = timeCompleto.split(':');
+                const horaMedicamento = `${hora}:${minuto}`;
+                
+                const nome = med.name || 'Medicamento';
+                const dosagem = med.dosage || '';
+                const isActive = med.is_active !== false;
+                
+                if (isActive) {
+                    console.log(`💊 ${nome} às ${horaMedicamento} (ativo: ${isActive})`);
+                    
+                    // Verifica se chegou a hora (HH:MM)
+                    if (horaMedicamento === horaAtual) {
+                        // Verifica se é hoje (dias da semana)
+                        const diaSemana = agora.getDay(); // 0=Domingo, 1=Segunda, etc.
+                        const diasAtivos = med.days_of_week || [];
+                        
+                        if (diasAtivos.includes(diaSemana)) {
+                            console.log(`🔔 HORA DE TOMAR: ${nome}!`);
+                            
+                            // Toca o áudio
+                            tocarAlertaMedicamento(nome, dosagem, 'Hora de tomar seu medicamento');
+                        } else {
+                            console.log(`⏸️ ${nome} não é para hoje (dia ${diaSemana})`);
+                        }
+                    }
+                }
+            });
+            
+        } catch (error) {
+            console.error('❌ Erro ao verificar medicamentos:', error);
+        }
+    }
+
+    // 🔄 INICIAR VERIFICADOR AUTOMÁTICO
+    document.addEventListener('DOMContentLoaded', function() {
+        console.log('🎵 Sistema de verificação automática iniciado');
+        
+        // Aguarda 5 segundos para página carregar
+        setTimeout(() => {
+            // Verifica imediatamente
+            verificarHorarioMedicamentos();
+            
+            // Verifica a cada 30 segundos
+            setInterval(verificarHorarioMedicamentos, 30000);
+            
+            console.log('✅ Verificador automático ativo! Verificando a cada 30s');
+        }, 5000);
+    });
+
+    // 🧪 BOTÃO DE TESTE
+    function testeAudioRapido() {
+        tocarAlertaMedicamento('Teste', 'Medicamento de teste', 'Teste de áudio');
+    }
+
+    // Cria botão flutuante
+    window.addEventListener('load', function() {
+        const btn = document.createElement('button');
+        btn.textContent = '🔊';
+        btn.title = 'Testar Áudio';
+        btn.style.cssText = `
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            z-index: 9999;
+            width: 60px;
+            height: 60px;
+            background: #ff6b6b;
+            color: white;
+            border: none;
+            border-radius: 50%;
+            font-size: 30px;
+            cursor: pointer;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+        `;
+        btn.onclick = testeAudioRapido;
+        document.body.appendChild(btn);
+    });
     </script>
-</body>
-</html>
+
+    <style>
+    @keyframes slideIn {
+        from { opacity: 0; transform: translate(-50%, -60%); }
+        to { opacity: 1; transform: translate(-50%, -50%); }
+    }
+    </style>
+        <!-- ======================================================================================================= -->
+      
+        </body>
+        </html>
