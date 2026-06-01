@@ -2,7 +2,7 @@
 from fastapi import FastAPI, HTTPException, Depends, status, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse, JSONResponse
-from sqlalchemy import create_engine, Column, String, DateTime, Boolean, Time, Date, Text, or_
+from sqlalchemy import create_engine, Column, String, DateTime, Boolean, Time, Date, Text, or_, Integer
 from sqlalchemy.orm import sessionmaker, declarative_base, Session
 from sqlalchemy.dialects.postgresql import UUID, JSONB
 from sqlalchemy import text
