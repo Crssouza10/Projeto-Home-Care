@@ -244,6 +244,8 @@ class ClienteMedicationResponse(BaseModel):
     time: str
     periodo: str
     days_of_week: list
+    taken_status: Optional[str] = "pending"
+    is_active: Optional[bool] = True
     model_config = ConfigDict(from_attributes=True)
 
 class ClienteAppointmentResponse(BaseModel):
@@ -436,7 +438,9 @@ async def get_client_medications(user_id: str, db: Session = Depends(get_db)):
             "dosage": med.dosage,
             "time": med.time.strftime('%H:%M') if med.time else None,
             "periodo": _get_periodo(med.time),
-            "days_of_week": med.days_of_week or [0,1,2,3,4,5,6]
+            "days_of_week": med.days_of_week or [0,1,2,3,4,5,6],
+            "taken_status": med.taken_status,
+            "is_active": med.is_active
         })
     
     return resultado
