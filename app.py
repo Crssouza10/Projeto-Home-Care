@@ -92,6 +92,12 @@ class Medication(Base):
     is_continuous = Column(Boolean, default=False)
     created_at = Column(DateTime, default=datetime.utcnow)
     end_date = Column(String(10), nullable=True)  # "YYYY-MM-DD" ou use Date
+    
+    # NOVAS COLUNAS DO FLUXO DE ESTADO
+    taken_status = Column(String(20), default="pending")
+    reminder_count = Column(Integer, default=0)
+    responsible_notified = Column(Boolean, default=False)
+    last_taken_date = Column(Date, nullable=True)
 
 # -------------------------------------------------------
 # MODELO PARA PUSH SUBSCRIPTIONS (TABELA NOVA)
