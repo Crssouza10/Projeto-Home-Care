@@ -503,6 +503,10 @@ async def mark_taken(med_id: str):
     finally:
         db.close()
 
+# =========================================================
+# Endpoint para reagendar medicamento
+# =========================================================
+
 @app.put("/api/medications/{med_id}/reschedule")
 async def reschedule_medication(med_id: str, new_time: str):
     """Estado 4: Reagenda e muda status para aguardar novo horário"""
@@ -1220,60 +1224,6 @@ async def confirm_medication_taken(med_id: str, status: str = "taken"):
     finally:
         db.close()
 
-# =========================================================
-# Endpoint para reagendar medicamento
-# =========================================================
-@app.put("/api/medications/{med_id}/reschedule")
-async def reschedule_medication(med_id: str, new_time: str):
-    """
-    Reagenda medicamento para novo horário
-    new_time: formato "HH:MM" (ex: "14:30")
-    """
-    db = SessionLocal()
-    try:
-        # Busca o medicamento
-        med = db.query(Medication).filter(Medication.id == med_id).first()
-        if not med:
-            raise HTTPException(status_code=404, detail="Medicamento não encontrado")
-        
-        # Converte "HH:MM" para time
-        try:
-            hour, minute = map(int, new_time.split(":"))
-            if not (0 <= hour <= 23 and 0 <= minute <= 59):
-                raise ValueError("Hora inválida")
-        except ValueError as e:
-            raise HTTPException(status_code=400, detail=f"Horário inválido: {e}")
-        
-        # Atualiza o horário
-        med.time = time(hour, minute)
-        
-        # Reseta status para pending (aguardando tomada)
-        med.taken_status = "pending"
-        med.reminder_count = 0
-        med.responsible_notified = False
-        
-        db.commit()
-        db.refresh(med)
-        
-        print(f"✅ Medicamento {med.name} reagendado para {new_time}")
-        
-        return {
-            "status": "success",
-            "message": f"Medicamento reagendado para {new_time}",
-            "medication": {
-                "id": str(med.id),
-                "name": med.name,
-                "new_time": f"{hour:02d}:{minute:02d}"
-            }
-        }
-    except HTTPException:
-        raise
-    except Exception as e:
-        db.rollback()
-        print(f"❌ Erro ao reagendar: {e}")
-        raise HTTPException(status_code=500, detail=f"Erro interno: {str(e)}")
-    finally:
-        db.close()
 
 # Endpoint para registrar "não tomou"
 @app.post("/api/medications/{med_id}/not-taken")

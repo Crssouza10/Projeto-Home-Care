@@ -3006,40 +3006,43 @@
         ">
             🔊 TESTAR ÁUDIO
         </button>  -->
+       <!-- ======================================================================================================= -->
+        <!-- 🔊 SISTEMA INTELIGENTE DE MONITORAMENTO - VERSÃO UNIFICADA E CORRIGIDA -->
         <!-- ======================================================================================================= -->
-        <!-- ============================================ -->
-        <!-- 🔊 SISTEMA INTELIGENTE DE MONITORAMENTO -->
-        <!-- ============================================ -->
         <script>
-        // 🟢 CACHE LOCAL DE ESTADO (evita flicker)
-        const medicationStateCache = {}; // { medId: { status: 'taken', updatedAt: timestamp } }
+        // ============================================
+        // 🟢 ESTADO GLOBAL E CACHE
+        // ============================================
+        const monitoringState = {
+            notifiedMeds: {},        // { medId: { firstAlert: timestamp, secondAlert: timestamp, confirmed: bool } }
+            checkInterval: null,
+            lastCheck: null
+        };
 
-        // Função para atualizar cache
+        const medicationStateCache = {}; // Cache local para evitar flicker
+
+        // Atualiza cache local
         function updateLocalState(medId, newStatus, extraData = {}) {
             medicationStateCache[medId] = {
                 status: newStatus,
                 updatedAt: Date.now(),
                 ...extraData
             };
-            console.log(`💾 Cache atualizado: ${medId} -> ${newStatus}`);
+            console.log(`💾 Cache: ${medId} -> ${newStatus}`);
         }
 
-        // Função para consultar cache (prioriza local sobre API)
+        // Consulta cache (prioriza local se < 5min)
         function getMedicationState(med) {
             const cached = medicationStateCache[med.id];
-            // Se tem cache válido (menos de 5 min), usa ele
             if (cached && (Date.now() - cached.updatedAt) < 5 * 60 * 1000) {
                 return { ...med, taken_status: cached.status, ...cached.extra };
             }
-            return med; // Sem cache, usa dado da API
-        }            
-        // Estado global de monitoramento
-        const monitoringState = {
-            notifiedMeds: {},
-            checkInterval: null
-        };
+            return med;
+        }
 
-        // 🔊 FUNÇÃO PARA GERAR E TOCAR ÁUDIO
+        // ============================================
+        // 🔊 ÁUDIO TTS - GERAÇÃO E REPRODUÇÃO
+        // ============================================
         async function tocarAlertaMedicamento(nome, dosagem, tipo = "lembrete") {
             try {
                 const mensagens = {
@@ -3067,147 +3070,121 @@
                     audio.volume = 1.0;
                     await audio.play();
                     console.log('✅ Áudio tocando:', tipo);
+                    return true;
                 }
+                return false;
             } catch (error) {
                 console.error('❌ Erro ao tocar áudio:', error);
+                return false;
             }
         }
 
-        // ⏰ VERIFICADOR INTELIGENTE - VERSÃO CORRIGIDA
+        // ============================================
+        // ⏰ VERIFICADOR PRINCIPAL - LÓGICA UNIFICADA
+        // ============================================
         async function verificarMedicamentos() {
             try {
                 const agora = new Date();
-                const horaAtual = agora.toLocaleTimeString('pt-BR', { 
-                    hour: '2-digit', 
-                    minute: '2-digit' 
-                });
+                const horaAtual = agora.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
                 const minutosAtuais = agora.getHours() * 60 + agora.getMinutes();
-                const diaSemanaAtual = agora.getDay(); // 0=Domingo, 1=Segunda...
-                
-                console.log('⏰ Verificando... Hora:', horaAtual, '| Minutos:', minutosAtuais, '| Dia:', diaSemanaAtual);
+                const diaSemanaAtual = agora.getDay();
                 
                 const userId = '4bb47caf-45df-4595-8d19-309369a015ee';
                 const response = await fetch(`http://localhost:8000/api/cliente/${userId}/medications`);
                 const medicamentos = await response.json();
                 
-                console.log('📋 Total de medicamentos:', medicamentos.length);
+                console.log(`⏰ Verificando ${medicamentos.length} medicamentos às ${horaAtual}`);
                 
                 for (const med of medicamentos) {
-                    console.log('\n💊 Processando:', med.name);
-                    console.log('   - is_active:', med.is_active);
-                    console.log('   - time:', med.time, '(tipo:', typeof med.time, ')');
-                    console.log('   - days_of_week:', med.days_of_week);
+                    // ✅ Pula apenas se INATIVO (NÃO pula se reagendado!)
+                    if (med.is_active === false) continue;
                     
-                    // Pular se não está ativo
-                    if (med.is_active === false) {
-                        console.log('   ⏸️ Inativo - pulando');
-                        continue;
-                    }
+                    // ✅ Verifica dia da semana
+                    const diasAtivos = med.days_of_week || [];
+                    if (!diasAtivos.includes(diaSemanaAtual)) continue;
                     
-                    // Extrair hora do campo time
+                    // Extrai hora do medicamento (suporta string e objeto)
                     let horaMed, minutoMed;
-                    
                     if (typeof med.time === 'string') {
-                        // Formato: "18:00:00" ou "18:00"
                         const parts = med.time.split(':');
                         horaMed = parseInt(parts[0]);
                         minutoMed = parseInt(parts[1]);
                     } else if (typeof med.time === 'object' && med.time !== null) {
-                        // Formato objeto: {hour: 18, minute: 0}
                         horaMed = med.time.hour ?? med.time.hours;
                         minutoMed = med.time.minute ?? med.time.minutes;
                     } else {
-                        console.log('   ❌ Formato de hora não suportado:', med.time);
                         continue;
                     }
                     
-                    if (horaMed === undefined || minutoMed === undefined) {
-                        console.log('   ❌ Não conseguiu extrair hora válida');
-                        continue;
-                    }
+                    if (horaMed === undefined || minutoMed === undefined) continue;
                     
                     const minutosMedicamento = horaMed * 60 + minutoMed;
                     const diffMinutos = minutosAtuais - minutosMedicamento;
+                    const status = med.taken_status || 'pending';
                     
-                    console.log('   🕐 Horário do remédio:', `${horaMed}:${minutoMed}`.padStart(5, '0'), `(${minutosMedicamento} min)`);
-                    console.log('   📊 Diferença:', diffMinutos, 'minutos');
-                    
-                    // Verificar se é hoje (dias da semana)
-                    const diasAtivos = med.days_of_week || [];
-                    if (!diasAtivos.includes(diaSemanaAtual)) {
-                        console.log('   ⏸️ Não é dia ativo (dia', diaSemanaAtual, ')');
-                        continue;
-                    }
-                    
-                    // PRIMEIRA NOTIFICAÇÃO (hora exata - diferença 0)
-                    if (diffMinutos === 0) {
-                        // Toca áudio (já existente)
-                        await tocarAlertaMedicamento(med.name, med.dosage);
+                    // 🎯 CASO 1: HORA EXATA (diff = 0) - Dispara para pending E rescheduled
+                    if (diffMinutos === 0 && status !== 'taken' && status !== 'not_taken') {
+                        console.log(`🔔 HORA EXATA: ${med.name} às ${horaAtual} (status: ${status})`);
                         
-                        // ✅ NOVO: Força atualização visual para mostrar botões
-                        refreshMedicationCards();
+                        // Toca áudio
+                        await tocarAlertaMedicamento(med.name, med.dosage, "lembrete");
+                        
+                        // Atualiza UI para mostrar botões AÇÃO
+                        const card = document.querySelector(`#card-med-${med.id} .med-actions-container`);
+                        if (card) {
+                            card.innerHTML = renderMedicationActions(med);
+                        }
+                        
+                        // Marca como notificado (primeira vez)
+                        if (!monitoringState.notifiedMeds[med.id]) {
+                            monitoringState.notifiedMeds[med.id] = { firstAlert: Date.now() };
+                        }
                     }
-                    // SEGUNDA NOTIFICAÇÃO (+5 minutos)
-                    else if (diffMinutos === 5) {
-                        console.log('   ❓ +5 MINUTOS! Acionando segunda notificação...');
-                        await segundaNotificacao(med);
+                    
+                    // 🎯 CASO 2: +5 MINUTOS - Modal de confirmação (apenas para pending)
+                    else if (diffMinutos === 5 && status === 'pending') {
+                        const medState = monitoringState.notifiedMeds[med.id];
+                        if (medState && !medState.secondAlert) {
+                            console.log(`❓ +5 MIN: ${med.name} - Acionando modal`);
+                            
+                            await tocarAlertaMedicamento(med.name, med.dosage, "pergunta");
+                            mostrarModalConfirmacao(med);
+                            
+                            monitoringState.notifiedMeds[med.id].secondAlert = Date.now();
+                        }
+                    }
+                    
+                    // 🎯 CASO 3: ATUALIZAÇÃO VISUAL CONTÍNUA (para reagendados)
+                    // Garante que o botão "Reagendado" apareça mesmo sem recarregar
+                    if (status === 'rescheduled' || status === 'taken') {
+                        const card = document.querySelector(`#card-med-${med.id} .med-actions-container`);
+                        if (card) {
+                            // Só atualiza se o conteúdo estiver diferente
+                            const expectedHTML = renderMedicationActions(med);
+                            if (card.innerHTML !== expectedHTML) {
+                                card.innerHTML = expectedHTML;
+                                console.log(`🎨 UI atualizada para ${med.name}: ${status}`);
+                            }
+                        }
                     }
                 }
+                
+                monitoringState.lastCheck = Date.now();
+                
             } catch (error) {
                 console.error('❌ Erro na verificação:', error);
             }
         }
-        // 🔔 PRIMEIRA NOTIFICAÇÃO (Hora exata)
-        async function primeiraNotificacao(med) {
-            const medId = med.id;
-            
-            // Verifica se já foi notificado hoje
-            if (monitoringState.notifiedMeds[medId]?.firstAlert) {
-                const hoje = new Date().toDateString();
-                if (monitoringState.notifiedMeds[medId].data === hoje) {
-                    console.log(`ℹ️ ${med.name} já notificado hoje`);
-                    return;
-                }
-            }
-            
-            console.log(`🔔 PRIMEIRA NOTIFICAÇÃO: ${med.name}`);
-            
-            // Toca áudio
-            await tocarAlertaMedicamento(med.name, med.dosage, "lembrete");
-            
-            // Mostra alerta
-            mostrarAlertaPrimeiraVez(med);
-            
-            // Marca como notificado
-            monitoringState.notifiedMeds[medId] = {
-                firstAlert: Date.now(),
-                data: new Date().toDateString(),
-                confirmed: false
-            };
-        }
 
-        // ❓ SEGUNDA NOTIFICAÇÃO (+5 minutos)
-        async function segundaNotificacao(med) {
-            const medId = med.id;
-            
-            // Verifica se já confirmou
-            if (monitoringState.notifiedMeds[medId]?.confirmed) {
-                console.log(`✅ ${med.name} já confirmado`);
-                return;
-            }
-            
-            console.log(`❓ SEGUNDA NOTIFICAÇÃO: ${med.name}`);
-            
-            // Toca áudio de pergunta
-            await tocarAlertaMedicamento(med.name, med.dosage, "pergunta");
-            
-            // Mostra modal de confirmação
-            mostrarModalConfirmacao(med);
-        }
-
+        // ============================================
         // 📱 MODAL DE CONFIRMAÇÃO (+5 min)
+        // ============================================
         function mostrarModalConfirmacao(med) {
+            // Remove modais anteriores
+            document.querySelectorAll('.modal-overlay').forEach(el => el.remove());
+            
             const modal = document.createElement('div');
+            modal.className = 'modal-overlay';
             modal.innerHTML = `
                 <div style="
                     position: fixed;
@@ -3227,45 +3204,31 @@
                         width: 90%;
                         text-align: center;
                         box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+                        color: #333;
                     ">
                         <h2 style="color: #ff6b6b; margin: 0 0 20px 0; font-size: 28px;">
                             ⏰ VOCÊ TOMOU O REMÉDIO?
                         </h2>
-                        <h3 style="color: #333; margin: 0 0 10px 0;">${med.name}</h3>
+                        <h3 style="color: #333; margin: 0 0 10px 0; font-weight: 600;">${med.name}</h3>
                         <p style="color: #666; font-size: 18px; margin: 0 0 30px 0;">
                             ${med.dosage}
                         </p>
                         
                         <div style="display: flex; gap: 15px; justify-content: center; flex-wrap: wrap;">
                             <button onclick="confirmarTomada('${med.id}', true)" style="
-                                flex: 1;
-                                min-width: 150px;
-                                padding: 20px;
-                                background: #4CAF50;
-                                color: white;
-                                border: none;
-                                border-radius: 12px;
-                                font-size: 20px;
-                                font-weight: bold;
-                                cursor: pointer;
-                                transition: transform 0.2s;
-                            " onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">
+                                flex: 1; min-width: 140px; padding: 18px;
+                                background: #10b981; color: white; border: none;
+                                border-radius: 12px; font-size: 18px; font-weight: 600;
+                                cursor: pointer; transition: transform 0.2s;
+                            " onmouseover="this.style.transform='scale(1.03)'" onmouseout="this.style.transform='scale(1)'">
                                 ✅ TOMEI
                             </button>
-                            
                             <button onclick="confirmarTomada('${med.id}', false)" style="
-                                flex: 1;
-                                min-width: 150px;
-                                padding: 20px;
-                                background: #f44336;
-                                color: white;
-                                border: none;
-                                border-radius: 12px;
-                                font-size: 20px;
-                                font-weight: bold;
-                                cursor: pointer;
-                                transition: transform 0.2s;
-                            " onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">
+                                flex: 1; min-width: 140px; padding: 18px;
+                                background: #ef4444; color: white; border: none;
+                                border-radius: 12px; font-size: 18px; font-weight: 600;
+                                cursor: pointer; transition: transform 0.2s;
+                            " onmouseover="this.style.transform='scale(1.03)'" onmouseout="this.style.transform='scale(1)'">
                                 ❌ NÃO TOMEI
                             </button>
                         </div>
@@ -3275,60 +3238,42 @@
             document.body.appendChild(modal);
         }
 
-        // ==================================================
-        // ✅ CONFIRMAR QUE TOMOU - VERSÃO CORRIGIDA
-        // ❌ NÃO TOMEI - Marca e mostra opção de reagendar
-        // ==================================================
+        // ============================================
+        // ✅/❌ CONFIRMAÇÃO DE TOMADA
+        // ============================================
         async function confirmarTomada(medId, tomou) {
             try {
                 console.log('Confirmando:', { medId, tomou });
                 
-                // Inicializa estado se não existir
-                if (!monitoringState.notifiedMeds[medId]) {
-                    monitoringState.notifiedMeds[medId] = {
-                        firstAlert: Date.now(),
-                        data: new Date().toDateString(),
-                        confirmed: false
-                    };
-                }
-                
                 // Fecha modal
-                document.querySelectorAll('[style*="position: fixed"]').forEach(el => el.remove());
+                document.querySelectorAll('.modal-overlay').forEach(el => el.remove());
                 
                 if (tomou) {
-                    // ✅ TOMEI
-                    monitoringState.notifiedMeds[medId].confirmed = true;
-                    monitoringState.notifiedMeds[medId].takenAt = new Date();
+                    // ✅ TOMEI - Envia para backend
+                    await fetch(`http://localhost:8000/api/medications/${medId}/take`, { 
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' }
+                    });
                     
-                    // Envia para backend
-                    try {
-                        await fetch(`http://localhost:8000/api/medications/${medId}/take`, { 
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' }
-                        });
-                    } catch (e) {
-                        console.warn('⚠️ Backend não confirmou, mas marcado localmente');
-                    }
+                    // Atualiza cache local IMEDIATAMENTE
+                    updateLocalState(medId, 'taken');
                     
-                    console.log('✅ Medicamento confirmado:', medId);
                     showToast('✅ Medicamento confirmado como tomado!');
-                    setTimeout(() => location.reload(), 1000);
+                    
+                    // Recarrega para aplicar estado visual final
+                    setTimeout(() => location.reload(), 800);
+                    
                 } else {
-                    // ❌ NÃO TOMEI
-                    console.log('❌ Medicamento não tomado:', medId);
+                    // ❌ NÃO TOMEI - Notifica responsável e mostra reagendamento
+                    await fetch(`http://localhost:8000/api/medications/${medId}/not-taken`, { 
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' }
+                    });
                     
-                    // Envia para backend - notificar responsável
-                    try {
-                        await fetch(`http://localhost:8000/api/medications/${medId}/not-taken`, { 
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' }
-                        });
-                        console.log('📱 Responsável notificado');
-                    } catch (e) {
-                        console.warn('⚠️ Erro ao notificar responsável:', e);
-                    }
+                    console.log('📱 Responsável notificado');
+                    showToast('ℹ️ Responsável notificado');
                     
-                    // Mostra modal de reagendamento
+                    // Mostra opção de reagendar
                     mostrarOpcaoReagendar(medId);
                 }
             } catch (error) {
@@ -3337,11 +3282,14 @@
             }
         }
 
-        // 🔄 OPÇÃO DE REAGENDAR - CORRIGIDA
+        // ============================================
+        // 🔄 MODAL DE REAGENDAMENTO
+        // ============================================
         function mostrarOpcaoReagendar(medId) {
-            console.log('Mostrando modal de reagendamento para:', medId);
+            document.querySelectorAll('.modal-overlay').forEach(el => el.remove());
             
             const modal = document.createElement('div');
+            modal.className = 'modal-overlay';
             modal.innerHTML = `
                 <div style="
                     position: fixed;
@@ -3361,58 +3309,38 @@
                         width: 90%;
                         text-align: center;
                         box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+                        color: #333;
                     ">
-                        <h2 style="color: #ff9800; margin: 0 0 10px 0; font-size: 28px;">
+                        <h2 style="color: #f59e0b; margin: 0 0 10px 0; font-size: 28px;">
                             ⚠️ MEDICAMENTO NÃO TOMADO
                         </h2>
-                        <p style="color: #666; font-size: 16px; margin: 0 0 10px 0;">
-                            O responsável foi notificado.
-                        </p>
-                        <p style="color: #333; font-size: 18px; margin: 0 0 30px 0; font-weight: bold;">
-                            Deseja reagendar?
+                        <p style="color: #666; font-size: 16px; margin: 0 0 20px 0;">
+                            O responsável foi notificado.<br><br>
+                            <strong>Deseja reagendar?</strong>
                         </p>
                         
-                        <label style="display: block; text-align: left; margin-bottom: 10px; color: #666;">
+                        <label style="display: block; text-align: left; margin-bottom: 8px; color: #666; font-weight: 500;">
                             Novo horário:
                         </label>
                         <input type="time" id="novo-horario" style="
-                            padding: 15px;
-                            font-size: 18px;
-                            border: 2px solid #ddd;
-                            border-radius: 8px;
-                            margin: 0 0 20px 0;
-                            width: 100%;
-                            box-sizing: border-box;
+                            padding: 14px; font-size: 18px; border: 2px solid #ddd;
+                            border-radius: 10px; margin: 0 0 25px 0; width: 100%;
+                            box-sizing: border-box; font-weight: 600;
                         ">
                         
-                        <div style="display: flex; gap: 10px; justify-content: center;">
+                        <div style="display: flex; gap: 12px; justify-content: center;">
                             <button onclick="reagendarMedicamento('${medId}')" style="
-                                flex: 1;
-                                padding: 15px;
-                                background: #2196F3;
-                                color: white;
-                                border: none;
-                                border-radius: 8px;
-                                font-size: 16px;
-                                font-weight: bold;
-                                cursor: pointer;
-                                transition: background 0.3s;
-                            " onmouseover="this.style.background='#1976D2'" onmouseout="this.style.background='#2196F3'">
+                                flex: 1; padding: 16px; background: #3b82f6; color: white;
+                                border: none; border-radius: 10px; font-size: 16px;
+                                font-weight: 600; cursor: pointer; transition: background 0.2s;
+                            " onmouseover="this.style.background='#2563eb'" onmouseout="this.style.background='#3b82f6'">
                                 🔄 REAGENDAR
                             </button>
-                            
                             <button onclick="fecharReagendamento('${medId}')" style="
-                                flex: 1;
-                                padding: 15px;
-                                background: #9e9e9e;
-                                color: white;
-                                border: none;
-                                border-radius: 8px;
-                                font-size: 16px;
-                                font-weight: bold;
-                                cursor: pointer;
-                                transition: background 0.3s;
-                            " onmouseover="this.style.background='#757575'" onmouseout="this.style.background='#9e9e9e'">
+                                flex: 1; padding: 16px; background: #9ca3af; color: white;
+                                border: none; border-radius: 10px; font-size: 16px;
+                                font-weight: 600; cursor: pointer; transition: background 0.2s;
+                            " onmouseover="this.style.background='#6b7280'" onmouseout="this.style.background='#9ca3af'">
                                 FECHAR
                             </button>
                         </div>
@@ -3420,23 +3348,20 @@
                 </div>
             `;
             document.body.appendChild(modal);
+            
+            // Foca no input de horário
+            setTimeout(() => document.getElementById('novo-horario')?.focus(), 100);
         }
 
-        // 🔄 REAGENDAR MEDICAMENTO - CORRIGIDA
+        // ============================================
+        // 🔄 EXECUTAR REAGENDAMENTO
+        // ============================================
         async function reagendarMedicamento(medId) {
             const inputHorario = document.getElementById('novo-horario');
             const novoHorario = inputHorario?.value;
             
-            console.log('Reagendando:', { medId, novoHorario });
-            
-            if (!novoHorario) {
-                alert('⚠️ Por favor, selecione um horário!');
-                return;
-            }
-            
-            // Valida formato HH:MM
-            if (!/^\d{2}:\d{2}$/.test(novoHorario)) {
-                alert('⚠️ Formato de horário inválido! Use HH:MM');
+            if (!novoHorario || !/^\d{2}:\d{2}$/.test(novoHorario)) {
+                alert('⚠️ Por favor, selecione um horário válido (HH:MM)!');
                 return;
             }
             
@@ -3446,132 +3371,157 @@
                 // Chama backend
                 const response = await fetch(
                     `http://localhost:8000/api/medications/${medId}/reschedule?new_time=${novoHorario}`,
-                    { 
-                        method: 'PUT',
-                        headers: { 'Content-Type': 'application/json' }
-                    }
+                    { method: 'PUT', headers: { 'Content-Type': 'application/json' } }
                 );
                 
                 const data = await response.json();
-                console.log('Resposta do backend:', data);
                 
                 if (response.ok && data.status === 'success') {
-                    showToast(`✅ Medicamento reagendado para ${novoHorario}!`);
+                    showToast(`✅ Reagendado para ${novoHorario}!`);
                     
-                    // Fecha modal
-                    document.querySelectorAll('[style*="position: fixed"]').forEach(el => el.remove());
+                    // Atualiza cache local
+                    updateLocalState(medId, 'rescheduled', { newTime: novoHorario });
                     
-                    // Reseta estado de monitoramento
+                    // Limpa estado de monitoramento
                     if (monitoringState.notifiedMeds[medId]) {
                         delete monitoringState.notifiedMeds[medId];
                     }
                     
-                    // Recarrega a página após 2s para mostrar novo horário
-                    setTimeout(() => {
-                        console.log('Recarregando página...');
-                        location.reload();
-                    }, 2000);
+                    // Fecha modal e recarrega
+                    document.querySelectorAll('.modal-overlay').forEach(el => el.remove());
+                    setTimeout(() => location.reload(), 1000);
                 } else {
                     throw new Error(data.detail || 'Erro ao reagendar');
                 }
             } catch (error) {
                 console.error('❌ Erro ao reagendar:', error);
-                showToast('❌ Erro ao reagendar: ' + error.message, true);
+                showToast('❌ Erro: ' + error.message, true);
             }
         }
 
-        // Fecha modal sem reagendar
         function fecharReagendamento(medId) {
-            document.querySelectorAll('[style*="position: fixed"]').forEach(el => el.remove());
-            
-            // Reseta estado
+            document.querySelectorAll('.modal-overlay').forEach(el => el.remove());
             if (monitoringState.notifiedMeds[medId]) {
-                monitoringState.notifiedMeds[medId].confirmed = true; // Para de notificar
+                monitoringState.notifiedMeds[medId].confirmed = true;
             }
-            
             showToast('ℹ️ Reagendamento cancelado');
         }
 
-        // ==================================================
-        // 🔔 PRIMEIRO ALERTA (hora exata)
-        // ==================================================
-        function mostrarAlertaPrimeiraVez(med) {
-            const alerta = document.createElement('div');
-            alerta.style.cssText = `
-                position: fixed;
-                top: 50%;
-                left: 50%;
-                transform: translate(-50%, -50%);
-                background: white;
-                padding: 40px;
-                border-radius: 20px;
-                box-shadow: 0 10px 40px rgba(0,0,0,0.5);
-                z-index: 10000;
-                text-align: center;
-                animation: slideIn 0.5s ease;
-            `;
-            alerta.innerHTML = `
-                <h2 style="color: #4CAF50; margin: 0 0 20px 0; font-size: 32px;">
-                    ⏰ HORA DO MEDICAMENTO!
-                </h2>
-                <h3 style="color: #333; margin: 0 0 10px 0; font-size: 24px;">
-                    ${med.name}
-                </h3>
-                <p style="color: #666; font-size: 20px; margin: 0 0 30px 0;">
-                    ${med.dosage}
-                </p>
-                <button onclick="this.closest('[style*=\"fixed\"]').remove()" style="
-                    padding: 15px 40px;
-                    background: #4CAF50;
-                    color: white;
-                    border: none;
-                    border-radius: 12px;
-                    font-size: 18px;
-                    cursor: pointer;
-                ">
-                    ✅ ENTENDIDO
-                </button>
-            `;
-            document.body.appendChild(alerta);
+        // ============================================
+        // 🎨 RENDERIZAÇÃO DE AÇÕES (MÁQUINA DE ESTADOS)
+        // ============================================
+        function renderMedicationActions(med) {
+            const status = med.taken_status || 'pending';
             
-            // Auto-remove após 10s
-            setTimeout(() => alerta.remove(), 10000);
+            const timeStr = med.time || '00:00:00';
+            const [h, m] = timeStr.split(':');
+            const horaMed = `${h}:${String(m).padStart(2, '0')}`;
+            
+            // 1️⃣ ESTADO: TOMADO (Final - Verde)
+            if (status === 'taken') {
+                return `<button disabled style="
+                    width: 100%; margin-top: 10px; padding: 14px;
+                    background: #10b981; color: white; border: none;
+                    border-radius: 12px; font-weight: 700; font-size: 1.05rem;
+                    cursor: default; box-shadow: 0 2px 8px rgba(16,185,129,0.3);
+                ">✅ Tomei às ${horaMed}</button>`;
+            }
+            
+            // 2️⃣ ESTADO: REAGENDADO (Final - Laranja) - NÃO CLICÁVEL
+            if (status === 'rescheduled') {
+                return `<button disabled style="
+                    width: 100%; margin-top: 10px; padding: 14px;
+                    background: #f59e0b; color: white; border: none;
+                    border-radius: 12px; font-weight: 700; font-size: 1.05rem;
+                    cursor: default; box-shadow: 0 2px 8px rgba(245,158,11,0.3);
+                ">🔄 Reagendado para ${horaMed}</button>`;
+            }
+            
+            // 3️⃣ ESTADO: NÃO TOMADO (Final - Vermelho)
+            if (status === 'not_taken') {
+                return `<div style="display:flex; align-items:center; gap:10px; margin-top:10px;">
+                    <button disabled style="
+                        padding: 12px 20px; background: #ef4444; color: white;
+                        border: none; border-radius: 10px; font-weight: 600;
+                    ">❌ Não Tomei</button>
+                    <span style="color: #ef4444; font-size: 0.9em; font-weight: 600;">
+                        📱 Responsável acionado
+                    </span>
+                </div>`;
+            }
+            
+            // 4️⃣ ESTADO: AGUARDANDO (Card limpo - sem botões)
+            // Os botões só aparecem quando o verificador detectar a hora exata
+            return '';
         }
 
-        // 🔄 INICIAR SISTEMA
-        document.addEventListener('DOMContentLoaded', function() {
-            console.log('🎵 Sistema inteligente de monitoramento iniciado');
+        // ============================================
+        // 🔄 ATUALIZAÇÃO DE CARDS (suporte a cache)
+        // ============================================
+        function refreshMedicationCards() {
+            const medsToUpdate = medicationsData.filter(med => 
+                !medicationStateCache[med.id] || 
+                (Date.now() - medicationStateCache[med.id].updatedAt) > 5 * 60 * 1000
+            );
             
-            setTimeout(() => {
-                verificarMedicamentos();
-                monitoringState.checkInterval = setInterval(verificarMedicamentos, 60000); // A cada minuto
-                console.log('✅ Monitoramento ativo! Verificando a cada minuto');
-            }, 5000);
-        });
+            medsToUpdate.forEach(med => {
+                const card = document.querySelector(`#card-med-${med.id} .med-actions-container`);
+                if (card) {
+                    card.innerHTML = renderMedicationActions(med);
+                }
+            });
+        }
 
-        // Utilitários
+        // ============================================
+        // 🎯 UTILITÁRIOS
+        // ============================================
         function showToast(msg, isError = false) {
             const toast = document.createElement('div');
             toast.textContent = msg;
             toast.style.cssText = `
-                position: fixed;
-                top: 20px;
-                right: 20px;
-                background: ${isError ? '#f44336' : '#4CAF50'};
-                color: white;
-                padding: 20px;
-                border-radius: 8px;
-                z-index: 10001;
-                animation: slideIn 0.3s ease;
+                position: fixed; top: 20px; right: 20px;
+                background: ${isError ? '#ef4444' : '#10b981'};
+                color: white; padding: 14px 24px; border-radius: 10px;
+                z-index: 10001; font-weight: 600; font-size: 15px;
+                animation: slideIn 0.3s ease; box-shadow: 0 4px 12px rgba(0,0,0,0.2);
             `;
             document.body.appendChild(toast);
-            setTimeout(() => toast.remove(), 5000);
+            setTimeout(() => {
+                toast.style.opacity = '0';
+                toast.style.transition = 'opacity 0.3s';
+                setTimeout(() => toast.remove(), 300);
+            }, 4000);
         }
+
+        // ============================================
+        // 🚀 INICIALIZAÇÃO DO SISTEMA
+        // ============================================
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('🎵 Sistema de monitoramento iniciado');
+            
+            // Primeira verificação após 3 segundos
+            setTimeout(() => {
+                verificarMedicamentos();
+                
+                // Verifica a cada 60 segundos
+                monitoringState.checkInterval = setInterval(verificarMedicamentos, 60000);
+                
+                console.log('✅ Monitoramento ativo! Verificando a cada 60s');
+            }, 3000);
+            
+            // Cleanup ao fechar página
+            window.addEventListener('beforeunload', () => {
+                if (monitoringState.checkInterval) {
+                    clearInterval(monitoringState.checkInterval);
+                }
+            });
+        });
         </script>
+
         <style>
         @keyframes slideIn {
-            from { opacity: 0; transform: translate(-50%, -60%); }
-            to { opacity: 1; transform: translate(-50%, -50%); }
+            from { opacity: 0; transform: translateX(100px); }
+            to { opacity: 1; transform: translateX(0); }
         }
         @keyframes fadeIn {
             from { opacity: 0; }
@@ -3579,130 +3529,143 @@
         }
         </style>
         <!-- ======================================================================================================= -->
-        <!-- ============================================ -->
-        <!-- 🔊 SISTEMA DE VERIFICAÇÃO AUTOMÁTICA CORRIGIDO -->
-        <!-- ============================================ -->
-        <script>
-            // 🟢 FUNÇÃO PRINCIPAL DE VERIFICAÇÃO
-            async function verificarEAtualizarMedicamentos() {
-                try {
-                    const agora = new Date();
-                    const horaAtual = agora.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
-                    const minutosAtuais = agora.getHours() * 60 + agora.getMinutes();
-                    
-                    console.log('⏰ Verificando... Hora:', horaAtual, '| Minutos:', minutosAtuais);
-                    
-                    // Busca medicamentos da API
-                    const userId = '4bb47caf-45df-4595-8d19-309369a015ee';
-                    const response = await fetch(`http://localhost:8000/api/cliente/${userId}/medications`);
-                    const medicamentos = await response.json();
-                    
-                    console.log('📋 Total de medicamentos:', medicamentos.length);
-                    
-                    // Verifica CADA medicamento
-                    for (const med of medicamentos) {
-                        console.log('\n💊 Processando:', med.name);
-                        console.log('   - Status:', med.taken_status);
-                        console.log('   - Hora do remédio:', med.time);
-                        
-                        // Pula se já foi tomado ou reagendado
-                        if (med.taken_status === 'taken' || med.taken_status === 'rescheduled') {
-                            console.log('   ⏭️ Já tem status definido, pulando...');
-                            continue;
+        
+                <!-- ============================================ -->
+                <!-- 🔊 SISTEMA DE VERIFICAÇÃO AUTOMÁTICA CORRIGIDO -->
+                <!-- ============================================ -->
+                <script>
+                    // 🟢 FUNÇÃO PRINCIPAL DE VERIFICAÇÃO
+                    async function verificarEAtualizarMedicamentos() {
+                        try {
+                            const agora = new Date();
+                            const horaAtual = agora.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+                            const minutosAtuais = agora.getHours() * 60 + agora.getMinutes();
+                            
+                            const userId = '4bb47caf-45df-4595-8d19-309369a015ee';
+                            const response = await fetch(`http://localhost:8000/api/cliente/${userId}/medications`);
+                            const medicamentos = await response.json();
+                            
+                            console.log(`⏰ Verificando ${medicamentos.length} medicamentos às ${horaAtual}`);
+                            
+                            for (const med of medicamentos) {
+                                // ✅ Pula apenas se INATIVO
+                                if (med.is_active === false) continue;
+                                
+                                // ✅ Pula apenas se TOMADO (NÃO pula se reagendado!)
+                                if (med.taken_status === 'taken') {
+                                    console.log(`✅ ${med.name} já tomado - pulando`);
+                                    continue;
+                                }
+                                
+                                // Extrai hora do medicamento
+                                const timeStr = med.time || '00:00:00';
+                                const [h, m] = timeStr.split(':');
+                                const minutosMedicamento = parseInt(h) * 60 + parseInt(m);
+                                const diffMinutos = minutosAtuais - minutosMedicamento;
+                                const status = med.taken_status || 'pending';
+                                
+                                console.log(`💊 ${med.name} | Status: ${status} | Hora: ${med.time} | Diff: ${diffMinutos}min`);
+                                
+                                // 🎯 CASO 1: HORA EXATA (diff = 0) - Dispara para pending E rescheduled
+                                if (diffMinutos === 0 && status !== 'taken' && status !== 'not_taken') {
+                                    console.log(`🔔 HORA EXATA: ${med.name} às ${horaAtual} (status: ${status})`);
+                                    
+                                    // Toca áudio
+                                    await tocarAlertaMedicamento(med.name, med.dosage, "lembrete");
+                                    
+                                    // Atualiza UI para mostrar botões AÇÃO (se for pending)
+                                    if (status === 'pending') {
+                                        const card = document.querySelector(`#card-med-${med.id} .med-actions-container`);
+                                        if (card) {
+                                            card.innerHTML = renderMedicationActions(med);
+                                        }
+                                    }
+                                    
+                                    // Marca como notificado (primeira vez)
+                                    if (!monitoringState.notifiedMeds[med.id]) {
+                                        monitoringState.notifiedMeds[med.id] = { firstAlert: Date.now() };
+                                    }
+                                }
+                                
+                                // 🎯 CASO 2: +5 MINUTOS - Modal de confirmação (para pending E rescheduled)
+                                else if (diffMinutos === 5 && status !== 'taken' && status !== 'not_taken') {
+                                    const medState = monitoringState.notifiedMeds[med.id];
+                                    if (!medState?.secondAlert) {
+                                        console.log(`❓ +5 MIN: ${med.name} - Acionando modal`);
+                                        
+                                        await tocarAlertaMedicamento(med.name, med.dosage, "pergunta");
+                                        mostrarModalConfirmacao(med);
+                                        
+                                        if (!monitoringState.notifiedMeds[med.id]) {
+                                            monitoringState.notifiedMeds[med.id] = {};
+                                        }
+                                        monitoringState.notifiedMeds[med.id].secondAlert = Date.now();
+                                    }
+                                }
+                                
+                                // 🎯 CASO 3: ATUALIZAÇÃO VISUAL CONTÍNUA (para reagendados/tomados)
+                                if (status === 'rescheduled' || status === 'taken') {
+                                    const card = document.querySelector(`#card-med-${med.id} .med-actions-container`);
+                                    if (card) {
+                                        const expectedHTML = renderMedicationActions(med);
+                                        if (card.innerHTML !== expectedHTML) {
+                                            card.innerHTML = expectedHTML;
+                                            console.log(`🎨 UI atualizada para ${med.name}: ${status}`);
+                                        }
+                                    }
+                                }
+                            }
+                            
+                        } catch (error) {
+                            console.error('❌ Erro na verificação:', error);
                         }
-                        
-                        // Extrai hora do medicamento
-                        const timeStr = med.time || '00:00:00';
-                        const [h, m] = timeStr.split(':');
-                        const minutosMedicamento = parseInt(h) * 60 + parseInt(m);
-                        const diffMinutos = minutosAtuais - minutosMedicamento;
-                        
-                        console.log('   - Minutos medicamento:', minutosMedicamento);
-                        console.log('   - Diferença:', diffMinutos, 'minutos');
-                        
-                        // ✅ DISPARA QUANDO BATE A HORA EXATA (diferença = 0)
-                        if (diffMinutos === 0) {
-                            console.log('   🔔 HORA EXATA! Disparando alerta...');
+                    }
+                    // 🎵 FUNÇÃO DE ÁUDIO
+                    async function tocarAlertaMedicamento(nome, dosagem) {
+                        try {
+                            console.log('🔔 Gerando áudio para:', nome);
                             
-                            // Atualiza o card para mostrar botões
-                            const card = document.querySelector(`#card-med-${med.id} .med-actions-container`);
-                            if (card) {
-                                card.innerHTML = renderMedicationActions(med);
-                                console.log('   ✅ Botões atualizados no card!');
+                            const response = await fetch('http://localhost:8000/api/generate-audio', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({
+                                    medication: nome || 'Medicamento',
+                                    dosage: dosagem || '',
+                                    instructions: `Atenção! Hora de tomar ${nome}. ${dosagem}.`
+                                })
+                            });
+                            
+                            const data = await response.json();
+                            
+                            if (data.status === 'success' && data.url) {
+                                const audio = new Audio(data.url);
+                                audio.volume = 1.0;
+                                await audio.play();
+                                console.log('✅ Áudio tocando!');
                             }
-                            
-                            // Toca áudio
-                            if (typeof tocarAlertaMedicamento === 'function') {
-                                await tocarAlertaMedicamento(med.name, med.dosage);
-                            }
-                            
-                            // Mostra notificação visual
-                            showToast(`⏰ Hora de tomar: ${med.name}!`);
-                        }
-                        // ⚠️ ALERTA DE ATRASO (passou 1-5 minutos)
-                        else if (diffMinutos > 0 && diffMinutos <= 5) {
-                            console.log('   ⚠️ ATRASO!', diffMinutos, 'minutos. Tentando mostrar botões...');
-                            
-                            const card = document.querySelector(`#card-med-${med.id} .med-actions-container`);
-                            if (card) {
-                                // Força atualização mesmo com atraso
-                                const medComHora = {...med, time: med.time};
-                                card.innerHTML = renderMedicationActions(medComHora);
-                            }
+                        } catch (error) {
+                            console.error('❌ Erro ao tocar áudio:', error);
                         }
                     }
                     
-                } catch (error) {
-                    console.error('❌ Erro na verificação:', error);
-                }
-            }
-            
-            // 🎵 FUNÇÃO DE ÁUDIO
-            async function tocarAlertaMedicamento(nome, dosagem) {
-                try {
-                    console.log('🔔 Gerando áudio para:', nome);
-                    
-                    const response = await fetch('http://localhost:8000/api/generate-audio', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({
-                            medication: nome || 'Medicamento',
-                            dosage: dosagem || '',
-                            instructions: `Atenção! Hora de tomar ${nome}. ${dosagem}.`
-                        })
+                    // 🟢 INICIALIZAÇÃO
+                    document.addEventListener('DOMContentLoaded', function() {
+                        console.log('🚀 Sistema de verificação iniciado');
+                        
+                        // Verifica IMEDIATAMENTE ao carregar
+                        setTimeout(() => {
+                            console.log('📡 Primeira verificação...');
+                            verificarEAtualizarMedicamentos();
+                        }, 2000);
+                        
+                        // Verifica a cada 30 segundos
+                        setInterval(() => {
+                            console.log('🔄 Verificação periódica...');
+                            verificarEAtualizarMedicamentos();
+                        }, 30000);
+                        
+                        console.log('✅ Verificador ativo! Verificando a cada 30s');
                     });
-                    
-                    const data = await response.json();
-                    
-                    if (data.status === 'success' && data.url) {
-                        const audio = new Audio(data.url);
-                        audio.volume = 1.0;
-                        await audio.play();
-                        console.log('✅ Áudio tocando!');
-                    }
-                } catch (error) {
-                    console.error('❌ Erro ao tocar áudio:', error);
-                }
-            }
-            
-            // 🟢 INICIALIZAÇÃO
-            document.addEventListener('DOMContentLoaded', function() {
-                console.log('🚀 Sistema de verificação iniciado');
-                
-                // Verifica IMEDIATAMENTE ao carregar
-                setTimeout(() => {
-                    console.log('📡 Primeira verificação...');
-                    verificarEAtualizarMedicamentos();
-                }, 2000);
-                
-                // Verifica a cada 30 segundos
-                setInterval(() => {
-                    console.log('🔄 Verificação periódica...');
-                    verificarEAtualizarMedicamentos();
-                }, 30000);
-                
-                console.log('✅ Verificador ativo! Verificando a cada 30s');
-            });
-        </script> 
+                </script> 
         </body>
         </html>
