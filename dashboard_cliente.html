@@ -3669,6 +3669,15 @@
                         
                         console.log('✅ Verificador ativo! Verificando a cada 30s');
                     });
+                        // Verifica atualizações do Service Worker
+                    if ('serviceWorker' in navigator) {
+                    navigator.serviceWorker.addEventListener('controllerchange', () => {
+                        // Quando o SW muda, recarrega a página automaticamente
+                        console.log('[PWA] Nova versão detectada! Recarregando...');
+                        showToast('🔄 Nova versão disponível! Recarregando...');
+                        window.location.reload();
+                    });
+                    }                
                 </script> 
         </body>
         </html>
