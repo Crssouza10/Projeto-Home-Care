@@ -1,16 +1,34 @@
 {
-  
+  "version": 2,
   "builds": [
-    { "src": "app.py", "use": "@vercel/python" }
+    {
+      "src": "app.py",
+      "use": "@vercel/python",
+      "config": {
+        "maxLambdaSize": "50mb",
+        "runtime": "python3.11"
+      }
+    },
+    {
+      "src": "static/**",
+      "use": "@vercel/static"
+    }
   ],
   "routes": [
-    { "src": "/(.*)", "dest": "app.py" }
-  ],
-  "crons": [
     {
-      "path": "/api/check-reminders",
-      "schedule": "*/1 * * * *"
+      "src": "/static/(.*)",
+      "dest": "/static/$1"
+    },
+    {
+      "src": "/api/(.*)",
+      "dest": "/app.py"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "/app.py"
     }
-  ]  
-
+  ],
+  "env": {
+    "PYTHONPATH": "."
+  }
 }

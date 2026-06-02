@@ -1415,7 +1415,10 @@
     
     <script>
         // ✅ Usa o próprio host da página (funciona em PC e celular)
-        const API_URL = window.location.origin;
+        // ✅ PARA (funciona em localhost E Vercel):
+        const API_URL = window.location.hostname === 'localhost' 
+            ? 'http://localhost:8000' 
+            : window.location.origin;
         let userId = null;
         let currentUser = null;
         let currentScreen = 'medications';

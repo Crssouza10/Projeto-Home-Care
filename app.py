@@ -18,11 +18,11 @@ from fastapi.middleware.cors import CORSMiddleware
 import traceback
 from fastapi.responses import FileResponse, JSONResponse
 import os
+import sys
 import json
 from pywebpush import webpush, WebPushException
 from dotenv import load_dotenv
 from gtts import gTTS
-import os
 import uuid
 # =========================================================
 from fastapi.staticfiles import StaticFiles
@@ -30,6 +30,15 @@ from fastapi import FastAPI
 import os
 from fastapi import HTTPException
 from typing import Optional, List  
+
+# ===== CONFIGURAÇÃO PARA VERCEL =====
+# Detecta se está rodando na Vercel
+IS_VERCEL = os.getenv('VERCEL', '0') == '1'
+
+# Ajusta o path para imports funcionarem na Vercel
+if IS_VERCEL:
+    sys.path.append(os.getcwd())
+
 
 # =========================================================
 # ✅ CRIE O APP APENAS UMA VEZ (COM TODAS AS CONFIGURAÇÕES)
@@ -1081,7 +1090,7 @@ async def dummy_subscribe():
     return {"status": "ok", "msg": "Web Push desativado. Usando WhatsApp."}
 
 # 2. Endpoint para TESTE RÁPIDO DO WHATSAPP (Dispara manualmente)
-@app.post("/api/teste-push")
+@app.api_route("/api/teste-push", methods=["GET", "POST"])
 async def test_whatsapp(db: Session = Depends(get_db)):
     # Pega o primeiro usuário apenas para teste
     user = db.query(User).filter(User.phone.isnot(None)).first()
@@ -1319,10 +1328,10 @@ async def notify_responsible(medication, db):
 # INICIALIZAÇÃO
 # =========================================================
 
+# ===== INICIALIZAÇÃO =====
 if __name__ == "__main__":
     import uvicorn
-    print("🚀 CR$ HOME CARE AI - Iniciando...")
-    print(f"📊 Banco de dados: {os.getenv('DB_NAME', 'homecare_dev')}")
-    print(f"🔗 URL: http://localhost:8000")
-    print(f"📚 API Docs: http://localhost:8000/docs")
-    uvicorn.run("app:app", host="0.0.0.0", port=8000, reload=True)
+    # Só roda localmente, não na Vercel
+    if not IS_VERCEL:
+        print(" 🚀  CR$ HOME CARE AI - Iniciando...")
+        uvicorn.run("app:app", host="0.0.0.0", port=8000, reload=True)
