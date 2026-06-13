@@ -1,79 +1,66 @@
-# ===== versão 1.03 - 2024-06-25 17:30 ================================
+# ===== versão 1.04 - 2026-06-02 ================================
 from fastapi import FastAPI, HTTPException, Depends, status, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import HTMLResponse, JSONResponse
-from sqlalchemy import create_engine, Column, String, DateTime, Boolean, Time, Date, Text, or_, Integer
+from fastapi.responses import HTMLResponse, JSONResponse, FileResponse
+from fastapi.staticfiles import StaticFiles  # ✅ IMPORTAÇÃO CRÍTICA!
+from sqlalchemy import create_engine, Column, String, DateTime, Boolean, Time, Date, Text, or_, Integer, text
 from sqlalchemy.orm import sessionmaker, declarative_base, Session
 from sqlalchemy.dialects.postgresql import UUID, JSONB
-from sqlalchemy import text
 from pydantic import BaseModel, EmailStr, ConfigDict
 from typing import Optional, List
 from datetime import datetime, time, date, timedelta, timezone
 from dotenv import load_dotenv
-import os
-import uuid
-from pathlib import Path
+from pywebpush import webpush, WebPushException
+from gtts import gTTS
 from hashlib import sha256
-from fastapi.middleware.cors import CORSMiddleware
-import traceback
-from fastapi.responses import FileResponse, JSONResponse
+from pathlib import Path
 import os
 import sys
-import json
-from pywebpush import webpush, WebPushException
-from dotenv import load_dotenv
-from gtts import gTTS
 import uuid
-# =========================================================
-from fastapi.staticfiles import StaticFiles
-from fastapi import FastAPI
-import os
-from fastapi import HTTPException
-from typing import Optional, List  
+import json
+import re
+import asyncio
+import traceback
+import requests  # Para WhatsApp API
 
 # ===== CONFIGURAÇÃO PARA VERCEL =====
-# Detecta se está rodando na Vercel
 IS_VERCEL = os.getenv('VERCEL', '0') == '1'
-
-# Ajusta o path para imports funcionarem na Vercel
 if IS_VERCEL:
     sys.path.append(os.getcwd())
 
+# Carrega variáveis de ambiente ANTES de usar
+load_dotenv()
 
-# =========================================================
-# ✅ CRIE O APP APENAS UMA VEZ (COM TODAS AS CONFIGURAÇÕES)
-# =========================================================
+# ===== CRIAÇÃO DO APP (APENAS UMA VEZ) =====
 app = FastAPI(
     title="CR$ HOME CARE AI",
     description="Sistema de Cuidado Domiciliar Inteligente",
-    version="1.0.0"
+    version="1.0.4"
 )
 
-# ✅ CORS (depois de criar o app)
+# ===== CORS =====
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
     allow_credentials=True,
-    allow_methods=["*", "POST", "GET", "PUT", "DELETE"],
+    allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# ✅ MOUNT DOS ARQUIVOS ESTÁTICOS (DEPOIS DO APP E CORS)
+# ===== ARQUIVOS ESTÁTICOS =====
 os.makedirs("static/audio", exist_ok=True)
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
-# ✅ CARREGAR VARIÁVEIS DE AMBIENTE
-load_dotenv()
-
-# ✅ BANCO DE DADOS (mantenha sua configuração existente)
+# ===== BANCO DE DADOS =====
 DATABASE_URL = os.getenv("DATABASE_URL")
 if DATABASE_URL and DATABASE_URL.startswith("postgres://"):
     DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
 
+print(f"🔍 DATABASE_URL: {'✅ Configurada' if DATABASE_URL else '❌ NÃO CONFIGURADA'}")
+
 engine = create_engine(DATABASE_URL)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
-
 # ==================== MODELOS (TABELAS) ====================
 
 class User(Base):
@@ -209,6 +196,7 @@ class MedicationCreate(BaseModel):
     time: str
     days_of_week: List[int] = [0,1,2,3,4,5,6]
     is_continuous: bool = False
+    duration_days: Optional[int] = None
     end_date: Optional[str] = None
 
 from typing import Optional, List  # ✅ Certifique-se que este import existe no topo do arquivo
@@ -261,6 +249,7 @@ class ClienteMedicationResponse(BaseModel):
     days_of_week: list
     taken_status: Optional[str] = "pending"
     is_active: Optional[bool] = True
+    last_taken_date: Optional[date] = None
     model_config = ConfigDict(from_attributes=True)
 
 class ClienteAppointmentResponse(BaseModel):
@@ -360,6 +349,93 @@ async def health_check():
         return {"status": "error", "database": "disconnected", "error": str(e)}
 
 # =========================================================
+# 📅 HISTÓRICO DE MEDICAMENTOS POR DATA
+# =========================================================
+@app.get("/api/cliente/{user_id}/medications/history")
+async def get_medication_history(user_id: str, date: str, db: Session = Depends(get_db)):
+    """
+    Retorna medicamentos agendados para uma data específica
+    """
+    try:
+        user_uuid = uuid.UUID(user_id)
+        target_date = datetime.strptime(date, "%Y-%m-%d").date()
+        
+        # Converte para dia da semana (0=Dom, 6=Sáb)
+        day_of_week = target_date.weekday()
+        if day_of_week == 6:  # Python: 0=Seg, 6=Dom
+            day_of_week = 0
+        else:
+            day_of_week += 1
+        
+        print(f"🔍 Buscando histórico para {date} (dia da semana: {day_of_week})")
+        
+        # Fim do dia selecionado (para incluir todos os registros daquela data)
+        target_date_end = datetime.combine(target_date, time(23, 59, 59))
+        target_date_str = target_date.strftime("%Y-%m-%d")
+        
+        # Busca medicamentos ativos que incluem este dia e foram criados antes ou no próprio dia, e que não estejam vencidos
+        medications = db.query(Medication).filter(
+            Medication.user_id == user_uuid,
+            Medication.is_active == True,
+            Medication.created_at <= target_date_end,
+            or_(
+                Medication.end_date == None,
+                Medication.end_date >= target_date_str
+            ),
+            or_(
+                Medication.days_of_week.contains([day_of_week]),
+                Medication.days_of_week == []
+            )
+        ).all()
+        
+        print(f"✅ {len(medications)} medicamentos encontrados")
+        
+        # ✅ CORREÇÃO: Usa scheduled_datetime e confirmed_at (nomes corretos!)
+        logs_query = text("""
+            SELECT medication_id, status, confirmed_at
+            FROM medication_logs
+            WHERE user_id = :user_id
+            AND CAST(scheduled_datetime AS DATE) = :target_date
+        """)
+        logs_result = db.execute(logs_query, {
+            "user_id": user_uuid,
+            "target_date": target_date
+        })
+        
+        logs_dict = {}
+        for log in logs_result:
+            logs_dict[str(log[0])] = {
+                "status": log[1],
+                "actual_time": log[2].strftime("%H:%M") if log[2] else None
+            }
+        
+        resultado = []
+        for med in medications:
+            med_id = str(med.id)
+            log = logs_dict.get(med_id, {})
+            
+            resultado.append({
+                "id": med_id,
+                "name": med.name,
+                "dosage": med.dosage,
+                "time": med.time.strftime("%H:%M") if med.time else None,
+                "days_of_week": med.days_of_week or [],
+                "taken_status": log.get("status", "pending"),
+                "taken_time": log.get("actual_time"),
+                "created_at": med.created_at.strftime("%Y-%m-%d") if med.created_at else None,
+                "end_date": med.end_date,
+                "is_history": True
+            })
+        
+        return resultado
+        
+    except Exception as e:
+        print(f"❌ Erro ao carregar histórico: {e}")
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=str(e))
+    
+# =========================================================
 # 🔐 AUTH - LOGIN DO CLIENTE
 # =========================================================
 @app.post("/api/cliente/login")
@@ -440,22 +516,37 @@ async def get_client_medications(user_id: str, db: Session = Depends(get_db)):
     except ValueError:
         raise HTTPException(status_code=400, detail="ID de usuário inválido")
     
+    today_str = datetime.now().strftime("%Y-%m-%d")
     medications = db.query(Medication).filter(
         Medication.user_id == user_uuid,
-        Medication.is_active == True
+        Medication.is_active == True,
+        or_(
+            Medication.end_date == None,
+            Medication.end_date >= today_str
+        )
     ).all()
     
     resultado = []
+    today_date = datetime.now().date()
+    
     for med in medications:
+        status = med.taken_status
+        # Se foi tomado em um dia anterior, resetamos para pending na resposta
+        if status == 'taken' and med.last_taken_date != today_date:
+            status = 'pending'
+            
         resultado.append({
             "id": str(med.id),
             "name": med.name,
             "dosage": med.dosage,
             "time": med.time.strftime('%H:%M') if med.time else None,
             "periodo": _get_periodo(med.time),
-            "days_of_week": med.days_of_week or [0,1,2,3,4,5,6],
-            "taken_status": med.taken_status,
-            "is_active": med.is_active
+            "days_of_week": med.days_of_week if med.days_of_week is not None else [],
+            "taken_status": status,
+            "is_active": med.is_active,
+            "created_at": med.created_at.strftime("%Y-%m-%d") if med.created_at else None,
+            "end_date": med.end_date,
+            "last_taken_date": med.last_taken_date.isoformat() if med.last_taken_date else None
         })
     
     return resultado
@@ -469,7 +560,9 @@ async def create_medication(user_id: str, med: MedicationCreate, db: Session = D
     
     end_date = None
     if hasattr(med, 'is_continuous') and med.is_continuous:
-        end_date = date.today() + timedelta(days=365)
+        end_date = None  # Contínuo não tem data de fim, ou você pode colocar (date.today() + timedelta(days=3650)).strftime("%Y-%m-%d")
+    elif hasattr(med, 'duration_days') and med.duration_days is not None and med.duration_days > 0:
+        end_date = (date.today() + timedelta(days=med.duration_days - 1)).strftime("%Y-%m-%d")
     
     nova_med = Medication(
         user_id=user_uuid,
@@ -487,6 +580,7 @@ async def create_medication(user_id: str, med: MedicationCreate, db: Session = D
     
     return {"status": "sucesso", "id": str(nova_med.id)}
 
+
 # =========================================================
 #  ROTAS DE ESTADO DO MEDICAMENTO (FLUXO DE 7 ESTADOS)
 # =========================================================
@@ -503,6 +597,20 @@ async def mark_taken(med_id: str):
         med.last_taken_date = datetime.now().date()
         med.reminder_count = 0
         med.responsible_notified = False
+        
+        if med.time:
+            sched_dt = datetime.combine(datetime.now().date(), med.time)
+        else:
+            sched_dt = datetime.now()
+            
+        new_log = MedicationLog(
+            user_id=med.user_id,
+            medication_id=med.id,
+            scheduled_datetime=sched_dt,
+            status="taken",
+            confirmed_at=datetime.now()
+        )
+        db.add(new_log)
         db.commit()
         
         return {"status": "success", "message": "✅ Registrado como tomado"}
@@ -551,6 +659,21 @@ async def mark_not_taken(med_id: str):
         med.taken_status = "not_taken"
         med.responsible_notified = True
         med.reminder_count += 1
+        
+        if med.time:
+            sched_dt = datetime.combine(datetime.now().date(), med.time)
+        else:
+            sched_dt = datetime.now()
+            
+        new_log = MedicationLog(
+            user_id=med.user_id,
+            medication_id=med.id,
+            scheduled_datetime=sched_dt,
+            status="not_taken",
+            confirmed_at=datetime.now(),
+            responsible_notified_at=datetime.now()
+        )
+        db.add(new_log)
         db.commit()
         
         #  Dispara notificação (assíncrono para não travar UI)
@@ -879,6 +1002,22 @@ async def update_medication(
     medication.time = med.time
     medication.days_of_week = med.days_of_week
     
+    if hasattr(med, 'is_continuous') and med.is_continuous:
+        medication.end_date = None
+        medication.is_continuous = True
+    elif hasattr(med, 'duration_days') and med.duration_days is not None and med.duration_days > 0:
+        medication.end_date = (date.today() + timedelta(days=med.duration_days - 1)).strftime("%Y-%m-%d")
+        medication.is_continuous = False
+    else:
+        medication.end_date = None
+        medication.is_continuous = False
+    
+    # Ao editar, resetar o status para garantir que o alarme toque caso o horário mude
+    medication.taken_status = "pending"
+    medication.last_taken_date = None
+    medication.reminder_count = 0
+    medication.responsible_notified = False
+    
     db.commit()
     db.refresh(medication)
     
@@ -1178,109 +1317,6 @@ from fastapi import HTTPException
 # =========================================================
 # Endpoint para confirmar tomada do 
 # =========================================================
-@app.post("/api/medications/{med_id}/confirm-taken")
-async def confirm_medication_taken(med_id: str, status: str = "taken"):
-    """
-    status: 'taken' ou 'not_taken'
-    """
-    db = SessionLocal()
-    try:
-        med = db.query(Medication).filter(Medication.id == med_id).first()
-        if not med:
-            raise HTTPException(status_code=404, detail="Medicamento não encontrado")
-        
-        # Atualiza status
-        med.taken_status = status
-        med.last_taken_date = datetime.now().date()
-        
-        if status == "taken":
-            med.reminder_count = 0
-        elif status == "not_taken":
-            med.reminder_count += 1
-            med.responsible_notified = True
-        
-        # Cria log
-        from sqlalchemy import text
-        log_query = text("""
-            INSERT INTO medication_logs 
-            (medication_id, client_id, scheduled_time, actual_time, status, notes)
-            VALUES (:med_id, :client_id, :sched_time, NOW(), :status, :notes)
-        """)
-        
-        db.execute(log_query, {
-            "med_id": med_id,
-            "client_id": str(med.user_id),
-            "sched_time": med.time,
-            "status": status,
-            "notes": f"Reminder #{med.reminder_count}" if status == "not_taken" else ""
-        })
-        
-        db.commit()
-        
-        # Se não tomou, notificar responsável
-        if status == "not_taken":
-            await notify_responsible(med, db)
-        
-        return {
-            "status": "success",
-            "message": f"Medicamento {status} registrado",
-            "medication": {
-                "name": med.name,
-                "taken_status": med.taken_status,
-                "reminder_count": med.reminder_count
-            }
-        }
-    finally:
-        db.close()
-
-
-# Endpoint para registrar "não tomou"
-@app.post("/api/medications/{med_id}/not-taken")
-async def mark_not_taken(med_id: str):
-    """
-    Marca medicamento como não tomado e notifica responsável
-    """
-    db = SessionLocal()
-    try:
-        med = db.query(Medication).filter(Medication.id == med_id).first()
-        if not med:
-            raise HTTPException(status_code=404, detail="Medicamento não encontrado")
-        
-        # Atualiza contador
-        med.reminder_count = (med.reminder_count or 0) + 1
-        med.taken_status = "not_taken"
-        med.responsible_notified = True
-        
-        # Cria log
-        from sqlalchemy import text
-        log_query = text("""
-            INSERT INTO medication_logs 
-            (medication_id, client_id, scheduled_time, actual_time, status, responsible_notified)
-            VALUES (:med_id, :client_id, :sched_time, NOW(), 'not_taken', TRUE)
-        """)
-        
-        db.execute(log_query, {
-            "med_id": med_id,
-            "client_id": str(med.user_id),
-            "sched_time": med.time
-        })
-        
-        db.commit()
-        
-        # Notifica responsável (implementar depois)
-        # await notify_responsible(med, db)
-        
-        return {
-            "status": "success",
-            "message": "Responsável notificado",
-            "reminder_count": med.reminder_count
-        }
-    except Exception as e:
-        db.rollback()
-        raise HTTPException(status_code=500, detail=str(e))
-    finally:
-        db.close()
-
 # =========================================================
 # Função para notificar responsável
 async def notify_responsible(medication, db):

@@ -531,37 +531,30 @@
             font-weight: 600;
         }
         
-        /* ============================================ */
-        /* 📅 CALENDÁRIO - ESTILOS COMPLETOS */
-        /* ============================================ */
-
-        /* Container do calendário */
+        /* CALENDÁRIO */
         .calendar-container {
             background: rgba(17, 27, 51, 0.6);
             border-radius: 14px;
             padding: 20px;
-            border: 1px solid rgba(0, 212, 255, 0.15);
         }
-
-        /* Header do calendário */
+        
         .calendar-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
             margin-bottom: 20px;
         }
-
+        
         .calendar-title {
             font-weight: 700;
             font-size: 1rem;
-            color: #FFFFFF;
         }
-
+        
         .calendar-nav {
             display: flex;
             gap: 8px;
         }
-
+        
         .calendar-btn {
             width: 30px;
             height: 30px;
@@ -574,36 +567,26 @@
             cursor: pointer;
             color: #00D4FF;
             transition: all 0.2s;
-            font-size: 1.2rem;
-            line-height: 1;
         }
-
+        
         .calendar-btn:hover {
             background: rgba(0, 212, 255, 0.2);
-            transform: scale(1.05);
         }
-
-        .calendar-btn:active {
-            transform: scale(0.95);
-        }
-
-        /* Grid do calendário */
+        
         .calendar-grid {
             display: grid;
             grid-template-columns: repeat(7, 1fr);
             gap: 4px;
             text-align: center;
         }
-
+        
         .calendar-day-header {
             font-size: 0.7rem;
             color: #8A9BB5;
             padding: 8px 0;
             font-weight: 600;
-            text-transform: uppercase;
         }
-
-        /* Dias do calendário */
+        
         .calendar-day {
             aspect-ratio: 1;
             display: flex;
@@ -615,204 +598,57 @@
             font-weight: 600;
             position: relative;
             transition: all 0.2s;
-            color: #FFFFFF;
-            background: rgba(0, 212, 255, 0.05);
         }
-
+        
         .calendar-day:hover {
             background: rgba(0, 212, 255, 0.2);
             transform: scale(1.1);
         }
-
-        /* Dia atual (HOJE) */
+        
         .calendar-day.today {
             background: linear-gradient(135deg, #0052FF, #00D4FF);
             font-weight: 800;
             box-shadow: 0 2px 8px rgba(0, 212, 255, 0.4);
-            color: #FFFFFF;
         }
-
-        /* Dia selecionado pelo usuário */
+        
         .calendar-day.selected {
             background: linear-gradient(135deg, #f59e0b, #d97706);
             font-weight: 800;
             box-shadow: 0 2px 8px rgba(245, 158, 11, 0.4);
             animation: pulse 1s ease;
-            color: #FFFFFF;
         }
-
+        
         @keyframes pulse {
             0%, 100% { transform: scale(1); }
             50% { transform: scale(1.15); }
         }
-
-        /* ============================================ */
-        /* 🔴🟢 INDICADORES DE EVENTOS (CORES DIFERENCIADAS) */
-        /* ============================================ */
-
-        /* 🟢 Medicamentos (verde) - APENAS medicamentos */
+        
         .calendar-day.has-event::after {
             content: '';
             position: absolute;
             bottom: 4px;
             width: 6px;
             height: 6px;
-            background: #34D399; /* Verde para medicamentos */
+            background: #34D399;
             border-radius: 50%;
-            z-index: 1;
         }
-
-        /* 🔴 Consultas futuras (vermelho) - APENAS consultas */
-        .calendar-day.has-appointment::after {
-            content: '';
-            position: absolute;
-            bottom: 4px;
-            width: 6px;
-            height: 6px;
-            background: #EF4444; /* Vermelho para consultas */
-            border-radius: 50%;
-            z-index: 1;
-        }
-
-        /* 🟢🔴 Ambos no mesmo dia (gradiente) */
-        .calendar-day.has-multiple-events::after {
-            content: '';
-            position: absolute;
-            bottom: 4px;
+        
+        .calendar-day.has-event.has-multiple::after {
             width: 12px;
             height: 6px;
-            background: linear-gradient(90deg, #34D399 50%, #EF4444 50%);
+            background: linear-gradient(90deg, #34D399 50%, #10b981 50%);
             border-radius: 3px;
-            z-index: 1;
         }
-
-        /* ============================================ */
-        /* 📝 LEGENDA EXPLICATIVA DAS CORES */
-        /* ============================================ */
-        .calendar-legend {
-            display: flex;
-            justify-content: center;
-            gap: 16px;
-            margin-top: 12px;
-            padding-top: 12px;
-            border-top: 1px solid rgba(0, 212, 255, 0.1);
-            font-size: 0.7rem;
-            color: #8A9BB5;
-        }
-
-        .legend-item {
-            display: flex;
-            align-items: center;
-            gap: 6px;
-        }
-
-        .legend-dot {
-            width: 8px;
-            height: 8px;
-            border-radius: 50%;
-            flex-shrink: 0;
-        }
-
-        /* Cores da legenda */
-        .legend-dot.meds { 
-            background: #34D399; /* Verde - Medicamentos */
-        }
-
-        .legend-dot.appts { 
-            background: #EF4444; /* Vermelho - Consultas */
-        }
-
-        .legend-dot.both { 
-            background: linear-gradient(90deg, #34D399 50%, #EF4444 50%);
-            border-radius: 2px;
-        }
-
-        /* ============================================ */
-        /* Dias de outros meses (cinza) */
-        /* ============================================ */
+        
         .calendar-day.other-month {
             color: #4A5568;
             opacity: 0.5;
             cursor: default;
-            background: transparent;
         }
-
+        
         .calendar-day.other-month:hover {
             background: transparent;
             transform: none;
-        }
-
-        /* ============================================ */
-        /* RESPONSIVO - MOBILE */
-        /* ============================================ */
-        @media (max-width: 768px) {
-            .calendar-container {
-                padding: 12px;
-            }
-            
-            .calendar-title {
-                font-size: 0.9rem;
-            }
-            
-            .calendar-btn {
-                width: 26px;
-                height: 26px;
-                font-size: 1rem;
-            }
-            
-            .calendar-day-header {
-                font-size: 0.6rem;
-                padding: 4px 0;
-            }
-            
-            .calendar-day {
-                font-size: 0.7rem;
-                border-radius: 8px;
-            }
-            
-            .calendar-day.today,
-            .calendar-day.selected {
-                font-size: 0.75rem;
-            }
-            
-            /* Indicadores menores no mobile */
-            .calendar-day.has-event::after,
-            .calendar-day.has-appointment::after {
-                width: 5px;
-                height: 5px;
-                bottom: 3px;
-            }
-            
-            .calendar-day.has-multiple-events::after {
-                width: 10px;
-                height: 5px;
-                bottom: 3px;
-            }
-            
-            /* Legenda compacta no mobile */
-            .calendar-legend {
-                gap: 10px;
-                margin-top: 8px;
-                padding-top: 8px;
-                font-size: 0.6rem;
-            }
-            
-            .legend-dot {
-                width: 6px;
-                height: 6px;
-            }
-        }
-
-        /* Telas muito pequenas (< 400px) */
-        @media (max-width: 400px) {
-            .calendar-day {
-                font-size: 0.65rem;
-            }
-            
-            .calendar-legend {
-                flex-wrap: wrap;
-                gap: 8px;
-            }
         }
         
         /* MODAIS */
@@ -1299,7 +1135,7 @@
 </head>
 
 <body>
-    <!-- BOTÃO DE TESTE DO ÁUDIO 
+    <!-- BOTÃO DE TESTE DO ÁUDIO -->
     <button onclick="testarAudio()" style="
         padding: 15px 30px;
         background: #4CAF50;
@@ -1315,7 +1151,7 @@
         z-index: 9999;
     ">
         🔊 Testar Áudio
-    </button>  -->
+    </button>
 
     <!-- RESTANTE DO SEU HTML AQUI -->
     <div class="grid-bg"></div>
@@ -1745,127 +1581,46 @@
             }
         }
         
-        // ============================================
-        // 🚀 INICIALIZAÇÃO UNIFICADA (ÚNICO DOMContentLoaded)
-        // ============================================
-        document.addEventListener('DOMContentLoaded', async function() {
-            console.log('🚀 Sistema CR$ HOME CARE AI - Inicializando...');
-            
-            // ===== CARREGAR DADOS DO USUÁRIO =====
+
+    <!--                 axxxxxx                                    -->      
+        document.addEventListener('DOMContentLoaded', function() {
             userId = localStorage.getItem('userId');
             currentUser = JSON.parse(localStorage.getItem('currentUser') || '{}');
+            if (!userId) { window.location.href = '/'; return; }
             
-            if (!userId) {
-                console.error('❌ userId não encontrado!');
-                window.location.href = '/';
-                return;
-            }
-            
-            console.log('✅ Usuário logado:', userId);
-            
-            // ===== SAUDAÇÃO =====
             const hour = new Date().getHours();
             const greeting = hour < 12 ? 'Bom dia' : hour < 18 ? 'Boa tarde' : 'Boa noite';
             document.getElementById('greeting').textContent = `${greeting}!`;
             document.getElementById('user-name').textContent = currentUser.full_name || 'Paciente';
             
-            // ===== CONFIGURAÇÕES INICIAIS =====
+            // Configurar dias da semana clicáveis
             setupDayChips();
-            populateTimeGrid();
-            updateSeniorButtonUI();
             
-            // ===== DATA ATUAL COMO PADRÃO =====
+            // ✅ INICIALIZAÇÃO: Definir data atual como padrão de visualização
             const today = new Date();
             const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
             
-            viewingSpecificDate = todayStr;
+            viewingSpecificDate = todayStr; // ✅ Define hoje como data alvo inicial
             selectedDate = today;
             
             setCurrentDate();
             generateCalendar();
+            loadAllData();
             
-            // ===== CARREGAR DADOS DA API =====
-            await loadAllData();
-            
-            // ===== APLICAR FILTROS INICIAIS =====
+            // ✅ Após carregar dados, aplicar filtros iniciais
             setTimeout(() => {
+                // Atualiza contadores para hoje
                 updateCountersForDate(todayStr);
+                
+                // Se a aba ativa for consultas, carrega filtrado
                 if (currentScreen === 'appointments') {
                     loadAppointmentsForDate(todayStr);
                 } else if (currentScreen === 'medications') {
                     loadMedicationsForDay(today.getDay());
                 }
             }, 300);
-            
-            // ===== SISTEMA DE MONITORAMENTO DE MEDICAMENTOS =====
-            setTimeout(() => {
-                if (typeof verificarMedicamentos === 'function') {
-                    verificarMedicamentos();
-                    monitoringState.checkInterval = setInterval(verificarMedicamentos, 30000);
-                    console.log('✅ Monitoramento de medicamentos ativo! (30s)');
-                }
-            }, 2000);
-            
-            // ===== SISTEMA DE LEMBRETES DE CONSULTAS =====
-            setTimeout(() => {
-                if (typeof verificarLembretesConsultas === 'function') {
-                    verificarLembretesConsultas();
-                    // Verifica a cada 5 minutos
-                    setInterval(verificarLembretesConsultas, 5 * 60 * 1000);
-                    console.log('✅ Lembrete de consultas ativo! (5min)');
-                }
-            }, 3000);
-            
-            // ===== PUSH NOTIFICATIONS =====
-            if ('Notification' in window && typeof registerPush === 'function') {
-                registerPush();
-            }
-            
-            // ===== SERVICE WORKER =====
-            if ('serviceWorker' in navigator) {
-                navigator.serviceWorker.register('/sw.js')
-                    .then(reg => console.log('[PWA] SW registrado:', reg.scope))
-                    .catch(err => console.log('[PWA] Erro ao registrar SW:', err));
-                
-                // Verifica atualizações do SW
-                navigator.serviceWorker.addEventListener('controllerchange', () => {
-                    console.log('[PWA] Nova versão detectada! Recarregando...');
-                    if (typeof showToast === 'function') {
-                        showToast('🔄 Nova versão disponível! Recarregando...');
-                    }
-                    setTimeout(() => window.location.reload(), 2000);
-                });
-            }
-            
-            // ===== PWA INSTALL PROMPT =====
-            let deferredPrompt = null;
-            const installBtn = document.getElementById('install-btn');
-            
-            window.addEventListener('beforeinstallprompt', (e) => {
-                e.preventDefault();
-                deferredPrompt = e;
-                if (installBtn) installBtn.style.display = 'inline-flex';
-            });
-            
-            window.addEventListener('appinstalled', () => {
-                if (installBtn) installBtn.style.display = 'none';
-                deferredPrompt = null;
-                if (typeof showToast === 'function') showToast('🎉 PWA instalado!');
-            });
-            
-            // ===== LIMPEZA AO FECHAR =====
-            window.addEventListener('beforeunload', () => {
-                if (monitoringState.checkInterval) {
-                    clearInterval(monitoringState.checkInterval);
-                }
-            });
-            
-            console.log('✅ Sistema inicializado com sucesso!');
         });
         
-        // ============================================
-        // 🗓️ CONFIGURAÇÃO DO CALENDÁRIO (COM EVENTOS DIFER
-        // ============================================
         function setupDayChips() {
             document.querySelectorAll('.day-chip').forEach(chip => {
                 chip.addEventListener('click', function() {
@@ -1880,66 +1635,54 @@
             document.getElementById('current-day').textContent = String(now.getDate()).padStart(2,'0');
             document.getElementById('current-month').textContent = `${months[now.getMonth()]} ${now.getFullYear()}`;
         }
-
-        // ============================================
-        // 📅 CALENDÁRIO (COM EVENTOS DIFERENCIADOS) 
-        // ============================================        
+        
         function generateCalendar() {
             const monthNames = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
             const dayNames = ['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'];
             const today = new Date();
-            today.setHours(0, 0, 0, 0);
-            
             const firstDay = new Date(currentCalendarYear, currentCalendarMonth, 1).getDay();
             const daysInMonth = new Date(currentCalendarYear, currentCalendarMonth + 1, 0).getDate();
             const daysInPrevMonth = new Date(currentCalendarYear, currentCalendarMonth, 0).getDate();
             
-            // ✅ CORREÇÃO: Separar dias com medicamentos (verde) e consultas (vermelho)
-            const daysWithMedications = new Set();
-            const daysWithAppointments = new Set();
-            const daysWithMultiple = new Set();
+            // Coletar dias com eventos
+            const daysWithEvents = new Set();
+            const daysWithMultipleEvents = new Set();
             
-            // 🔹 Adicionar dias de medicamentos (VERDE)
-            if (Array.isArray(medicationsData)) {
-                medicationsData.forEach(med => {
-                    if (med.days_of_week && med.days_of_week.length > 0) {
-                        for (let day = 1; day <= daysInMonth; day++) {
-                            const currentLoopDateStr = `${currentCalendarYear}-${String(currentCalendarMonth+1).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
-                            
-                            // Verifica período de validade do medicamento
-                            if (med.created_at && currentLoopDateStr < med.created_at) continue;
-                            if (med.end_date && currentLoopDateStr > med.end_date) continue;
-                            
-                            const dayOfWeek = new Date(currentCalendarYear, currentCalendarMonth, day).getDay();
-                            if (med.days_of_week.includes(dayOfWeek)) {
-                                daysWithMedications.add(day);
-                                if (daysWithAppointments.has(day)) {
-                                    daysWithMultiple.add(day);
-                                }
+            // Adicionar dias de medicamentos
+            medicationsData.forEach(med => {
+                if (med.days_of_week && med.days_of_week.length > 0) {
+                    for (let day = 1; day <= daysInMonth; day++) {
+                        const currentLoopDateStr = `${currentCalendarYear}-${String(currentCalendarMonth+1).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
+                        
+                        // Verifica se o dia atual do loop está dentro do período de validade do medicamento
+                        if (med.created_at && currentLoopDateStr < med.created_at) continue;
+                        if (med.end_date && currentLoopDateStr > med.end_date) continue;
+                        
+                        const dayOfWeek = new Date(currentCalendarYear, currentCalendarMonth, day).getDay();
+                        if (med.days_of_week.includes(dayOfWeek)) {
+                            if (daysWithEvents.has(day)) {
+                                daysWithMultipleEvents.add(day);
+                            } else {
+                                daysWithEvents.add(day);
                             }
                         }
                     }
-                });
-            }
+                }
+            });
             
-            // 🔹 Adicionar dias de consultas FUTURAS (VERMELHO)
-            if (Array.isArray(appointmentsData)) {
-                appointmentsData.forEach(appt => {
-                    const apptDate = new Date(appt.appointment_date + 'T00:00:00');
-                    // ✅ FILTRAR: Apenas consultas futuras no mês atual
-                    if (apptDate >= today && 
-                        apptDate.getMonth() === currentCalendarMonth && 
-                        apptDate.getFullYear() === currentCalendarYear) {
-                        const day = apptDate.getDate();
-                        daysWithAppointments.add(day);
-                        if (daysWithMedications.has(day)) {
-                            daysWithMultiple.add(day);
-                        }
+            // Adicionar dias de consultas
+            appointmentsData.forEach(appt => {
+                const apptDate = new Date(appt.appointment_date + 'T00:00:00');
+                if (apptDate.getMonth() === currentCalendarMonth && apptDate.getFullYear() === currentCalendarYear) {
+                    const day = apptDate.getDate();
+                    if (daysWithEvents.has(day)) {
+                        daysWithMultipleEvents.add(day);
+                    } else {
+                        daysWithEvents.add(day);
                     }
-                });
-            }
+                }
+            });
             
-            // 🔹 Montar HTML do calendário
             let html = `
                 <div class="calendar-header">
                     <div class="calendar-title">${monthNames[currentCalendarMonth]} ${currentCalendarYear}</div>
@@ -1952,13 +1695,13 @@
                     ${dayNames.map(d => `<div class="calendar-day-header">${d}</div>`).join('')}
             `;
             
-            // 🔹 Dias do mês anterior (cinza)
+            // Dias do mês anterior
             for (let i = firstDay - 1; i >= 0; i--) {
                 const day = daysInPrevMonth - i;
                 html += `<div class="calendar-day other-month">${day}</div>`;
             }
             
-            // 🔹 Dias do mês atual
+            // Dias do mês atual
             for (let day = 1; day <= daysInMonth; day++) {
                 const classes = ['calendar-day'];
                 const isToday = today.getDate() === day && today.getMonth() === currentCalendarMonth && today.getFullYear() === currentCalendarYear;
@@ -1966,21 +1709,15 @@
                 
                 if (isToday) classes.push('today');
                 if (isSelected) classes.push('selected');
+                if (daysWithEvents.has(day)) classes.push('has-event');
+                if (daysWithMultipleEvents.has(day)) classes.push('has-multiple');
                 
-                // ✅ CORREÇÃO: Classes diferenciadas por tipo de evento
-                if (daysWithMultiple.has(day)) {
-                    classes.push('has-multiple-events'); // 🟢🔴 Ambos
-                } else if (daysWithAppointments.has(day)) {
-                    classes.push('has-appointment'); // 🔴 Apenas consulta
-                } else if (daysWithMedications.has(day)) {
-                    classes.push('has-event'); // 🟢 Apenas medicamento
-                }
-                
+                // Adicionar evento de clique
                 const dateStr = `${currentCalendarYear}-${String(currentCalendarMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
                 html += `<div class="${classes.join(' ')}" onclick="selectDay('${dateStr}')">${day}</div>`;
             }
             
-            // 🔹 Dias do próximo mês (cinza)
+            // Dias do próximo mês
             const totalCells = firstDay + daysInMonth;
             const remainingCells = 42 - totalCells;
             for (let day = 1; day <= remainingCells; day++) {
@@ -1988,113 +1725,9 @@
             }
             
             html += '</div>';
-            
-            // ✅ NOVO: Adicionar legenda explicativa das cores
-            html += `
-                <div class="calendar-legend">
-                    <div class="legend-item">
-                        <div class="legend-dot meds"></div>
-                        <span>Remédios</span>
-                    </div>
-                    <div class="legend-item">
-                        <div class="legend-dot appts"></div>
-                        <span>Consultas</span>
-                    </div>
-                    <div class="legend-item">
-                        <div class="legend-dot both"></div>
-                        <span>Ambos</span>
-                    </div>
-                </div>
-            `;
-            
             document.getElementById('calendar').innerHTML = html;
-            
-            // ✅ DEBUG: Log para verificar se dias foram marcados
-            console.log('📅 Calendário gerado:', {
-                dias_medicamentos: daysWithMedications.size,
-                dias_consultas: daysWithAppointments.size,
-                dias_ambos: daysWithMultiple.size
-            });
         }
-
-
         
-        // =====================================================
-        // ✅ NOVA FUNÇÃO: Carrega TODAS as consultas FUTURAS
-        // =====================================================
-        function loadAllFutureAppointments() {
-            const container = document.getElementById('appointments-list');
-            
-            console.log('📅 Carregando TODAS as consultas futuras...');
-            console.log('Total no array appointmentsData:', appointmentsData.length);
-            
-            // Filtra apenas consultas FUTURAS (hoje ou depois)
-            const today = new Date();
-            today.setHours(0, 0, 0, 0);
-            
-            const futureAppointments = appointmentsData.filter(appt => {
-                const apptDate = new Date(appt.appointment_date + 'T00:00:00');
-                return apptDate >= today;
-            });
-            
-            console.log('Consultas futuras encontradas:', futureAppointments.length);
-            
-            if (futureAppointments.length === 0) {
-                container.innerHTML = `
-                    <div class="empty-state">
-                        <span class="icon">📅</span>
-                        <p>Nenhuma consulta agendada</p>
-                        <div class="hint">
-                            <p>💡 Use o botão <strong style="color: #10b981;">➕ Inserir</strong> para agendar uma nova consulta.</p>
-                            <button onclick="handleInsert()">➕ Agendar Consulta</button>
-                        </div>
-                    </div>
-                `;
-                // ✅ Atualiza contador da aba para total de consultas futuras
-                document.getElementById('tab-appts').textContent = '0';
-                return;
-            }
-            
-            // Ordena por data e horário
-            futureAppointments.sort((a, b) => 
-                new Date(`${a.appointment_date}T${a.appointment_time}`) - 
-                new Date(`${b.appointment_date}T${b.appointment_time}`)
-            );
-            
-            container.innerHTML = futureAppointments.map(appt => {
-                const dateStr = new Date(appt.appointment_date + 'T00:00:00').toLocaleDateString('pt-BR');
-                return `
-                    <div class="appt-card ${appt.status === 'confirmed' ? 'confirmed' : appt.status === 'cancelled' ? 'cancelled' : ''}">
-                        <div class="med-card-header">
-                            <div>
-                                <div class="med-name">👨‍⚕️ ${appt.doctor_name || 'Médico'}</div>
-                                <div class="med-dosage">${appt.specialty || 'Especialidade não informada'}</div>
-                            </div>
-                            <div class="card-actions-group">
-                                <button class="card-icon-btn insert" onclick="handleInsert()" title="Inserir">➕</button>
-                                <button class="card-icon-btn create" onclick="handleCreate()" title="Criar">✨</button>
-                                <button class="card-icon-btn edit" onclick="editAppt('${appt.id}')" title="Editar">✏️</button>
-                                <button class="card-icon-btn delete" onclick="deleteAppointment('${appt.id}')" title="Excluir">🗑️</button>
-                            </div>
-                        </div>
-                        <div class="med-days">📅 ${dateStr} ⏰ ${appt.appointment_time || ''}</div>
-                        ${appt.notes ? `<div class="med-dosage">📝 ${appt.notes}</div>` : ''}
-                        <div class="med-actions">
-                            ${appt.status !== 'cancelled' && appt.status !== 'completed' ? `
-                                <button class="btn-taken" onclick="confirmAppt('${appt.id}')">✅ Confirmar</button>
-                                <button class="btn-later" onclick="cancelAppt('${appt.id}')">❌ Cancelar</button>
-                            ` : ''}
-                        </div>
-                    </div>
-                `;
-            }).join('');
-            
-            // ✅ Atualiza contador da aba para total de consultas futuras
-            document.getElementById('tab-appts').textContent = futureAppointments.length;
-        }        
-        // ============================================ 
-        // ============================================ 
-        // ============================================         
         function changeMonth(delta) {
             currentCalendarMonth += delta;
             if (currentCalendarMonth > 11) {
@@ -2256,58 +1889,42 @@
                 </button>`;
         }
                         
-        // =====================================================
-        // ✅ FUNÇÃO CORRIGIDA: Mostra total de consultas FUTURAS
-        // =====================================================
+
+
+        // ✅ CORREÇÃO: Função updateCounters original (para quando não há data específica selecionada)
         function updateCounters() {
             console.log('📊 Atualizando contadores (padrão)...');
             
             // Contadores das abas
             document.getElementById('tab-meds').textContent = medicationsData.length;
+            document.getElementById('tab-appts').textContent = appointmentsData.length;
             document.getElementById('tab-resp').textContent = responsiblesData.length;
             document.getElementById('tab-contacts').textContent = contactsData.length;
             
-            // ✅ CORREÇÃO: Contar consultas FUTURAS (hoje ou depois)
+            // Contador de consultas mostra apenas consultas de HOJE
             const today = new Date();
-            today.setHours(0, 0, 0, 0);
+            const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
             
-            let futureAppointments = 0;
-            if (Array.isArray(appointmentsData)) {
-                appointmentsData.forEach(appt => {
-                    const apptDate = new Date(appt.appointment_date + 'T00:00:00');
-                    if (apptDate >= today) {
-                        futureAppointments++;
-                    }
-                });
-            }
+            let apptsToday = 0;
+            appointmentsData.forEach(appt => {
+                if (appt.appointment_date === todayStr) {
+                    apptsToday++;
+                }
+            });
             
-            // ✅ CORREÇÃO: Só atualiza contador da aba se NÃO estiver vendo data específica
-            if (!viewingSpecificDate) {
-                document.getElementById('tab-appts').textContent = futureAppointments;
-            }
+            document.getElementById('tab-appts').textContent = apptsToday;
             
             // Calcular compromissos para HOJE (medicamentos + consultas)
             const currentDayOfWeek = today.getDay();
-            let medsToday = 0;
-            if (Array.isArray(medicationsData)) {
-                medicationsData.forEach(med => {
-                    if (med.days_of_week && med.days_of_week.includes(currentDayOfWeek)) {
-                        medsToday++;
-                    } else if (!med.days_of_week || med.days_of_week.length === 0) {
-                        medsToday++;
-                    }
-                });
-            }
             
-            let apptsToday = 0;
-            const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
-            if (Array.isArray(appointmentsData)) {
-                appointmentsData.forEach(appt => {
-                    if (appt.appointment_date === todayStr) {
-                        apptsToday++;
-                    }
-                });
-            }
+            let medsToday = 0;
+            medicationsData.forEach(med => {
+                if (med.days_of_week && med.days_of_week.includes(currentDayOfWeek)) {
+                    medsToday++;
+                } else if (!med.days_of_week || med.days_of_week.length === 0) {
+                    medsToday++;
+                }
+            });
             
             const totalToday = medsToday + apptsToday;
             document.getElementById('today-commitments').textContent = totalToday;
@@ -2316,15 +1933,60 @@
             viewingSpecificDate = null;
             document.querySelector('.header-stat-label').textContent = 'Compromissos para hoje';
             
-            // ✅ CORREÇÃO: Só gera calendário se dados estiverem carregados
-            if (Array.isArray(appointmentsData) && Array.isArray(medicationsData)) {
-                generateCalendar();
-            }
+            generateCalendar();
         }
 
-        // =====================================================
+
+        // ✅ NOVA FUNÇÃO: Atualiza contadores para uma data específica
+        function updateCountersForDate(dateStr) {
+            console.log('🔄 Atualizando contadores para:', dateStr);
+            
+            // Atualiza o texto do header
+            const parts = dateStr.split('-');
+            const day = String(parts[2]).padStart(2, '0');
+            const month = String(parts[1]).padStart(2, '0');
+            const year = parts[0];
+            const dateBR = `${day}/${month}/${year}`;
+            
+            // Verifica se é hoje
+            const today = new Date();
+            const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+            
+            if (dateStr === todayStr) {
+                document.querySelector('.header-stat-label').textContent = 'Compromissos para hoje';
+            } else {
+                document.querySelector('.header-stat-label').textContent = `Compromissos para ${dateBR}`;
+            }
+            
+            // Conta medicamentos para este dia da semana
+            const selectedDayObj = new Date(dateStr + 'T00:00:00');
+            const dayOfWeek = selectedDayObj.getDay();
+            
+            let medsCount = 0;
+            medicationsData.forEach(med => {
+                if (med.days_of_week && med.days_of_week.includes(dayOfWeek)) {
+                    medsCount++;
+                } else if (!med.days_of_week || med.days_of_week.length === 0) {
+                    medsCount++;
+                }
+            });
+            
+            // Conta consultas para esta data exata
+            let apptsCount = 0;
+            appointmentsData.forEach(appt => {
+                if (appt.appointment_date === dateStr) {
+                    apptsCount++;
+                }
+            });
+            
+            const total = medsCount + apptsCount;
+            document.getElementById('today-commitments').textContent = total;
+            
+            console.log(`✅ Medicamentos: ${medsCount}, Consultas: ${apptsCount}, Total: ${total}`);
+        }        
+
+
         // ✅ CORREÇÃO: Função showTodayCommitments
-        // =====================================================        
         function showTodayCommitments() {
             const today = new Date();
             const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
@@ -2335,8 +1997,40 @@
                 showScreen('appointments', consultationsTab);
             }
         }
-
        
+
+        function loadAllData() {
+            console.log('📥 Iniciando carregamento de dados...');
+            
+            // Carrega dados que não precisam de filtro
+            Promise.all([
+                loadResponsibles(),
+                loadContacts()
+            ]).then(() => {
+                // ✅ CRÍTICO: Primeiro carrega TODOS os medicamentos
+                loadMedications().then(() => {
+                    // Só depois carrega consultas
+                    loadAppointments().then(() => {
+                        console.log('✅ Todos os dados carregados!');
+                        
+                        // Agora aplica os filtros para a data atual
+                        const today = new Date();
+                        const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+                        
+                        // Atualiza contadores
+                        updateCountersForDate(todayStr);
+                        
+                        // Se a aba atual for medicamentos, filtra por dia
+                        if (currentScreen === 'medications') {
+                            loadMedicationsForDay(today.getDay());
+                        } else if (currentScreen === 'appointments') {
+                            loadAppointmentsForDate(todayStr);
+                        }
+                    });
+                });
+            });
+        }
+        
         function loadAppointmentsForDate(dateStr) {
             const container = document.getElementById('appointments-list');
             
@@ -2486,7 +2180,7 @@
             document.getElementById('tab-meds').textContent = medsOnDay.length;
         }
         // ------------------------------
-        // -- função showScreen corrigida para considerar data específica --
+        //
         // -------------------------------------
         function showScreen(screen, btn) {
             currentScreen = screen;
@@ -2497,170 +2191,37 @@
             
             const fab = document.getElementById('fab-btn');
             
+            // ✅ CORREÇÃO: Usa viewingSpecificDate ou data atual como padrão
             const targetDateStr = viewingSpecificDate || `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}-${String(new Date().getDate()).padStart(2, '0')}`;
             const targetDateObj = new Date(targetDateStr + 'T00:00:00');
             
-            if (screen === 'medications') {
-                fab.style.display = 'block';
-                fab.style.background = 'linear-gradient(135deg, #10b981, #059669)';
+            if (screen === 'medications') { 
+                fab.style.display = 'block'; 
+                fab.style.background = 'linear-gradient(135deg, #10b981, #059669)'; 
+                // Mostra medicamentos do dia alvo (não todos)
                 loadMedicationsForDay(targetDateObj.getDay());
-            } 
-            else if (screen === 'appointments') {
-                fab.style.display = 'block';
-                fab.style.background = 'linear-gradient(135deg, #f59e0b, #d97706)';
-                // ✅ CORREÇÃO: Carrega TODAS as consultas FUTURAS
-                loadAllFutureAppointments();
-            } 
-            else if (screen === 'responsibles') {
-                fab.style.display = 'block';
-                fab.style.background = 'linear-gradient(135deg, #8b5cf6, #6d28d9)';
-                loadResponsibles();
-            } 
-            else if (screen === 'contacts') {
-                fab.style.display = 'block';
-                fab.style.background = 'linear-gradient(135deg, #ec4899, #be185d)';
-                loadContacts();
-            } 
-            else {
-                fab.style.display = 'none';
+                
+            } else if (screen === 'appointments') { 
+                fab.style.display = 'block'; 
+                fab.style.background = 'linear-gradient(135deg, #f59e0b, #d97706)'; 
+                // Mostra APENAS consultas do dia alvo (não todas)
+                loadAppointmentsForDate(targetDateStr);
+                
+            } else if (screen === 'responsibles') { 
+                fab.style.display = 'block'; 
+                fab.style.background = 'linear-gradient(135deg, #8b5cf6, #6d28d9)'; 
+                loadResponsibles(); // Sempre mostra todos
+                
+            } else if (screen === 'contacts') { 
+                fab.style.display = 'block'; 
+                fab.style.background = 'linear-gradient(135deg, #ec4899, #be185d)'; 
+                loadContacts(); // Sempre mostra todos
+                
+            } else { 
+                fab.style.display = 'none'; 
             }
         }
-        // =====================================================
-        // ✅ NOVA FUNÇÃO: Carrega TODAS as consultas futuras
-        // =====================================================
-        function loadAllAppointments() {
-            const container = document.getElementById('appointments-list');
-            
-            console.log('📅 Carregando TODAS as consultas futuras...');
-            console.log('Total no array appointmentsData:', appointmentsData.length);
-            
-            // Filtra apenas consultas FUTURAS (hoje ou depois)
-            const today = new Date();
-            today.setHours(0, 0, 0, 0);
-            
-            const futureAppointments = appointmentsData.filter(appt => {
-                const apptDate = new Date(appt.appointment_date + 'T00:00:00');
-                return apptDate >= today;
-            });
-            
-            console.log('Consultas futuras encontradas:', futureAppointments.length);
-            
-            if (futureAppointments.length === 0) {
-                container.innerHTML = `
-                    <div class="empty-state">
-                        <span class="icon">📅</span>
-                        <p>Nenhuma consulta agendada</p>
-                        <div class="hint">
-                            <p>💡 Use o botão <strong style="color: #10b981;">➕ Inserir</strong> para agendar uma nova consulta.</p>
-                            <button onclick="handleInsert()">➕ Agendar Consulta</button>
-                        </div>
-                    </div>
-                `;
-                // ✅ Atualiza contador para mostrar total de consultas futuras
-                document.getElementById('tab-appts').textContent = '0';
-                return;
-            }
-            
-            // Ordena por data e horário
-            futureAppointments.sort((a, b) => 
-                new Date(`${a.appointment_date}T${a.appointment_time}`) - 
-                new Date(`${b.appointment_date}T${b.appointment_time}`)
-            );
-            
-            container.innerHTML = futureAppointments.map(appt => {
-                const dateStr = new Date(appt.appointment_date + 'T00:00:00').toLocaleDateString('pt-BR');
-                return `
-                    <div class="appt-card ${appt.status === 'confirmed' ? 'confirmed' : appt.status === 'cancelled' ? 'cancelled' : ''}">
-                        <div class="med-card-header">
-                            <div>
-                                <div class="med-name">👨‍⚕️ ${appt.doctor_name || 'Médico'}</div>
-                                <div class="med-dosage">${appt.specialty || 'Especialidade não informada'}</div>
-                            </div>
-                            <div class="card-actions-group">
-                                <button class="card-icon-btn insert" onclick="handleInsert()" title="Inserir">➕</button>
-                                <button class="card-icon-btn create" onclick="handleCreate()" title="Criar">✨</button>
-                                <button class="card-icon-btn edit" onclick="editAppt('${appt.id}')" title="Editar">✏️</button>
-                                <button class="card-icon-btn delete" onclick="deleteAppointment('${appt.id}')" title="Excluir">🗑️</button>
-                            </div>
-                        </div>
-                        <div class="med-days">📅 ${dateStr} ⏰ ${appt.appointment_time || ''}</div>
-                        ${appt.notes ? `<div class="med-dosage">📝 ${appt.notes}</div>` : ''}
-                        <div class="med-actions">
-                            ${appt.status !== 'cancelled' && appt.status !== 'completed' ? `
-                                <button class="btn-taken" onclick="confirmAppt('${appt.id}')">✅ Confirmar</button>
-                                <button class="btn-later" onclick="cancelAppt('${appt.id}')">❌ Cancelar</button>
-                            ` : ''}
-                        </div>
-                    </div>
-                `;
-            }).join('');
-            
-            // ✅ Atualiza contador para mostrar total de consultas futuras
-            document.getElementById('tab-appts').textContent = futureAppointments.length;
-        }
-
-        // =====================================================
-        // ✅ NOVA FUNÇÃO: Atualiza contadores para uma data específica
-        // =====================================================
-        function updateCountersForDate(dateStr) {
-            console.log('🔄 Atualizando contadores para:', dateStr);
-            
-            // Atualiza o texto do header
-            const parts = dateStr.split('-');
-            const day = String(parts[2]).padStart(2, '0');
-            const month = String(parts[1]).padStart(2, '0');
-            const year = parts[0];
-            const dateBR = `${day}/${month}/${year}`;
-            
-            // Verifica se é hoje
-            const today = new Date();
-            const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
-            if (dateStr === todayStr) {
-                document.querySelector('.header-stat-label').textContent = 'Compromissos para hoje';
-            } else {
-                document.querySelector('.header-stat-label').textContent = `Compromissos para ${dateBR}`;
-            }
-            
-            // Conta medicamentos para este dia da semana
-            const selectedDayObj = new Date(dateStr + 'T00:00:00');
-            const dayOfWeek = selectedDayObj.getDay();
-            let medsCount = 0;
-            medicationsData.forEach(med => {
-                if (med.days_of_week && med.days_of_week.includes(dayOfWeek)) {
-                    medsCount++;
-                } else if (!med.days_of_week || med.days_of_week.length === 0) {
-                    medsCount++;
-                }
-            });
-            
-            // Conta consultas para esta data exata
-            let apptsCount = 0;
-            appointmentsData.forEach(appt => {
-                if (appt.appointment_date === dateStr) {
-                    apptsCount++;
-                }
-            });
-            
-            const total = medsCount + apptsCount;
-            document.getElementById('today-commitments').textContent = total;
-            
-            // ✅ CORREÇÃO: Se a aba ativa for "Consultas", atualiza para total futuro
-            if (currentScreen === 'appointments') {
-                const futureCount = appointmentsData.filter(appt => {
-                    const apptDate = new Date(appt.appointment_date + 'T00:00:00');
-                    return apptDate >= new Date();
-                }).length;
-                document.getElementById('tab-appts').textContent = futureCount;
-            } else {
-                // Para outras abas, mostra contagem do dia
-                document.getElementById('tab-appts').textContent = apptsCount;
-            }
-            
-            console.log(`✅ Medicamentos: ${medsCount}, Consultas: ${apptsCount}, Total: ${total}`);
-        }
-        // ------------------------------
-        //
-        // ------------------------------------- 
+ 
         function handleFabClick() {
             handleInsert();
         }
@@ -2852,8 +2413,6 @@
                 }
             });
         }
-
-
         // ===== MEDICAÇÕES =====
         async function loadMedications() {
             const container = document.getElementById('medications-list');
@@ -2976,337 +2535,7 @@
                 updateCounters();
             }
         }
-
-        // ============================================
-        // 📅 SISTEMA DE LEMBRETES DE CONSULTAS
-        // ============================================
-        async function verificarLembretesConsultas() {
-            try {
-                console.log('📅 Verificando lembretes de consultas...');
-                
-                const agora = new Date();
-                const currentUserId = localStorage.getItem('userId');
-                if (!currentUserId) return;
-                
-                const response = await fetch(`${API_URL}/api/cliente/${currentUserId}/appointments`);
-                const consultas = await response.json();
-                
-                console.log(`📋 Total de consultas para verificar: ${consultas.length}`);
-                
-                for (const consulta of consultas) {
-                    // Pula consultas já confirmadas/canceladas
-                    if (consulta.status === 'confirmed' || consulta.status === 'cancelled' || consulta.status === 'completed') {
-                        continue;
-                    }
-                    
-                    const dataConsulta = new Date(`${consulta.appointment_date}T${consulta.appointment_time}`);
-                    const diffMs = dataConsulta - agora;
-                    const diffHoras = diffMs / (1000 * 60 * 60);
-                    
-                    console.log(`🔍 ${consulta.doctor_name}: ${diffHoras.toFixed(1)}h até a consulta`);
-                    
-                    // ✅ LEMBRETE 1: 24 HORAS ANTES (janela 23-25h)
-                    if (diffHoras >= 23 && diffHoras <= 25) {
-                        console.log('⏰ ALERTA 24h: ' + consulta.doctor_name);
-                        await enviarLembreteConsulta(consulta, '24horas');
-                    }
-                    
-                    // ✅ LEMBRETE 2: 3 HORAS ANTES (janela 2.5-3.5h)
-                    if (diffHoras >= 2.5 && diffHoras <= 3.5) {
-                        console.log('⏰ ALERTA 3h: ' + consulta.doctor_name);
-                        await enviarLembreteConsulta(consulta, '3horas');
-                    }
-                }
-            } catch (error) {
-                console.error('❌ Erro ao verificar lembretes:', error);
-            }
-        }
-
-        async function enviarLembreteConsulta(consulta, tipo) {
-            try {
-                const mensagem = tipo === '24horas' 
-                    ? `Lembrete: Consulta amanhã às ${formatarHora(consulta.appointment_time)} com ${consulta.doctor_name}.`
-                    : `Lembrete: Consulta HOJE às ${formatarHora(consulta.appointment_time)} com ${consulta.doctor_name}.`;
-                
-                console.log('🔔 Enviando lembrete (' + tipo + '): ' + mensagem);
-                
-                // 1. Notificação visual
-                mostrarNotificacaoConsulta(consulta, tipo);
-                
-                // 2. Notificação do sistema
-                if ('Notification' in window && Notification.permission === 'granted') {
-                    new Notification('📅 Lembrete de Consulta', {
-                        body: mensagem,
-                        icon: '/icon-192x192.png',
-                        requireInteraction: true
-                    });
-                }
-                
-                // 3. Toast
-                if (typeof showToast === 'function') {
-                    showToast('📅 ' + (tipo === '24horas' ? 'Consulta amanhã' : 'Consulta hoje') + ': ' + consulta.doctor_name);
-                }
-                
-            } catch (error) {
-                console.error('❌ Erro ao enviar lembrete:', error);
-            }
-        }
-
-        function mostrarNotificacaoConsulta(consulta, tipo) {
-            const alerta = document.createElement('div');
-            alerta.className = 'notification-consulta';
-            
-            const titulo = tipo === '24horas' ? '📅 CONSULTA AMANHÃ' : '⏰ CONSULTA HOJE';
-            const dataFormatada = new Date(consulta.appointment_date + 'T00:00:00').toLocaleDateString('pt-BR');
-            
-            alerta.innerHTML = `
-                <div class="titulo">${titulo}</div>
-                <div class="medico"><strong>${consulta.doctor_name}</strong></div>
-                <div class="especialidade">${consulta.specialty || 'Médico'}</div>
-                <div class="detalhes">
-                    <div>📅 ${dataFormatada}</div>
-                    <div>⏰ ${formatarHora(consulta.appointment_time)}</div>
-                </div>
-                <button class="fechar" onclick="this.parentElement.remove()">Fechar</button>
-            `;
-            
-            document.body.appendChild(alerta);
-            
-            setTimeout(() => {
-                alerta.style.opacity = '0';
-                alerta.style.transition = 'opacity 0.5s';
-                setTimeout(() => alerta.remove(), 500);
-            }, 15000);
-        }
-
-        function formatarHora(hora) {
-            if (!hora) return '--:--';
-            const [h, m] = hora.split(':');
-            return h + ':' + m;
-        }
-      
-        async function enviarLembreteConsulta(consulta, tipo) {
-            try {
-                const mensagem = tipo === '24horas' 
-                    ? `Lembrete: Consulta amanhã às ${formatarHora(consulta.appointment_time)} com ${consulta.doctor_name}.`
-                    : `Lembrete: Consulta HOJE às ${formatarHora(consulta.appointment_time)} com ${consulta.doctor_name}.`;
-                
-                console.log(`🔔 Enviando: ${mensagem}`);
-                
-                // Notificação visual
-                mostrarNotificacaoConsulta(consulta, tipo);
-                
-                // Notificação do sistema
-                if ('Notification' in window && Notification.permission === 'granted') {
-                    new Notification('📅 Lembrete de Consulta', {
-                        body: mensagem,
-                        icon: '/icon-192x192.png',
-                        requireInteraction: true
-                    });
-                }
-                
-                // Toast
-                if (typeof showToast === 'function') {
-                    showToast(`📅 ${tipo === '24horas' ? 'Consulta amanhã' : 'Consulta hoje'}: ${consulta.doctor_name}`);
-                }
-                
-            } catch (error) {
-                console.error('❌ Erro ao enviar lembrete:', error);
-            }
-        }
-
-        function mostrarNotificacaoConsulta(consulta, tipo) {
-            const alerta = document.createElement('div');
-            alerta.className = 'notification-consulta';
-            
-            const titulo = tipo === '24horas' ? '📅 CONSULTA AMANHÃ' : '⏰ CONSULTA HOJE';
-            const dataFormatada = new Date(consulta.appointment_date + 'T00:00:00').toLocaleDateString('pt-BR');
-            
-            alerta.innerHTML = `
-                <div class="titulo">${titulo}</div>
-                <div class="medico"><strong>${consulta.doctor_name}</strong></div>
-                <div class="especialidade">${consulta.specialty || 'Médico'}</div>
-                <div class="detalhes">
-                    <div>📅 ${dataFormatada}</div>
-                    <div>⏰ ${formatarHora(consulta.appointment_time)}</div>
-                </div>
-                <button class="fechar" onclick="this.parentElement.remove()">Fechar</button>
-            `;
-            
-            document.body.appendChild(alerta);
-            
-            setTimeout(() => {
-                alerta.style.opacity = '0';
-                alerta.style.transition = 'opacity 0.5s';
-                setTimeout(() => alerta.remove(), 500);
-            }, 15000);
-        }
-
-        function formatarHora(hora) {
-            if (!hora) return '--:--';
-            const [h, m] = hora.split(':');
-            return `${h}:${m}`;
-        }
-
-        // ============================================
-        // 🔔 ENVIAR LEMBRETE DE CONSULTA
-        // ============================================
-        async function enviarLembreteConsulta(consulta, tipo) {
-            try {
-                const mensagem = tipo === '24horas' 
-                    ? `Lembrete: Você tem uma consulta amanhã às ${formatarHora(consulta.appointment_time)} com ${consulta.doctor_name}${consulta.specialty ? ` (${consulta.specialty})` : ''}.`
-                    : `Lembrete: Sua consulta com ${consulta.doctor_name} é hoje às ${formatarHora(consulta.appointment_time)}. Prepare-se!`;
-                
-                console.log(`🔔 Enviando lembrete (${tipo}): ${mensagem}`);
-                
-                // 1. Notificação visual na página
-                mostrarNotificacaoConsulta(consulta, tipo);
-                
-                // 2. Notificação do sistema (se permitido)
-                if ('Notification' in window && Notification.permission === 'granted') {
-                    new Notification('📅 Lembrete de Consulta', {
-                        body: mensagem,
-                        icon: '/icon-192x192.png',
-                        requireInteraction: true,
-                        tag: `consulta-${consulta.id}-${tipo}`
-                    });
-                }
-                
-                // 3. Áudio de alerta (opcional - apenas para 3 horas antes)
-                if (tipo === '3horas') {
-                    await tocarAlertaConsulta(consulta.doctor_name, consulta.appointment_time);
-                }
-                
-                // 4. Toast notification
-                showToast(`📅 ${tipo === '24horas' ? 'Consulta amanhã' : 'Consulta hoje'}: ${consulta.doctor_name}`);
-                
-                // 5. Marcar como notificado no backend (opcional)
-                await fetch(`${API_URL}/api/appointments/${consulta.id}/notify`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        notification_type: tipo,
-                        notified_at: new Date().toISOString()
-                    })
-                }).catch(() => {}); // Ignora erro se endpoint não existir
-                
-            } catch (error) {
-                console.error('❌ Erro ao enviar lembrete:', error);
-            }
-        }
-
-        // ============================================
-        // 🔊 ÁUDIO DE ALERTA PARA CONSULTAS
-        // ============================================
-        async function tocarAlertaConsulta(medico, horario) {
-            try {
-                const mensagem = `Atenção! Você tem uma consulta hoje às ${horario} com ${medico}. Prepare-se!`;
-                
-                const response = await fetch(`${API_URL}/api/generate-audio`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        medication: 'Consulta Médica',
-                        dosage: `Dr. ${medico}`,
-                        instructions: mensagem
-                    })
-                });
-                
-                const data = await response.json();
-                
-                if (data.status === 'success' && data.url) {
-                    const audioUrl = data.url.startsWith('http') 
-                        ? data.url 
-                        : `${API_URL}${data.url}`;
-                    
-                    const audio = new Audio(audioUrl);
-                    audio.volume = 1.0;
-                    await audio.play();
-                    console.log('✅ Áudio de consulta tocando!');
-                }
-            } catch (error) {
-                console.error('❌ Erro ao tocar áudio de consulta:', error);
-            }
-        }
-
-        // ============================================
-        // 📱 NOTIFICAÇÃO VISUAL NA PÁGINA
-        // ============================================
-        function mostrarNotificacaoConsulta(consulta, tipo) {
-            const alerta = document.createElement('div');
-            alerta.style.cssText = `
-                position: fixed;
-                top: 100px;
-                right: 20px;
-                background: linear-gradient(135deg, #667eea, #764ba2);
-                color: white;
-                padding: 24px;
-                border-radius: 16px;
-                box-shadow: 0 8px 24px rgba(0,0,0,0.4);
-                z-index: 10000;
-                max-width: 400px;
-                animation: slideInRight 0.5s ease;
-                border-left: 6px solid #f59e0b;
-            `;
-            
-            const titulo = tipo === '24horas' ? '📅 CONSULTA AMANHÃ' : '⏰ CONSULTA HOJE';
-            const dataFormatada = new Date(consulta.appointment_date + 'T00:00:00').toLocaleDateString('pt-BR');
-            
-            alerta.innerHTML = `
-                <div style="font-size: 1.2rem; font-weight: 800; margin-bottom: 8px;">${titulo}</div>
-                <div style="font-size: 1rem; margin-bottom: 4px;"><strong>${consulta.doctor_name}</strong></div>
-                <div style="font-size: 0.9rem; opacity: 0.9;">${consulta.specialty || 'Médico'}</div>
-                <div style="margin-top: 12px; padding-top: 12px; border-top: 1px solid rgba(255,255,255,0.3);">
-                    <div style="font-size: 0.85rem;">📅 ${dataFormatada}</div>
-                    <div style="font-size: 0.85rem;">⏰ ${formatarHora(consulta.appointment_time)}</div>
-                </div>
-                <button onclick="this.parentElement.remove()" style="
-                    margin-top: 12px;
-                    background: rgba(255,255,255,0.2);
-                    border: none;
-                    color: white;
-                    padding: 8px 16px;
-                    border-radius: 8px;
-                    cursor: pointer;
-                    font-weight: 600;
-                ">Fechar</button>
-            `;
-            
-            document.body.appendChild(alerta);
-            
-            // Remove automaticamente após 15 segundos
-            setTimeout(() => {
-                alerta.style.opacity = '0';
-                alerta.style.transition = 'opacity 0.5s';
-                setTimeout(() => alerta.remove(), 500);
-            }, 15000);
-        }
-
-        // ============================================
-        // 🕐 FORMATAR HORA (HH:MM para HH:MM)
-        // ============================================
-        function formatarHora(hora) {
-            if (!hora) return '--:--';
-            const [h, m] = hora.split(':');
-            return `${h}:${m}`;
-        }
-
-        // ============================================
-        // 🎨 ANIMAÇÃO CSS (Adicionar no <style>)
-        // ============================================
-        /*
-        @keyframes slideInRight {
-            from {
-                opacity: 0;
-                transform: translateX(400px);
-            }
-            to {
-                opacity: 1;
-                transform: translateX(0);
-            }
-        }
-        */
-
+        
         // ===== RESPONSÁVEIS =====
         async function loadResponsibles() {
             const container = document.getElementById('responsibles-list');
@@ -3976,13 +3205,13 @@
         }
 
         // Botão de teste (opcional - pode remover depois)
-        // function testarAudio() {
-        //    tocarNotificacaoMedicamento({
-        //        nome: 'Dipirona',
-        //        dosagem: '500mg - 1 comprimido',
-        //        instrucoes: 'Tomar com água'
-        //    });
-        //}
+        function testarAudio() {
+            tocarNotificacaoMedicamento({
+                nome: 'Dipirona',
+                dosagem: '500mg - 1 comprimido',
+                instrucoes: 'Tomar com água'
+            });
+        }
 
         // ===== PWA REGISTRATION =====
         if ('serviceWorker' in navigator) {
@@ -4550,278 +3779,39 @@
         }
 
         // ============================================
-        // 🚀 INICIALIZAÇÃO UNIFICADA
+        // 🚀 INICIALIZAÇÃO
         // ============================================
         document.addEventListener('DOMContentLoaded', function() {
             console.log('🎵 Sistema de monitoramento iniciado');
             
-            // ===== MONITORAMENTO DE MEDICAMENTOS =====
             setTimeout(() => {
-                if (typeof verificarMedicamentos === 'function') {
-                    verificarMedicamentos();
-                    monitoringState.checkInterval = setInterval(verificarMedicamentos, 30000);
-                    console.log('✅ Monitoramento de medicamentos ativo! (30s)');
-                }
+                verificarMedicamentos();
+                monitoringState.checkInterval = setInterval(verificarMedicamentos, 30000);
+                console.log('✅ Monitoramento ativo! Verificando a cada 30s');
             }, 2000);
             
-            // ===== SISTEMA DE LEMBRETES DE CONSULTAS =====
-            setTimeout(() => {
-                if (typeof verificarLembretesConsultas === 'function') {
-                    verificarLembretesConsultas();
-                    setInterval(verificarLembretesConsultas, 5 * 60 * 1000); // 5 minutos
-                    console.log('✅ Lembrete de consultas ativo! (5min)');
-                }
-            }, 3000);
-            
-            // ===== LIMPEZA AO FECHAR A PÁGINA =====
             window.addEventListener('beforeunload', () => {
                 if (monitoringState.checkInterval) {
                     clearInterval(monitoringState.checkInterval);
                 }
             });
-            
-        }); 
-        // ✅ CORREÇÃO: Fecha o DOMContentLoaded AQUI!
+        });
         </script>
 
-        <!-- ============================================ -->
-        <!-- 🎨 ESTILOS ADICIONAIS (ANIMAÇÕES E NOTIFICAÇÕES) -->
-        <!-- ============================================ -->
         <style>
-            /* ===== ANIMAÇÕES GERAIS ===== */
-            @keyframes slideIn {
-                from { opacity: 0; transform: translateX(100px); }
-                to { opacity: 1; transform: translateX(0); }
-            }
-
-            @keyframes fadeIn {
-                from { opacity: 0; }
-                to { opacity: 1; }
-            }
-
-            @keyframes slideInRight {
-                from {
-                    opacity: 0;
-                    transform: translateX(400px);
-                }
-                to {
-                    opacity: 1;
-                    transform: translateX(0);
-                }
-            }
-
-            @keyframes pulse {
-                0%, 100% { transform: scale(1); }
-                50% { transform: scale(1.15); }
-            }
-
-            /* ===== NOTIFICAÇÕES DE CONSULTA ===== */
-            .notification-consulta {
-                position: fixed;
-                top: 100px;
-                right: 20px;
-                background: linear-gradient(135deg, #667eea, #764ba2);
-                color: white;
-                padding: 24px;
-                border-radius: 16px;
-                box-shadow: 0 8px 24px rgba(0,0,0,0.4);
-                z-index: 10000;
-                max-width: 400px;
-                animation: slideInRight 0.5s ease;
-                border-left: 6px solid #f59e0b;
-            }
-
-            .notification-consulta .titulo {
-                font-size: 1.2rem;
-                font-weight: 800;
-                margin-bottom: 8px;
-            }
-
-            .notification-consulta .medico {
-                font-size: 1rem;
-                margin-bottom: 4px;
-            }
-
-            .notification-consulta .especialidade {
-                font-size: 0.9rem;
-                opacity: 0.9;
-            }
-
-            .notification-consulta .detalhes {
-                margin-top: 12px;
-                padding-top: 12px;
-                border-top: 1px solid rgba(255,255,255,0.3);
-                font-size: 0.85rem;
-            }
-
-            .notification-consulta .fechar {
-                margin-top: 12px;
-                background: rgba(255,255,255,0.2);
-                border: none;
-                color: white;
-                padding: 8px 16px;
-                border-radius: 8px;
-                cursor: pointer;
-                font-weight: 600;
-            }
-
-            @keyframes slideInRight {
-                from { opacity: 0; transform: translateX(400px); }
-                to { opacity: 1; transform: translateX(0); }
-            }
-
-            @media (max-width: 768px) {
-                .notification-consulta {
-                    top: 80px;
-                    right: 10px;
-                    left: 10px;
-                    max-width: none;
-                    padding: 16px;
-                }
-            }
+        @keyframes slideIn { from { opacity:0; transform:translateX(100px); } to { opacity:1; transform:translateX(0); } }
+        @keyframes fadeIn { from { opacity:0; } to { opacity:1; } }
         </style>
 
-        <!-- Toast container (garantir que exista) -->
-        <div class="toast" id="toast"></div>
-
-    </body>
-    </html>
-
-    <!-- ============================================ -->
-    <!-- 🔄 SERVICE WORKER - ATUALIZAÇÕES AUTOMÁTICAS -->
-    <!-- ============================================ -->
-    <script>
-        // Verifica atualizações do Service Worker
-        if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.addEventListener('controllerchange', () => {
-                // Quando o SW muda, recarrega a página automaticamente
-                console.log('[PWA] Nova versão detectada! Recarregando...');
-                
-                // Usa a função showToast se existir, senão alert
-                if (typeof showToast === 'function') {
-                    showToast('🔄 Nova versão disponível! Recarregando...');
-                }
-                
-                // Recarrega após 2 segundos para mostrar a mensagem
-                setTimeout(() => {
-                    window.location.reload();
-                }, 2000);
-            });
-        }
-
- 
-        // ============================================
-        // 🔔 ENVIAR LEMBRETE DE CONSULTA
-        // ============================================
-        async function enviarLembreteConsulta(consulta, tipo) {
-            try {
-                const mensagem = tipo === '24horas' 
-                    ? `Lembrete: Você tem uma consulta amanhã às ${formatarHora(consulta.appointment_time)} com ${consulta.doctor_name}${consulta.specialty ? ` (${consulta.specialty})` : ''}.`
-                    : `Lembrete: Sua consulta com ${consulta.doctor_name} é hoje às ${formatarHora(consulta.appointment_time)}. Prepare-se!`;
-                
-                console.log(`🔔 Enviando lembrete (${tipo}): ${mensagem}`);
-                
-                // 1. Notificação visual na página
-                mostrarNotificacaoConsulta(consulta, tipo);
-                
-                // 2. Notificação do sistema (se permitido)
-                if ('Notification' in window && Notification.permission === 'granted') {
-                    new Notification('📅 Lembrete de Consulta', {
-                        body: mensagem,
-                        icon: '/icon-192x192.png',
-                        requireInteraction: true,
-                        tag: `consulta-${consulta.id}-${tipo}`
+                        // Verifica atualizações do Service Worker
+                    if ('serviceWorker' in navigator) {
+                    navigator.serviceWorker.addEventListener('controllerchange', () => {
+                        // Quando o SW muda, recarrega a página automaticamente
+                        console.log('[PWA] Nova versão detectada! Recarregando...');
+                        showToast('🔄 Nova versão disponível! Recarregando...');
+                        window.location.reload();
                     });
-                }
-                
-                // 3. Áudio de alerta (opcional - apenas para 3 horas antes)
-                if (tipo === '3horas') {
-                    await tocarAlertaConsulta(consulta.doctor_name, consulta.appointment_time);
-                }
-                
-                // 4. Toast notification
-                showToast(`📅 ${tipo === '24horas' ? 'Consulta amanhã' : 'Consulta hoje'}: ${consulta.doctor_name}`);
-                
-            } catch (error) {
-                console.error('❌ Erro ao enviar lembrete:', error);
-            }
-        }
-
-        // ============================================
-        // 🔊 ÁUDIO DE ALERTA PARA CONSULTAS
-        // ============================================
-        async function tocarAlertaConsulta(medico, horario) {
-            try {
-                const mensagem = `Atenção! Você tem uma consulta hoje às ${horario} com ${medico}. Prepare-se!`;
-                
-                const response = await fetch(`${API_URL}/api/generate-audio`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        medication: 'Consulta Médica',
-                        dosage: `Dr. ${medico}`,
-                        instructions: mensagem
-                    })
-                });
-                
-                const data = await response.json();
-                
-                if (data.status === 'success' && data.url) {
-                    const audioUrl = data.url.startsWith('http') 
-                        ? data.url 
-                        : `${API_URL}${data.url}`;
-                    
-                    console.log('🎵 Tocando áudio de consulta:', audioUrl);
-                    const audio = new Audio(audioUrl);
-                    audio.volume = 1.0;
-                    await audio.play();
-                    console.log('✅ Áudio de consulta tocando!');
-                }
-            } catch (error) {
-                console.error('❌ Erro ao tocar áudio de consulta:', error);
-            }
-        }
-
-        // ============================================
-        // 📱 NOTIFICAÇÃO VISUAL NA PÁGINA
-        // ============================================
-        function mostrarNotificacaoConsulta(consulta, tipo) {
-            const alerta = document.createElement('div');
-            alerta.className = 'notification-consulta';
-            
-            const titulo = tipo === '24horas' ? '📅 CONSULTA AMANHÃ' : '⏰ CONSULTA HOJE';
-            const dataFormatada = new Date(consulta.appointment_date + 'T00:00:00').toLocaleDateString('pt-BR');
-            
-            alerta.innerHTML = `
-                <div class="titulo">${titulo}</div>
-                <div class="medico"><strong>${consulta.doctor_name}</strong></div>
-                <div class="especialidade">${consulta.specialty || 'Médico'}</div>
-                <div class="detalhes">
-                    <div>📅 ${dataFormatada}</div>
-                    <div>⏰ ${formatarHora(consulta.appointment_time)}</div>
-                </div>
-                <button class="fechar" onclick="this.parentElement.remove()">Fechar</button>
-            `;
-            
-            document.body.appendChild(alerta);
-            
-            // Remove automaticamente após 15 segundos
-            setTimeout(() => {
-                alerta.style.opacity = '0';
-                alerta.style.transition = 'opacity 0.5s';
-                setTimeout(() => alerta.remove(), 500);
-            }, 15000);
-        }
-
-        // ============================================
-        // 🕐 FORMATAR HORA (HH:MM para HH:MM)
-        // ============================================
-        function formatarHora(hora) {
-            if (!hora) return '--:--';
-            const [h, m] = hora.split(':');
-            return `${h}:${m}`;
-        }        
-
-    </script>
+                    }                
+                </script> 
         </body>
         </html>
