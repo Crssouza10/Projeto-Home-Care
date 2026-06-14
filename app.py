@@ -1360,6 +1360,36 @@ async def notify_responsible(medication, db):
     except Exception as e:
         print(f"❌ Erro ao notificar responsável: {e}")
         return None
+    
+# ============================================
+# 🚀 CONFIGURAÇÃO PARA VERCEL
+# ============================================
+import os
+
+# Permitir CORS para produção
+from fastapi.middleware.cors import CORSMiddleware
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[
+        "http://localhost:8000",
+        "https://projeto-home-care.vercel.app",
+        "https://*.vercel.app"
+    ],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+# Handler para Vercel serverless
+if os.getenv("VERCEL"):
+    @app.get("/")
+    async def root():
+        return {
+            "status": "ok",
+            "message": "CR$ HOME CARE API - Running on Vercel",
+            "docs": "/docs"
+        }    
 # =========================================================
 # INICIALIZAÇÃO
 # =========================================================

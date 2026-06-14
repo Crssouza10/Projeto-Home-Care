@@ -1,13 +1,33 @@
-# No PowerShell ou Git Bash:
-cd "C:\Users\carlo\OneDrive\Documentos\Python\Projeto Home Care"
-
-# Cria o .gitignore
-@"
+# Python
 __pycache__/
-*.pyc
-.env
+*.py[cod]
+*$py.class
+*.so
+.Python
 venv/
-node_modules/
+env/
+.venv/
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Environment
+.env
+*.env.local
+.env.*.local
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Logs
+*.log
+logs/
+
+# OS
 .DS_Store
-static/audio/*.mp3
-"@ | Out-File -FilePath .gitignore -Encoding UTF8
+Thumbs.db
+
+# Vercel
+.vercel/

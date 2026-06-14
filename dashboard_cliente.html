@@ -7,7 +7,8 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
     <!-- PWA Meta Tags -->
     <meta name="theme-color" content="#00D4FF">
-    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes"> 
+    <meta name="mobile-web-app-capable" content="yes">  
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="HomeCare">
     <link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/3135/3135715.png">
@@ -1738,13 +1739,35 @@
                     contatos: contactsData.length
                 });
                 
+                // ✅ Chama renderCurrentScreen APÓS carregar dados
                 renderCurrentScreen();
                 
             } catch (error) {
                 console.error('❌ Erro ao carregar dados:', error);
             }
         }
-        
+        // ============================================
+        // ✅ NOVA FUNÇÃO: Renderiza tela atual
+        // ============================================
+        function renderCurrentScreen() {
+            console.log('🎨 Renderizando tela:', currentScreen);
+            
+            if (currentScreen === 'medications') {
+                loadMedicationsForDay(new Date().getDay());
+            } 
+            else if (currentScreen === 'appointments') {
+                const todayStr = new Date().toISOString().split('T')[0];
+                loadAppointmentsForDate(todayStr);
+            } 
+            else if (currentScreen === 'responsibles') {
+                loadResponsibles();
+            } 
+            else if (currentScreen === 'contacts') {
+                loadContacts();
+            }
+            
+            updateCounters();
+        }
         // ============================================
         // 🚀 INICIALIZAÇÃO UNIFICADA (ÚNICO DOMContentLoaded)
         // ============================================

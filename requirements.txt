@@ -1,10 +1,29 @@
-fastapi==0.115.0
-uvicorn==0.30.6
-python-multipart==0.0.9
-sqlalchemy==2.0.36
-psycopg2-binary==2.9.9
-python-dotenv==1.0.1
-pydantic==2.9.2
-pydantic-settings==2.6.0
-pywebpush==2.3.0requests
-gTTS
+# FastAPI & Servidor
+fastapi>=0.109.0
+uvicorn[standard]>=0.27.0
+
+# Banco de Dados
+sqlalchemy>=2.0.25
+psycopg2-binary>=2.9.9
+alembic>=1.13.1
+
+# Utilitários
+python-dotenv>=1.0.1
+pydantic>=2.5.0
+pydantic-settings>=2.1.0
+
+# Agendamento
+apscheduler>=3.10.4
+
+# HTTP Requests
+httpx>=0.26.0
+requests>=2.31.0
+
+# Utilitários de Data
+python-dateutil>=2.8.2
+
+# CORS
+fastapi-cors>=0.0.6
+
+# Para produção (opcional)
+gunicorn>=21.2.0
