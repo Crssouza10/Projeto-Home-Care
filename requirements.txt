@@ -27,3 +27,4 @@ fastapi-cors>=0.0.6
 
 # Para produção (opcional)
 gunicorn>=21.2.0
+pywebpush>=1.14.0  
