@@ -1360,7 +1360,7 @@
                 <div class="month-year" id="current-month">Maio 2026</div>
             </div>
             <button onclick="handleLogout()" 
-                style="background-color: #ef4444; color: white; padding: 8px 16px; border-radius: 8px; border: none; font-weight: bold; cursor: pointer; font-size: 14px;">
+                    style="background-color: #ef4444; color: white; padding: 8px 16px; border-radius: 8px; border: none; font-weight: bold; cursor: pointer; font-size: 14px;">
                 Sair
             </button>
         </div>
@@ -4640,6 +4640,33 @@
             });
             
         }); 
+
+        // ============================================
+        // 🚪 FUNÇÃO DE LOGOUT
+        // ============================================
+        function handleLogout() {
+            console.log('🚪 Tentando sair...');
+            
+            if (confirm('Deseja realmente sair da aplicação?')) {
+                console.log('✅ Confirmação aceita, limpando dados...');
+                
+                // Limpar TODOS os dados
+                localStorage.clear();
+                sessionStorage.clear();
+                
+                console.log('🔄 Redirecionando para /...');
+                
+                // Redirecionar IMEDIATAMENTE
+                window.location.href = '/';
+                
+                // Backup caso o primeiro falhe
+                setTimeout(() => {
+                    window.location.href = 'https://projeto-home-care.vercel.app/';
+                }, 1000);
+            } else {
+                console.log('❌ Cancelado pelo usuário');
+            }
+        }        
         // ✅ CORREÇÃO: Fecha o DOMContentLoaded AQUI!
         </script>
 
