@@ -2700,14 +2700,24 @@
         
         function handleLogout() {
             if (confirm('Deseja realmente sair da aplicação?')) {
-                // Limpar todos os dados
+                // Limpar TODOS os dados do localStorage
                 localStorage.clear();
                 sessionStorage.clear();
                 
-                // Redirecionar forçadamente para a tela de login
-                window.location.href = 'https://projeto-home-care.vercel.app/';
-                // OU tente:
-                // window.location.replace('/');
+                // Remover qualquer cache
+                if ('caches' in window) {
+                    caches.keys().then(names => {
+                        names.forEach(name => caches.delete(name));
+                    });
+                }
+                
+                // Redirecionar forçadamente
+                window.location.href = '/';
+                
+                // Se não funcionar, tenta novamente após 100ms
+                setTimeout(() => {
+                    window.location.href = 'https://projeto-home-care.vercel.app/';
+                }, 100);
             }
         }
         
