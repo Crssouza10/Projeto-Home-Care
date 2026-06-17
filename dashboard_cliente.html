@@ -1359,7 +1359,7 @@
                 <div class="day" id="current-day">19</div>
                 <div class="month-year" id="current-month">Maio 2026</div>
             </div>
-            <button class="btn-logout" onclick="handleLogout()">Sair</button>
+            <button onclick="handleLogout()" class="btn-sair">Sair</button>
         </div>
     </header>
     
@@ -1603,15 +1603,15 @@
 
         console.log('✅ API_URL configurada:', API_URL);
 
-        // ✅ ADICIONE ESTE BLOCO AQUI 👇
-        // Verificação de login IMEDIATA
+        // Verificação de login IMEDIATA E FORÇADA
         if (!localStorage.getItem('userId')) {
             console.log('⚠️ Usuário não logado! Redirecionando para login...');
-            window.location.replace('/');  // ← Use replace() em vez de href
-            // Ou tente:
-            // window.location.href = 'https://projeto-home-care.vercel.app/';
+            
+            // Forçar redirecionamento imediato
+            setTimeout(() => {
+                window.location.href = 'https://projeto-home-care.vercel.app/';
+            }, 100);
         }
-
       
         // ============================================
         // 🟢 ESTADO GLOBAL
@@ -2698,11 +2698,17 @@
             handleInsert();
         }
         
-        function handleLogout() { 
-            if (confirm('Deseja sair?')) { 
-                localStorage.clear(); 
-                window.location.href = '/'; 
-            } 
+        function handleLogout() {
+            if (confirm('Deseja realmente sair da aplicação?')) {
+                // Limpar todos os dados
+                localStorage.clear();
+                sessionStorage.clear();
+                
+                // Redirecionar forçadamente para a tela de login
+                window.location.href = 'https://projeto-home-care.vercel.app/';
+                // OU tente:
+                // window.location.replace('/');
+            }
         }
         
         // ===== FUNÇÕES DE INSERIR/CREAR =====
