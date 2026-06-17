@@ -1359,7 +1359,10 @@
                 <div class="day" id="current-day">19</div>
                 <div class="month-year" id="current-month">Maio 2026</div>
             </div>
-            <button onclick="handleLogout()" class="btn-sair">Sair</button>
+            <button onclick="handleLogout()" 
+                style="background-color: #ef4444; color: white; padding: 8px 16px; border-radius: 8px; border: none; font-weight: bold; cursor: pointer; font-size: 14px;">
+                Sair
+            </button>
         </div>
     </header>
     
@@ -2700,24 +2703,15 @@
         
         function handleLogout() {
             if (confirm('Deseja realmente sair da aplicação?')) {
-                // Limpar TODOS os dados do localStorage
+                console.log(' Saindo do sistema...');
+                
+                // 1. Limpar dados do usuário
                 localStorage.clear();
                 sessionStorage.clear();
                 
-                // Remover qualquer cache
-                if ('caches' in window) {
-                    caches.keys().then(names => {
-                        names.forEach(name => caches.delete(name));
-                    });
-                }
-                
-                // Redirecionar forçadamente
-                window.location.href = '/';
-                
-                // Se não funcionar, tenta novamente após 100ms
-                setTimeout(() => {
-                    window.location.href = 'https://projeto-home-care.vercel.app/';
-                }, 100);
+                // 2. Redirecionar FORÇADAMENTE para a tela de login (index.html)
+                // Usamos window.location.replace para evitar que o botão "Voltar" traga o usuário de volta
+                window.location.replace('index.html');
             }
         }
         
