@@ -1598,8 +1598,6 @@
         <!-- ============================================ -->
         <script>
         // ============================================
-        //       <!-- 🟢 SCRIPT PRINCIPAL (TUDO DENTRO DE UMA TAG) -->
-        // ============================================
         // 🌍 CONFIGURAÇÃO DA API (PRIMEIRA COISA!)
         // ============================================
         const API_URL = window.location.hostname === 'localhost' 
@@ -1613,26 +1611,24 @@
         // ============================================
         if (!localStorage.getItem('userId')) {
             console.log('🔒 Usuário não logado! Redirecionando forçadamente...');
-               
-        // Limpar qualquer dado residual
+              
+            // Limpar qualquer dado residual
             localStorage.clear();
             sessionStorage.clear();
-                
-        // Redirecionamento IMEDIATO e IRREVERSÍVEL
+               
+            // Redirecionamento IMEDIATO e IRREVERSÍVEL
             window.location.replace('/');
                 
             // PARAR execução do script completamente
             throw new Error('⛔ Execução interrompida - Redirecionando para login');
         }
             
-            // ============================================
-            // ✅ SE CHEGOU AQUI, USUÁRIO ESTÁ LOGADO
-            // ============================================
-            console.log('✅ Usuário autenticado, carregando dashboard...');
+        // ============================================
+        // ✅ SE CHEGOU AQUI, USUÁRIO ESTÁ LOGADO
+        // ============================================
+        console.log('✅ Usuário autenticado, carregando dashboard...');
       
-            // ============================================
-            console.log('✅ Usuário autenticado, carregando dashboard...');
-      
+     
         // ============================================
         // ============================================
         // 🟢 ESTADO GLOBAL
