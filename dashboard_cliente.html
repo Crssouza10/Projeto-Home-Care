@@ -1607,21 +1607,26 @@
         console.log('✅ API_URL configurada:', API_URL);
 
         // ============================================
-        // 🛡️ VERIFICAÇÃO DE LOGIN IMEDIATA E BLOQUEANTE
+        // 🛡️ VERIFICAÇÃO DE LOGIN
         // ============================================
-        if (!localStorage.getItem('userId')) {
-            console.log('🔒 Usuário não logado! Redirecionando forçadamente...');
-              
-            // Limpar qualquer dado residual
+        const userId = localStorage.getItem('userId');
+        
+        if (!userId || userId === 'null') {
+            console.log('🔒 Usuário não logado! Limpando dados...');
+            
+            // Limpar dados
             localStorage.clear();
             sessionStorage.clear();
-               
-            // Redirecionamento IMEDIATO e IRREVERSÍVEL
-            window.location.replace('/');
-                
-            // PARAR execução do script completamente
-            throw new Error('⛔ Execução interrompida - Redirecionando para login');
+            
+            // Redirecionar
+            window.location.href = '/';
+            
+            // Parar execução sem erro
+            return;
         }
+        
+        console.log('✅ Usuário autenticado:', userId);
+        // ============================================
             
         // ============================================
         // ✅ SE CHEGOU AQUI, USUÁRIO ESTÁ LOGADO
@@ -1874,20 +1879,20 @@
             }
             
             // ===== SERVICE WORKER =====
-            if ('serviceWorker' in navigator) {
-                navigator.serviceWorker.register('/sw.js')
-                    .then(reg => console.log('[PWA] SW registrado:', reg.scope))
-                    .catch(err => console.log('[PWA] Erro ao registrar SW:', err));
-                
-                // Verifica atualizações do SW
-                navigator.serviceWorker.addEventListener('controllerchange', () => {
-                    console.log('[PWA] Nova versão detectada! Recarregando...');
-                    if (typeof showToast === 'function') {
-                        showToast('🔄 Nova versão disponível! Recarregando...');
-                    }
-                    setTimeout(() => window.location.reload(), 2000);
-                });
-            }
+            // if ('serviceWorker' in navigator) {
+            //    navigator.serviceWorker.register('/sw.js')
+            //        .then(reg => console.log('[PWA] SW registrado:', reg.scope))
+            //        .catch(err => console.log('[PWA] Erro ao registrar SW:', err));
+            //    
+            //    // Verifica atualizações do SW
+            //    navigator.serviceWorker.addEventListener('controllerchange', () => {
+            //        console.log('[PWA] Nova versão detectada! Recarregando...');
+            //        if (typeof showToast === 'function') {
+            //            showToast('🔄 Nova versão disponível! Recarregando...');
+            //        }
+            //        setTimeout(() => window.location.reload(), 2000);
+            //    });
+            // }
             
             // ===== PWA INSTALL PROMPT =====
             let deferredPrompt = null;
@@ -2717,20 +2722,7 @@
             handleInsert();
         }
         
-        function handleLogout() {
-            if (confirm('Deseja realmente sair da aplicação?')) {
-                console.log(' Saindo do sistema...');
-                
-                // 1. Limpar dados do usuário
-                localStorage.clear();
-                sessionStorage.clear();
-                
-                // 2. Redirecionar FORÇADAMENTE para a tela de login (index.html)
-                // Usamos window.location.replace para evitar que o botão "Voltar" traga o usuário de volta
-                window.location.replace('index.html');
-            }
-        }
-        
+      
         // ===== FUNÇÕES DE INSERIR/CREAR =====
         function handleInsert() {
             const screenNames = {
@@ -4642,31 +4634,33 @@
         }); 
 
         // ============================================
-        // 🚪 FUNÇÃO DE LOGOUT
+        // ============================================
+        // 🚪 FUNÇÃO DE LOGOUT (ÚNICA)
         // ============================================
         function handleLogout() {
-            console.log('🚪 Tentando sair...');
+            console.log('🚪 Botão sair clicado');
             
             if (confirm('Deseja realmente sair da aplicação?')) {
-                console.log('✅ Confirmação aceita, limpando dados...');
+                console.log('✅ Confirmação aceita');
                 
                 // Limpar TODOS os dados
                 localStorage.clear();
                 sessionStorage.clear();
                 
-                console.log('🔄 Redirecionando para /...');
+                console.log('🔄 Redirecionando para /');
                 
-                // Redirecionar IMEDIATAMENTE
+                // Redirecionar
                 window.location.href = '/';
                 
-                // Backup caso o primeiro falhe
+                // Fallback após 1 segundo
                 setTimeout(() => {
                     window.location.href = 'https://projeto-home-care.vercel.app/';
                 }, 1000);
             } else {
-                console.log('❌ Cancelado pelo usuário');
+                console.log('❌ Cancelado');
             }
-        }        
+        }
+        // ============================================
         // ✅ CORREÇÃO: Fecha o DOMContentLoaded AQUI!
         </script>
 
