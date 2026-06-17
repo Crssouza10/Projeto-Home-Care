@@ -1600,9 +1600,16 @@
         const API_URL = window.location.hostname === 'localhost' 
             ? 'http://localhost:8000' 
             : 'https://projeto-home-care-production.up.railway.app';
-        
+
         console.log('✅ API_URL configurada:', API_URL);
-        
+
+        // ✅ ADICIONE ESTE BLOCO AQUI 👇
+        if (!localStorage.getItem('userId')) {
+            console.log('⚠️ Usuário não logado! Redirecionando para Login...');
+            window.location.href = '/'; 
+        }
+
+      
         // ============================================
         // 🟢 ESTADO GLOBAL
         // ============================================
