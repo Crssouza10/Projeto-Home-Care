@@ -1604,9 +1604,12 @@
         console.log('✅ API_URL configurada:', API_URL);
 
         // ✅ ADICIONE ESTE BLOCO AQUI 👇
+        // Verificação de login IMEDIATA
         if (!localStorage.getItem('userId')) {
-            console.log('⚠️ Usuário não logado! Redirecionando para Login...');
-            window.location.href = '/'; 
+            console.log('⚠️ Usuário não logado! Redirecionando para login...');
+            window.location.replace('/');  // ← Use replace() em vez de href
+            // Ou tente:
+            // window.location.href = 'https://projeto-home-care.vercel.app/';
         }
 
       
