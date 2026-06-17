@@ -1593,10 +1593,12 @@
     <div class="toast" id="toast"></div>
     <!---                      novo --------------------->
 
-    <!-- ============================================ -->
-    <!-- 🟢 SCRIPT PRINCIPAL (TUDO DENTRO DE UMA TAG) -->
-    <!-- ============================================ -->
-    <script>
+        <!-- ============================================ -->
+        <!-- 🟢 SCRIPT PRINCIPAL (TUDO DENTRO DE UMA TAG) -->
+        <!-- ============================================ -->
+        <script>
+        // ============================================
+        //       <!-- 🟢 SCRIPT PRINCIPAL (TUDO DENTRO DE UMA TAG) -->
         // ============================================
         // 🌍 CONFIGURAÇÃO DA API (PRIMEIRA COISA!)
         // ============================================
@@ -1606,16 +1608,32 @@
 
         console.log('✅ API_URL configurada:', API_URL);
 
-        // Verificação de login IMEDIATA E FORÇADA
+        // ============================================
+        // 🛡️ VERIFICAÇÃO DE LOGIN IMEDIATA E BLOQUEANTE
+        // ============================================
         if (!localStorage.getItem('userId')) {
-            console.log('⚠️ Usuário não logado! Redirecionando para login...');
-            
-            // Forçar redirecionamento imediato
-            setTimeout(() => {
-                window.location.href = 'https://projeto-home-care.vercel.app/';
-            }, 100);
+            console.log('🔒 Usuário não logado! Redirecionando forçadamente...');
+               
+        // Limpar qualquer dado residual
+            localStorage.clear();
+            sessionStorage.clear();
+                
+        // Redirecionamento IMEDIATO e IRREVERSÍVEL
+            window.location.replace('/');
+                
+            // PARAR execução do script completamente
+            throw new Error('⛔ Execução interrompida - Redirecionando para login');
         }
+            
+            // ============================================
+            // ✅ SE CHEGOU AQUI, USUÁRIO ESTÁ LOGADO
+            // ============================================
+            console.log('✅ Usuário autenticado, carregando dashboard...');
       
+            // ============================================
+            console.log('✅ Usuário autenticado, carregando dashboard...');
+      
+        // ============================================
         // ============================================
         // 🟢 ESTADO GLOBAL
         // ============================================
