@@ -4036,13 +4036,13 @@
         //}
 
         // ===== PWA REGISTRATION =====
-        if ('serviceWorker' in navigator) {
-            window.addEventListener('load', () => {
-                navigator.serviceWorker.register('/sw.js')
-                    .then(reg => console.log('[PWA] SW registrado:', reg.scope))
-                    .catch(err => console.log('[PWA] Erro ao registrar SW:', err));
-            });
-        }
+        // if ('serviceWorker' in navigator) {
+        //    window.addEventListener('load', () => {
+        //        navigator.serviceWorker.register('/sw.js')
+        //            .then(reg => console.log('[PWA] SW registrado:', reg.scope))
+        //            .catch(err => console.log('[PWA] Erro ao registrar SW:', err));
+        //    });
+        //}
 
         // ===== PWA INSTALL PROMPT =====
         let deferredPrompt = null;
@@ -4640,24 +4640,22 @@
         function handleLogout() {
             console.log('🚪 Botão sair clicado');
             
-            if (confirm('Deseja realmente sair da aplicação?')) {
+            if (confirm('Deseja realmente sair da aplicação ..................?')) {
                 console.log('✅ Confirmação aceita');
                 
                 // Limpar TODOS os dados
                 localStorage.clear();
                 sessionStorage.clear();
                 
-                console.log('🔄 Redirecionando para /');
+                console.log('🔄 Redirecionando...............................');
                 
-                // Redirecionar
+                // Redirecionar para raiz
                 window.location.href = '/';
                 
-                // Fallback após 1 segundo
+                // Forçar após 500ms
                 setTimeout(() => {
-                    window.location.href = 'https://projeto-home-care.vercel.app/';
-                }, 1000);
-            } else {
-                console.log('❌ Cancelado');
+                    window.location.href = window.location.origin + '/';
+                }, 500);
             }
         }
         // ============================================
