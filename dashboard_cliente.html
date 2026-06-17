@@ -1788,13 +1788,15 @@
             console.log('🚀 Sistema CR$ HOME CARE AI - Inicializando...');
             
             // ===== CARREGAR DADOS DO USUÁRIO =====
-            userId = localStorage.getItem('userId');
-            currentUser = JSON.parse(localStorage.getItem('currentUser') || '{}');
-            
-            if (!userId) {
-                console.error('❌ userId não encontrado!');
-                window.location.href = '/';
-                return;
+            // ============================================
+            // ️ VERIFICAÇÃO DE SEGURANÇA (COLE NO TOPO!)
+            // ============================================
+            const storedUser = localStorage.getItem('userId');
+
+            if (!storedUser) {
+                console.log('️ Usuário não encontrado! Redirecionando para Login...');
+                // Redireciona imediatamente para a página de login
+                window.location.href = 'index.html'; 
             }
             
             console.log('✅ Usuário logado:', userId);
