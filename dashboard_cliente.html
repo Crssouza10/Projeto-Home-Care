@@ -1605,7 +1605,7 @@
             // ============================================
             const API_URL = window.location.hostname === 'localhost'
                 ? 'http://localhost:8000'
-                : 'https://projeto-home-care-production.up.railway.app';
+                : window.location.origin;
 
             console.log('✅ API_URL configurada:', API_URL);
 
