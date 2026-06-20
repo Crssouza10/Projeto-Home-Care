@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
-<head>
+<h
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Minha Saúde - CR$ HOME CARE AI</title>
@@ -13,6 +13,9 @@
     <meta name="apple-mobile-web-app-title" content="HomeCare">
     <link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/3135/3135715.png">
     <link rel="manifest" href="/manifest.json">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
     <!--         xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx   -->
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Inter', sans-serif; }
@@ -1371,9 +1374,10 @@
         <div class="main-grid">
             <!-- LEFT: CONTENT -->
             <div class="section">
-                <div class="section-header">
-                    <div class="section-title">👤 Meus Dados</div>
-                </div>
+                <!-- Antes estava apenas o texto, agora coloque o ID -->
+                <h3 id="agenda-header" style="font-size: 1.2rem; font-weight: 700; margin-bottom: 15px; color: #fff;">
+                    📅 Minha agenda para hoje dia: 20/junho/2026
+                </h3>
                 
                 <!-- TABS -->
                 <div class="tabs">
@@ -1591,75 +1595,67 @@
     <button class="fab" id="fab-btn" onclick="handleFabClick()">+</button>
     
     <div class="toast" id="toast"></div>
-    <!---                      novo --------------------->
 
         <!-- ============================================ -->
         <!-- 🟢 SCRIPT PRINCIPAL (TUDO DENTRO DE UMA TAG) -->
         <!-- ============================================ -->
         <script>
-        // ============================================
-        // 🌍 CONFIGURAÇÃO DA API (PRIMEIRA COISA!)
-        // ============================================
-        const API_URL = window.location.hostname === 'localhost' 
-            ? 'http://localhost:8000' 
-            : 'https://projeto-home-care-production.up.railway.app';
+            // ============================================
+            // 🌍 CONFIGURAÇÃO DA API (PRIMEIRA COISA!)
+            // ============================================
+            const API_URL = window.location.hostname === 'localhost' 
+                ? 'http://localhost:8000' 
+                : 'https://projeto-home-care-production.up.railway.app';
+            
+            console.log('✅ API_URL configurada:', API_URL);
 
-        console.log('✅ API_URL configurada:', API_URL);
-
-        // ============================================
-        // 🛡️ VERIFICAÇÃO DE LOGIN
-        // ============================================
-        const userId = localStorage.getItem('userId');
-        
-        if (!userId || userId === 'null') {
-            console.log('🔒 Usuário não logado! Limpando dados...');
+            // ============================================
+            // 🛡️ VERIFICAÇÃO DE LOGIN
+            // ============================================
+            const storedUserId = localStorage.getItem('userId');
             
-            // Limpar dados
-            localStorage.clear();
-            sessionStorage.clear();
+            if (!storedUserId || storedUserId === 'null') {
+                console.log('🔒 Usuário não logado! Limpando dados...');
+                localStorage.clear();
+                sessionStorage.clear();
+                window.location.href = '/';
+                // Parar execução
+                (function(){ return; })();
+            }
             
-            // Redirecionar
-            window.location.href = '/';
+            console.log('✅ Usuário autenticado:', storedUserId);
+            // ============================================
             
-            // Parar execução sem erro
-            return;
-        }
-        
-        console.log('✅ Usuário autenticado:', userId);
-        // ============================================
+            // ============================================
+            // 🟢 ESTADO GLOBAL (DECLARAÇÕES ÚNICAS)
+            // ============================================
+            // Usuário (já validado acima)
+            let userId = storedUserId;
+            let currentUser = JSON.parse(localStorage.getItem('currentUser') || 'null');
+            let currentScreen = 'medications';
             
-        // ============================================
-        // ✅ SE CHEGOU AQUI, USUÁRIO ESTÁ LOGADO
-        // ============================================
-        console.log('✅ Usuário autenticado, carregando dashboard...');
-      
-     
-        // ============================================
-        // ============================================
-        // 🟢 ESTADO GLOBAL
-        // ============================================
-        let userId = null;
-        let currentUser = null;
-        let currentScreen = 'medications';
-        let medicationsData = [];
-        let appointmentsData = [];
-        let responsiblesData = [];
-        let contactsData = [];
-        
-        // Variáveis do calendário
-        let currentCalendarMonth = new Date().getMonth();
-        let currentCalendarYear = new Date().getFullYear();
-        let selectedDate = null;
-        
-        // Estado do monitoramento
-        const monitoringState = {
-            notifiedMeds: {},
-            checkInterval: null,
-            lastCheck: null
-        };
-        
-        const medicationStateCache = {};
-        
+            // Dados da aplicação
+            let medicationsData = [];
+            let appointmentsData = [];
+            let responsiblesData = [];
+            let contactsData = [];
+            
+            // Calendário
+            let currentCalendarMonth = new Date().getMonth();
+            let currentCalendarYear = new Date().getFullYear();
+            let selectedDate = null;
+            
+            // Monitoramento
+            const monitoringState = {
+                notifiedMeds: {},
+                checkInterval: null,
+                lastCheck: null
+            };
+            
+            const medicationStateCache = {};
+            
+            // Chave VAPID para Push (substitua pela sua chave pública real)
+            // const publicVapidKey = 'BEl62iUYjUivxIkv69yViEuiBIa-Ib9-SkvMeAtA3LFgDzkrxZQjSdtFnLjZ3U3Xh7p1q4V8Q1J2Q3Q4Q5Q6Q7'; // ← SUBSTITUA PELA SUA CHAVE
         // ============================================
         // 🔊 FUNÇÃO DE ÁUDIO (CORRIGIDA)
         // ============================================
@@ -1840,6 +1836,7 @@
             
             setCurrentDate();
             generateCalendar();
+            updateAgendaHeader(today); // ✅ NOVO: Atualiza o título ao carregar a página
             
             // ===== CARREGAR DADOS DA API =====
             await loadAllData();
@@ -1936,8 +1933,33 @@
             const months = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
             document.getElementById('current-day').textContent = String(now.getDate()).padStart(2,'0');
             document.getElementById('current-month').textContent = `${months[now.getMonth()]} ${now.getFullYear()}`;
+            updateAgendaHeader(selectedDate); // ✅ ATUALIZA O TÍTULO AO CLICAR NO CALENDÁRIO
         }
 
+        // ============================================
+        // 📅 ATUALIZAR CABEÇALHO DA AGENDA (HOJE vs SELECIONADO)
+        // ============================================
+        function updateAgendaHeader(dateObj) {
+            // Pega o elemento pelo ID que criamos no Passo 1
+            const headerEl = document.getElementById('agenda-header');
+            if (!headerEl) return;
+
+            const day = String(dateObj.getDate()).padStart(2, '0');
+            const month = dateObj.toLocaleString('pt-BR', { month: 'long' });
+            const year = dateObj.getFullYear();
+
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            const checkDate = new Date(dateObj);
+            checkDate.setHours(0, 0, 0, 0);
+
+            // Lógica para mudar o texto
+            if (checkDate.getTime() === today.getTime()) {
+                headerEl.textContent = ` Minha agenda para hoje dia: ${day}/${month}/${year}`;
+            } else {
+                headerEl.textContent = `📅 Minha agenda para o dia: ${day}/${month}/${year}`;
+            }
+        }
         // ============================================
         // 📅 CALENDÁRIO (COM EVENTOS DIFERENCIADOS) 
         // ============================================        
@@ -2128,8 +2150,8 @@
                                 <div class="med-dosage">${appt.specialty || 'Especialidade não informada'}</div>
                             </div>
                             <div class="card-actions-group">
-                                <button class="card-icon-btn insert" onclick="handleInsert()" title="Inserir">➕</button>
-                                <button class="card-icon-btn create" onclick="handleCreate()" title="Criar">✨</button>
+                                <!-- <button class="card-icon-btn insert" onclick="handleInsert()" title="Inserir">➕</button> -->
+                                <!-- <button class="card-icon-btn create" onclick="handleCreate()" title="Criar">✨</button> -->
                                 <button class="card-icon-btn edit" onclick="editAppt('${appt.id}')" title="Editar">✏️</button>
                                 <button class="card-icon-btn delete" onclick="deleteAppointment('${appt.id}')" title="Excluir">🗑️</button>
                             </div>
@@ -2170,25 +2192,30 @@
 
 
         function selectDay(dateStr) {
-            console.log(' 📅  Data selecionada:', dateStr);
+            console.log('📅 Dia clicado:', dateStr);
+            
+            // 1. Atualiza variáveis globais
             const parts = dateStr.split('-');
             selectedDate = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
             viewingSpecificDate = dateStr;
+            
+            // 2. Atualiza o Calendário visual (muda a cor laranja)
             generateCalendar();
             
+            // 3. ✅ CORREÇÃO: Atualiza o Título do Cabeçalho
+            updateAgendaHeader(selectedDate);
+            
+            // 4. Atualiza Header de Data (canto superior direito)
             const dayStr = String(selectedDate.getDate()).padStart(2, '0');
             const monthStr = String(selectedDate.getMonth() + 1).padStart(2, '0');
             const yearStr = selectedDate.getFullYear();
-            const dateBR = `${dayStr}/${monthStr}/${yearStr}`;
-            
-            // Atualiza header
             document.getElementById('current-day').textContent = dayStr;
             const months = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
             document.getElementById('current-month').textContent = `${months[selectedDate.getMonth()]} ${yearStr}`;
             
+            // 5. Carrega os dados (Remédios/Consultas)
             updateCountersForDate(dateStr);
             
-            // ✅ CORREÇÃO: Verifica se é data passada, presente ou futura
             const today = new Date();
             today.setHours(0, 0, 0, 0);
             const selectedDateOnly = new Date(selectedDate);
@@ -2197,18 +2224,15 @@
             if (currentScreen === 'appointments') {
                 loadAppointmentsForDate(dateStr);
             } else if (currentScreen === 'medications') {
-                // ✅ Se for data passada, carrega histórico
                 if (selectedDateOnly < today) {
                     loadMedicationsHistory(dateStr);
                 } else {
-                    // Se for hoje ou futuro, carrega normal
                     loadMedicationsForDay(selectedDate.getDay());
                 }
             }
             
-            showToast(` 📅  Dia ${dateBR} selecionado`);
+            showToast(`📅 Dia ${dayStr}/${monthStr}/${yearStr} selecionado`);
         }
-
         // =====================================================
         // ✅ NOVA FUNÇÃO: Carrega histórico de medicamentos
         // =====================================================
@@ -2434,8 +2458,8 @@
                                 <div class="med-dosage">${appt.specialty || 'Especialidade não informada'}</div>
                             </div>
                             <div class="card-actions-group">
-                                <button class="card-icon-btn insert" onclick="handleInsert()" title="Inserir">➕</button>
-                                <button class="card-icon-btn create" onclick="handleCreate()" title="Criar">✨</button>
+                                <!-- <button class="card-icon-btn insert" onclick="handleInsert()" title="Inserir">➕</button> -->
+                                <!-- <button class="card-icon-btn create" onclick="handleCreate()" title="Criar">✨</button> -->
                                 <button class="card-icon-btn edit" onclick="editAppt('${appt.id}')" title="Editar">✏️</button>
                                 <button class="card-icon-btn delete" onclick="deleteAppointment('${appt.id}')" title="Excluir">🗑️</button>
                             </div>
@@ -2524,8 +2548,8 @@
                         <div class="med-card-header">
                             <div class="med-time-badge">${med.time || '--:--'}</div>
                             <div class="card-actions-group">
-                                <button class="card-icon-btn insert" onclick="handleInsert()" title="Inserir">➕</button>
-                                <button class="card-icon-btn create" onclick="handleCreate()" title="Criar">✨</button>
+                                <!-- <button class="card-icon-btn insert" onclick="handleInsert()" title="Inserir">➕</button> -->
+                                <!-- <button class="card-icon-btn create" onclick="handleCreate()" title="Criar">✨</button> -->
                                 <button class="card-icon-btn edit" onclick="editMed('${med.id}')" title="Editar">✏️</button>
                                 <button class="card-icon-btn delete" onclick="deleteMedication('${med.id}')" title="Excluir">🗑️</button>
                             </div>
@@ -2634,8 +2658,8 @@
                                 <div class="med-dosage">${appt.specialty || 'Especialidade não informada'}</div>
                             </div>
                             <div class="card-actions-group">
-                                <button class="card-icon-btn insert" onclick="handleInsert()" title="Inserir">➕</button>
-                                <button class="card-icon-btn create" onclick="handleCreate()" title="Criar">✨</button>
+                                <!-- <button class="card-icon-btn insert" onclick="handleInsert()" title="Inserir">➕</button> -->
+                                <!-- <button class="card-icon-btn create" onclick="handleCreate()" title="Criar">✨</button> -->
                                 <button class="card-icon-btn edit" onclick="editAppt('${appt.id}')" title="Editar">✏️</button>
                                 <button class="card-icon-btn delete" onclick="deleteAppointment('${appt.id}')" title="Excluir">🗑️</button>
                             </div>
@@ -2948,8 +2972,8 @@
                                 <div class="med-time-badge">${med.time || '--:--'}</div>
                                 ${ (med.taken_status !== 'taken' && med.taken_status !== 'not_taken') ? `
                                 <div class="card-actions-group">
-                                    <button class="card-icon-btn insert" onclick="handleInsert()" title="Inserir">➕</button>
-                                    <button class="card-icon-btn create" onclick="handleCreate()" title="Criar">✨</button>
+                                    <!-- <button class="card-icon-btn insert" onclick="handleInsert()" title="Inserir">➕</button> -->
+                                    <!-- <button class="card-icon-btn create" onclick="handleCreate()" title="Criar">✨</button> -->
                                     <button class="card-icon-btn edit" onclick="editMed('${med.id}')" title="Editar">✏️</button>
                                     <button class="card-icon-btn delete" onclick="deleteMedication('${med.id}')" title="Excluir">🗑️</button>
                                 </div>` : '' }
@@ -2962,7 +2986,7 @@
                             </div>
                         </div>
                     `;
-                }).join('');
+                }).join(''); 
                 updateCounters();
             } catch (e) { 
                 container.innerHTML = `<div class="empty-state"><span class="icon">❌</span><p>Erro ao carregar</p></div>`;
@@ -4148,30 +4172,39 @@
         }
 
         async function registerPush() {
-            const currentUser = JSON.parse(localStorage.getItem('user'));
-            if (!currentUser?.id) return;
-            if (!('serviceWorker' in navigator) || !('PushManager' in window)) return;
-
             try {
-                const registration = await navigator.serviceWorker.ready;
-                const permission = await Notification.requestPermission();
-                
-                if (permission === 'granted') {
-                    const subscription = await registration.pushManager.subscribe({
-                        userVisibleOnly: true,
-                        applicationServerKey: urlB64ToUint8Array(publicVapidKey)
-                    });
-                    
-                    await fetch('/api/push/subscribe', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({
-                            ...subscription.toJSON(),
-                            user_id: currentUser.id
-                        })
-                    });
-                    console.log('✅ Assinatura Push enviada!');
+                const user = JSON.parse(localStorage.getItem('currentUser'));
+                if (!user?.id) {
+                    console.log('⚠️ Usuário não encontrado para Push');
+                    return;
                 }
+                
+                if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
+                    console.log('⚠️ Push não suportado neste navegador');
+                    return;
+                }
+
+                const permission = await Notification.requestPermission();
+                if (permission !== 'granted') {
+                    console.log('⚠️ Permissão de notificação negada');
+                    return;
+                }
+                
+                const registration = await navigator.serviceWorker.ready;
+                const subscription = await registration.pushManager.subscribe({
+                    userVisibleOnly: true,
+                    applicationServerKey: urlB64ToUint8Array(publicVapidKey)
+                });
+                
+                await fetch(`${API_URL}/api/push/subscribe`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        ...subscription.toJSON(),
+                        user_id: user.id
+                    })
+                });
+                console.log('✅ Assinatura Push enviada!');
             } catch (err) {
                 console.error('❌ Erro no Push:', err);
             }
@@ -4325,23 +4358,29 @@
             // 1️⃣ ESTADO: REAGENDADO (Botão laranja)
             if (status === 'rescheduled') {
                 return `<button disabled style="width:100%; margin-top:10px; padding:14px; background:#f59e0b; color:white; border:none; border-radius:12px; font-weight:700; font-size:1.05rem; cursor:default;">
-                    🔄 Reagendado para ${horaMed}
-                </button>`;
+        🔄 Reagendado para ${horaMed}
+        </button>`;
             }
             
             // 2️⃣ ESTADO: TOMADO (APENAS SE FOI HOJE)
             if (status === 'taken') {
                 const lastTakenDate = med.last_taken_date ? new Date(med.last_taken_date).toISOString().split('T')[0] : '';
-                
                 if (lastTakenDate === today) {
                     return `<button disabled style="width:100%; margin-top:10px; padding:14px; background:#10b981; color:white; border:none; border-radius:12px; font-weight:700; font-size:1.05rem; cursor:default;">
-                        ✅ Tomei às ${horaMed}
-                    </button>`;
+        ✅ Tomei às ${horaMed}
+        </button>`;
                 }
-                // Se foi tomado em outro dia, cai para pending (card limpo)
             }
             
-            // 3️⃣ ESTADO: AGUARDANDO (Card limpo - botões só aparecem na hora exata)
+            // ✅ 3️⃣ NOVO ESTADO: NÃO TOMOU (VERMELHO)
+            if (status === 'not_taken') {
+                const declinedTime = med.taken_time || horaMed;
+                return `<button disabled style="width:100%; margin-top:10px; padding:14px; background:#ef4444; color:white; border:none; border-radius:12px; font-weight:700; font-size:1.05rem; cursor:default;">
+        ❌ Não quis tomar a medicação às ${declinedTime}
+        </button>`;
+            }
+            
+            // 4️⃣ ESTADO: AGUARDANDO (Card limpo)
             return '';
         }
 
@@ -4354,16 +4393,54 @@
                 const horaAtual = agora.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
                 const minutosAtuais = agora.getHours() * 60 + agora.getMinutes();
                 const diaSemanaAtual = agora.getDay();
-                
                 const currentUserId = localStorage.getItem('userId');
-                if (!currentUserId) return;
                 
-                const response = await fetch(`${API_URL}/api/cliente/${currentUserId}/medications`);
-                const medicamentos = await response.json();
+                if (!currentUserId) {
+                    console.log('⚠️ Usuário não logado, pulando verificação');
+                    return;
+                }
+
+                // ✅ FETCH COM VERIFICAÇÃO DE ERRO
+                let response;
+                try {
+                    response = await fetch(`${API_URL}/api/cliente/${currentUserId}/medications`, {
+                        method: 'GET',
+                        headers: { 'Content-Type': 'application/json' }
+                    });
+                } catch (fetchError) {
+                    console.error('❌ Erro de conexão com a API:', fetchError);
+                    console.error('🔌 API pode estar offline ou inacessível');
+                    return;
+                }
                 
+                // ✅ VERIFICAR STATUS DA RESPOSTA
+                if (!response.ok) {
+                    const errorText = await response.text().catch(() => 'Sem detalhes');
+                    console.error(`❌ API retornou ${response.status} - ${response.statusText}`);
+                    console.error('📄 Resposta:', errorText);
+                    return;
+                }
+
+                // ✅ PARSE JSON COM VERIFICAÇÃO
+                let medicamentos;
+                try {
+                    medicamentos = await response.json();
+                } catch (jsonError) {
+                    console.error('❌ Erro ao parsear JSON da resposta:', jsonError);
+                    return;
+                }
+                
+                // ✅ GARANTIR QUE É ARRAY
+                if (!Array.isArray(medicamentos)) {
+                    console.error('❌ medicamentos NÃO é um array:', typeof medicamentos, medicamentos);
+                    return;
+                }
+
                 console.log(`⏰ Verificando ${medicamentos.length} medicamentos às ${horaAtual}`);
-                
+
                 for (const med of medicamentos) {
+                    if (!med) continue; // Pula nulos/undefined
+                    
                     if (med.is_active === false) continue;
                     
                     const diasAtivos = med.days_of_week || [];
@@ -4390,11 +4467,8 @@
                     // 🎯 CASO 1: HORA EXATA (diff = 0)
                     if (diffMinutos === 0 && status !== 'taken' && status !== 'not_taken') {
                         console.log(`🔔 HORA EXATA: ${med.name} às ${horaAtual} (status: ${status})`);
-                        
-                        // Dispara áudio SEM await para não bloquear loop
                         tocarAlertaMedicamento(med.name, med.dosage, "lembrete");
                         
-                        // Atualiza UI para mostrar botões
                         const card = document.querySelector(`#card-med-${med.id} .med-actions-container`);
                         if (card) {
                             card.innerHTML = renderMedicationActions(med);
@@ -4404,13 +4478,11 @@
                             monitoringState.notifiedMeds[med.id] = { firstAlert: Date.now() };
                         }
                     }
-                    
-                    // 🎯 CASO 2: +5 MINUTOS - Modal de confirmação
+                    // 🎯 CASO 2: +5 MINUTOS
                     else if (diffMinutos === 5 && status !== 'taken' && status !== 'not_taken') {
                         const medState = monitoringState.notifiedMeds[med.id];
                         if (!medState?.secondAlert) {
                             console.log(`❓ +5 MIN: ${med.name} - Acionando modal`);
-                            
                             tocarAlertaMedicamento(med.name, med.dosage, "pergunta");
                             mostrarModalConfirmacao(med);
                             
@@ -4420,8 +4492,7 @@
                             monitoringState.notifiedMeds[med.id].secondAlert = Date.now();
                         }
                     }
-                    
-                    // 🎯 CASO 3: ATUALIZAÇÃO VISUAL CONTÍNUA
+                    // 🎯 CASO 3: ATUALIZAÇÃO VISUAL
                     if (status === 'rescheduled' || status === 'taken') {
                         const card = document.querySelector(`#card-med-${med.id} .med-actions-container`);
                         if (card) {
@@ -4435,9 +4506,9 @@
                 }
                 
                 monitoringState.lastCheck = Date.now();
-                
             } catch (error) {
                 console.error('❌ Erro na verificação:', error);
+                console.error('📋 Stack:', error.stack);
             }
         }
 
@@ -4474,7 +4545,7 @@
                 document.querySelectorAll('.modal-overlay').forEach(el => el.remove());
                 
                 if (tomou) {
-                    await fetch(`${API_URL}/api/medications/${medId}/take`, { 
+                    await fetch(`${API_URL}/api/medications/${medId}/take`, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' }
                     });
@@ -4482,11 +4553,17 @@
                     showToast('✅ Medicamento confirmado como tomado!');
                     setTimeout(() => location.reload(), 800);
                 } else {
-                    await fetch(`${API_URL}/api/medications/${medId}/not-taken`, { 
+                    // ✅ CORREÇÃO: Marcar como NÃO TOMADO no backend
+                    const med = medicationsData.find(m => m.id === medId);
+                    await fetch(`${API_URL}/api/medications/${medId}/not-taken`, {
                         method: 'POST',
-                        headers: { 'Content-Type': 'application/json' }
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            not_taken_time: med?.time || new Date().toLocaleTimeString('pt-BR', {hour: '2-digit', minute:'2-digit'})
+                        })
                     });
-                    showToast('ℹ️ Responsável notificado');
+                    
+                    showToast('❌ Medicamento não tomado');
                     mostrarOpcaoReagendar(medId);
                 }
             } catch (error) {
@@ -4567,17 +4644,27 @@
 
         function fecharReagendamento(medId) {
             document.querySelectorAll('.modal-overlay').forEach(el => el.remove());
+            
             if (monitoringState.notifiedMeds[medId]) {
                 monitoringState.notifiedMeds[medId].confirmed = true;
             }
             
             const med = medicationsData.find(m => m.id === medId);
             if (med) {
+                // ✅ CORREÇÃO: Marcar como NÃO TOMADO e atualizar estado local
+                updateLocalState(medId, 'not_taken', { declinedTime: med.time });
+                
+                // Atualizar o card para mostrar mensagem vermelha
+                const card = document.querySelector(`#card-med-${med.id} .med-actions-container`);
+                if (card) {
+                    card.innerHTML = renderMedicationActions({...med, taken_status: 'not_taken'});
+                }
+                
                 tocarAlertaMedicamento(med.name, med.dosage, "fechado");
             }
             
-            showToast('ℹ️ Reagendamento cancelado');
-        }
+            showToast('⚠️ Medicamento não tomado');
+        }             
 
         // ============================================
         // 🎯 UTILITÁRIOS
@@ -4634,30 +4721,47 @@
         }); 
 
         // ============================================
-        // ============================================
-        // 🚪 FUNÇÃO DE LOGOUT (ÚNICA)
+        // 🚪 FUNÇÃO DE LOGOUT (CORRIGIDA)
         // ============================================
         function handleLogout() {
             console.log('🚪 Botão sair clicado');
             
-            if (confirm('Deseja realmente sair da aplicação ..................?')) {
-                console.log('✅ Confirmação aceita');
+            if (confirm('Deseja realmente sair da aplicação?')) {
+                console.log('✅ Confirmação aceita, limpando dados...');
                 
-                // Limpar TODOS os dados
+                // 1. Limpar TODOS os dados
                 localStorage.clear();
                 sessionStorage.clear();
                 
-                console.log('🔄 Redirecionando...............................');
+                // 2. Desregistrar Service Worker (se existir)
+                if ('serviceWorker' in navigator) {
+                    navigator.serviceWorker.getRegistrations().then(function(registrations) {
+                        for(let registration of registrations) {
+                            registration.unregister();
+                            console.log('🔕 Service Worker desregistrado');
+                        }
+                    });
+                }
                 
-                // Redirecionar para raiz
+                console.log('🔄 Redirecionando para login...');
+                
+                // 3. Redirecionar IMEDIATAMENTE
                 window.location.href = '/';
                 
-                // Forçar após 500ms
+                // 4. Fallback após 500ms
                 setTimeout(() => {
                     window.location.href = window.location.origin + '/';
                 }, 500);
+                
+                // 5. Último recurso após 1s
+                setTimeout(() => {
+                    window.location.replace('/');
+                }, 1000);
+            } else {
+                console.log('❌ Logout cancelado pelo usuário');
             }
         }
+
         // ============================================
         // ✅ CORREÇÃO: Fecha o DOMContentLoaded AQUI!
         </script>
@@ -4770,22 +4874,22 @@
     <!-- ============================================ -->
     <script>
         // Verifica atualizações do Service Worker
-        if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.addEventListener('controllerchange', () => {
-                // Quando o SW muda, recarrega a página automaticamente
-                console.log('[PWA] Nova versão detectada! Recarregando...');
-                
-                // Usa a função showToast se existir, senão alert
-                if (typeof showToast === 'function') {
-                    showToast('🔄 Nova versão disponível! Recarregando...');
-                }
-                
-                // Recarrega após 2 segundos para mostrar a mensagem
-                setTimeout(() => {
-                    window.location.reload();
-                }, 2000);
-            });
-        }
+        //if ('serviceWorker' in navigator) {
+        //    navigator.serviceWorker.addEventListener('controllerchange', () => {
+        //       // Quando o SW muda, recarrega a página automaticamente
+        ///        console.log('[PWA] Nova versão detectada! Recarregando...');
+        //        /
+        //        // Usa a função showToast se existir, senão alert
+        //        if (typeof showToast === 'function') {
+        //            showToast('🔄 Nova versão disponível! Recarregando...');
+        //        }
+        //        
+        //        // Recarrega após 2 segundos para mostrar a mensagem
+        //        setTimeout(() => {
+        //            window.location.reload();
+        //        }, 2000);
+        //    });
+        //}
 
  
         // ============================================
