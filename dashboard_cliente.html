@@ -1612,28 +1612,31 @@
             // ============================================
             // 🛡️ VERIFICAÇÃO DE LOGIN IMEDIATA E BLOQUEANTE
             // ============================================
-            const storedUserId = localStorage.getItem('userId');
+        // ============================================
+        // 🛡️ VERIFICAÇÃO DE LOGIN IMEDIATA E BLOQUEANTE
+        // ============================================
+        const storedUserId = localStorage.getItem('userId');
+        
+        if (!storedUserId || storedUserId === 'null' || storedUserId === 'undefined') {
+            console.log('🔒 USUÁRIO NÃO LOGADO! Redirecionando forçadamente...');
             
-            if (!storedUserId || storedUserId === 'null' || storedUserId === 'undefined') {
-                console.log('🔒 USUÁRIO NÃO LOGADO! Redirecionando forçadamente...');
-                
-                // Limpa tudo
-                localStorage.clear();
-                sessionStorage.clear();
-                
-                // Força redirecionamento IMEDIATO
-                window.location.href = 'https://projeto-home-care.vercel.app/';
-                
-                // Backup após 100ms
-                setTimeout(() => {
-                    window.location.replace('/');
-                }, 100);
-                
-                // PARA execução do script completamente
-                throw new Error('⛔ Execução interrompida - Usuário não autenticado');
-            }
+            // 1. Limpar TODOS os dados
+            localStorage.clear();
+            sessionStorage.clear();
             
-            console.log('✅ Usuário autenticado:', storedUserId);
+            // 2. Redirecionamento IMEDIATO e FORÇADO
+            window.location.replace('/');
+            
+            // 3. Fallback após 100ms
+            setTimeout(() => {
+                window.location.href = window.location.origin + '/';
+            }, 100);
+            
+            // 4. PARAR execução COMPLETAMENTE
+            throw new Error('⛔ Execução interrompida - Redirecionando para login');
+        }
+        
+        console.log('✅ Usuário autenticado:', storedUserId);
             // ============================================
 
             // ============================================
