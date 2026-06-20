@@ -1603,29 +1603,39 @@
             // ============================================
             // 🌍 CONFIGURAÇÃO DA API (PRIMEIRA COISA!)
             // ============================================
-            const API_URL = window.location.hostname === 'localhost' 
-                ? 'http://localhost:8000' 
+            const API_URL = window.location.hostname === 'localhost'
+                ? 'http://localhost:8000'
                 : 'https://projeto-home-care-production.up.railway.app';
-            
+
             console.log('✅ API_URL configurada:', API_URL);
 
             // ============================================
-            // 🛡️ VERIFICAÇÃO DE LOGIN
+            // 🛡️ VERIFICAÇÃO DE LOGIN IMEDIATA E BLOQUEANTE
             // ============================================
             const storedUserId = localStorage.getItem('userId');
             
-            if (!storedUserId || storedUserId === 'null') {
-                console.log('🔒 Usuário não logado! Limpando dados...');
+            if (!storedUserId || storedUserId === 'null' || storedUserId === 'undefined') {
+                console.log('🔒 USUÁRIO NÃO LOGADO! Redirecionando forçadamente...');
+                
+                // Limpa tudo
                 localStorage.clear();
                 sessionStorage.clear();
-                window.location.href = '/';
-                // Parar execução
-                (function(){ return; })();
+                
+                // Força redirecionamento IMEDIATO
+                window.location.href = 'https://projeto-home-care.vercel.app/';
+                
+                // Backup após 100ms
+                setTimeout(() => {
+                    window.location.replace('/');
+                }, 100);
+                
+                // PARA execução do script completamente
+                throw new Error('⛔ Execução interrompida - Usuário não autenticado');
             }
             
             console.log('✅ Usuário autenticado:', storedUserId);
             // ============================================
-            
+
             // ============================================
             // 🟢 ESTADO GLOBAL (DECLARAÇÕES ÚNICAS)
             // ============================================
