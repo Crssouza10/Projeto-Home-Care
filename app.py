@@ -1,7 +1,7 @@
 # ===== versão 1.04 - 2026-06-02 ================================
 from fastapi import FastAPI, HTTPException, Depends, status, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import HTMLResponse, JSONResponse, FileResponse
+from fastapi.responses import HTMLResponse, JSONResponse, FileResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles  # ✅ IMPORTAÇÃO CRÍTICA!
 from sqlalchemy import create_engine, Column, String, DateTime, Boolean, Time, Date, Text, or_, Integer, text
 from sqlalchemy.orm import sessionmaker, declarative_base, Session
@@ -27,6 +27,8 @@ import re
 import asyncio
 import traceback
 import requests  # Para WhatsApp API
+import io
+import urllib.parse
 
 # ===== CONFIGURAÇÃO PARA VERCEL =====
 IS_VERCEL = os.getenv('VERCEL', '0') == '1'
@@ -487,29 +489,39 @@ async def generate_audio(request: dict):
         dosage = request.get("dosage", "conforme prescrição")
         instructions = request.get("instructions", "")
         
-        # 2. Montar a mensagem (Texto para Fala)
-        # Ex: "Atenção! Hora de tomar Dipirona, 500mg. 1 comprimido."
-        text = f"Atenção! Lembrete de medicamento. Hora de tomar: {medication}, {dosage}. {instructions}"
+        # 2. Codificar parâmetros para uma URL segura
+        params = urllib.parse.urlencode({
+            "medication": medication,
+            "dosage": dosage,
+            "instructions": instructions
+        })
         
-        # 3. Gerar o áudio com gTTS (Google Text-to-Speech)
-        tts = gTTS(text=text, lang='pt-br', slow=False)
+        # 3. Retornar a URL dinâmica de streaming de áudio
+        audio_url = f"/api/serve-audio?{params}"
         
-        # 4. Salvar arquivo
-        filename = f"audio_{uuid.uuid4().hex}.mp3"
-        # Garanta que a pasta static/audio existe
-        os.makedirs("static/audio", exist_ok=True)
-        filepath = f"static/audio/{filename}"
-        
-        tts.save(filepath)
-        
-        # 5. Retornar a URL para o Frontend tocar
-        # Supondo que sua API roda na raiz, o link será /static/audio/filename.mp3
-        audio_url = f"/static/audio/{filename}"
-        
-        return {"status": "success", "url": audio_url, "message": "Áudio gerado com sucesso!"}
+        return {"status": "success", "url": audio_url, "message": "Áudio preparado com sucesso!"}
 
     except Exception as e:
         return {"status": "error", "message": str(e)}
+
+@app.get("/api/serve-audio")
+async def serve_audio(medication: str = "Seu medicamento", dosage: str = "conforme prescrição", instructions: str = ""):
+    try:
+        # 1. Montar o texto a partir dos parâmetros da query string
+        text = f"Atenção! Lembrete de medicamento. Hora de tomar: {medication}, {dosage}. {instructions}"
+        
+        # 2. Gerar áudio com gTTS (Google Text-to-Speech)
+        tts = gTTS(text=text, lang='pt-br', slow=False)
+        
+        # 3. Salvar o áudio em um buffer de memória
+        fp = io.BytesIO()
+        tts.write_to_fp(fp)
+        fp.seek(0)
+        
+        # 4. Retornar o buffer como Stream de áudio
+        return StreamingResponse(fp, media_type="audio/mpeg")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 # =========================================================
 # 💊 CRUD MEDICAÇÕES
 # =========================================================

@@ -10,7 +10,15 @@
       }
     },
     {
-      "src": "dashboard_cliente.html",
+      "src": "*.html",
+      "use": "@vercel/static"
+    },
+    {
+      "src": "sw.js",
+      "use": "@vercel/static"
+    },
+    {
+      "src": "manifest.json",
       "use": "@vercel/static"
     }
   ],
@@ -20,8 +28,36 @@
       "dest": "app.py"
     },
     {
-      "src": "/(.*)",
+      "src": "/health",
+      "dest": "app.py"
+    },
+    {
+      "src": "/sw.js",
+      "dest": "/sw.js"
+    },
+    {
+      "src": "/manifest.json",
+      "dest": "/manifest.json"
+    },
+    {
+      "src": "/dashboard",
+      "dest": "/dashboard.html"
+    },
+    {
+      "src": "/dashboard-cliente",
       "dest": "/dashboard_cliente.html"
+    },
+    {
+      "src": "/index.html",
+      "dest": "/index.html"
+    },
+    {
+      "src": "/static/(.*)",
+      "dest": "/static/$1"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "/index.html"
     }
   ],
   "env": {
