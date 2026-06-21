@@ -63,11 +63,33 @@ DATABASE_URL = os.getenv("DATABASE_URL")
 if DATABASE_URL and DATABASE_URL.startswith("postgres://"):
     DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
 
-print(f"🔍 DATABASE_URL: {'✅ Configurada' if DATABASE_URL else '❌ NÃO CONFIGURADA'}")
+print(f"DATABASE_URL: {'Configurada' if DATABASE_URL else 'NAO CONFIGURADA'}")
 
 engine = create_engine(DATABASE_URL)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
+
+# ===== AUTO-MIGRAÇÃO DE BANCO DE DADOS (GARANTIR COLUNAS) =====
+if DATABASE_URL:
+    try:
+        with engine.connect() as conn:
+            queries = [
+                "ALTER TABLE medications ADD COLUMN IF NOT EXISTS end_date VARCHAR(10)",
+                "ALTER TABLE medications ADD COLUMN IF NOT EXISTS taken_status VARCHAR(20) DEFAULT 'pending'",
+                "ALTER TABLE medications ADD COLUMN IF NOT EXISTS reminder_count INTEGER DEFAULT 0",
+                "ALTER TABLE medications ADD COLUMN IF NOT EXISTS responsible_notified BOOLEAN DEFAULT FALSE",
+                "ALTER TABLE medications ADD COLUMN IF NOT EXISTS last_taken_date DATE"
+            ]
+            for q in queries:
+                try:
+                    conn.execute(text(q))
+                    conn.commit()
+                except Exception as e:
+                    conn.rollback()
+                    print(f"Auto-migration info (non-fatal): {e}")
+            print("Auto-migration: medications table checks completed.")
+    except Exception as e:
+        print(f"Auto-migration database connection info: {e}")
 # ==================== MODELOS (TABELAS) ====================
 
 class User(Base):
