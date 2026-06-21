@@ -1726,6 +1726,10 @@
                 return false;
             } catch (error) {
                 console.error('❌ Erro ao tocar áudio:', error);
+                if (error.name === 'NotAllowedError') {
+                    window.pendingAudioAlert = { nome, dosagem, tipo };
+                    showToast('🔊 Dica: Toque na tela para liberar o som dos alarmes!', true);
+                }
                 return false;
             }
         }
@@ -1752,6 +1756,9 @@
             await loadAllData();
             
             // Inicia verificador de medicamentos
+            if (monitoringState.checkInterval) {
+                clearInterval(monitoringState.checkInterval);
+            }
             verificarMedicamentos();
             monitoringState.checkInterval = setInterval(verificarMedicamentos, 30000);
             
@@ -1929,6 +1936,9 @@
             // ===== SISTEMA DE MONITORAMENTO DE MEDICAMENTOS =====
             setTimeout(() => {
                 if (typeof verificarMedicamentos === 'function') {
+                    if (monitoringState.checkInterval) {
+                        clearInterval(monitoringState.checkInterval);
+                    }
                     verificarMedicamentos();
                     monitoringState.checkInterval = setInterval(verificarMedicamentos, 30000);
                     console.log('✅ Monitoramento de medicamentos ativo! (30s)');
@@ -2980,7 +2990,7 @@
                     
                     // 🔄 CRÍTICO: Recarrega a página para mostrar o botão "Reagendado"
                     // Isso garante que o card leia o novo status do banco de dados
-                    setTimeout(() => location.reload(), 1000); 
+                    setTimeout(() => reloadAndRefresh(), 1000); 
                 } else {
                     alert(' Erro ao registrar ação. Tente novamente.');
                 }
@@ -4044,6 +4054,28 @@
 
         // ===== INICIALIZAÇÃO (DOMContentLoaded) =====
         document.addEventListener('DOMContentLoaded', () => {
+            // ✅ Desbloqueia Autoplay de Áudio no primeiro clique/toque na tela
+            const unlockAudio = () => {
+                const audio = new Audio('data:audio/wav;base64,UklGRigAAABXQVZFZm10IBIAAAABAAEARKwAAIhYAQACABAAAABkYXRhAgAAAAAA');
+                audio.play().then(() => {
+                    console.log('🔊 Áudio desbloqueado com sucesso!');
+                    document.removeEventListener('click', unlockAudio);
+                    document.removeEventListener('touchstart', unlockAudio);
+                    
+                    // Se houver algum áudio na fila de espera, toca ele agora!
+                    if (window.pendingAudioAlert) {
+                        const { nome, dosagem, tipo } = window.pendingAudioAlert;
+                        window.pendingAudioAlert = null;
+                        console.log('🔊 Tocando áudio pendente da fila:', nome);
+                        tocarAlertaMedicamento(nome, dosagem, tipo);
+                    }
+                }).catch(e => {
+                    console.warn('⚠️ Falha ao desbloquear áudio (ainda sem interação):', e);
+                });
+            };
+            document.addEventListener('click', unlockAudio, { passive: true });
+            document.addEventListener('touchstart', unlockAudio, { passive: true });
+
             // Carregar preferência do Modo Sênior
             updateSeniorButtonUI();
             
@@ -4171,6 +4203,10 @@
                 return false;
             } catch (error) {
                 console.error('❌ Erro ao tocar áudio:', error);
+                if (error.name === 'NotAllowedError') {
+                    window.pendingAudioAlert = { nome, dosagem, tipo };
+                    showToast('🔊 Dica: Toque na tela para liberar o som dos alarmes!', true);
+                }
                 return false;
             }
         }
@@ -4383,7 +4419,7 @@
                     });
                     updateLocalState(medId, 'taken');
                     showToast('✅ Medicamento confirmado como tomado!');
-                    setTimeout(() => location.reload(), 800);
+                    setTimeout(() => reloadAndRefresh(), 800);
                 } else {
                     showToast('❌ Medicamento não tomado');
                     mostrarOpcaoReagendar(medId);
@@ -4454,7 +4490,7 @@
                         delete monitoringState.notifiedMeds[medId];
                     }
                     document.querySelectorAll('.modal-overlay').forEach(el => el.remove());
-                    setTimeout(() => location.reload(), 1000);
+                    setTimeout(() => reloadAndRefresh(), 1000);
                 } else {
                     throw new Error(data.detail || 'Erro ao reagendar');
                 }
@@ -4490,7 +4526,7 @@
                     
                     tocarAlertaMedicamento(med.name, med.dosage, "fechado");
                     showToast('⚠️ Medicamento não tomado');
-                    setTimeout(() => location.reload(), 1000);
+                    setTimeout(() => reloadAndRefresh(), 1000);
                 } catch (err) {
                     console.error('❌ Erro ao fechar reagendamento:', err);
                     showToast('❌ Erro de conexão ao salvar estado', true);
@@ -4528,6 +4564,9 @@
             // ===== MONITORAMENTO DE MEDICAMENTOS =====
             setTimeout(() => {
                 if (typeof verificarMedicamentos === 'function') {
+                    if (monitoringState.checkInterval) {
+                        clearInterval(monitoringState.checkInterval);
+                    }
                     verificarMedicamentos();
                     monitoringState.checkInterval = setInterval(verificarMedicamentos, 30000);
                     console.log('✅ Monitoramento de medicamentos ativo! (30s)');
