@@ -78,7 +78,9 @@ if DATABASE_URL:
                 "ALTER TABLE medications ADD COLUMN IF NOT EXISTS taken_status VARCHAR(20) DEFAULT 'pending'",
                 "ALTER TABLE medications ADD COLUMN IF NOT EXISTS reminder_count INTEGER DEFAULT 0",
                 "ALTER TABLE medications ADD COLUMN IF NOT EXISTS responsible_notified BOOLEAN DEFAULT FALSE",
-                "ALTER TABLE medications ADD COLUMN IF NOT EXISTS last_taken_date DATE"
+                "ALTER TABLE medications ADD COLUMN IF NOT EXISTS last_taken_date DATE",
+                "ALTER TABLE responsibles ADD COLUMN IF NOT EXISTS notify_whatsapp BOOLEAN DEFAULT TRUE",
+                "ALTER TABLE responsibles ADD COLUMN IF NOT EXISTS notify_call BOOLEAN DEFAULT FALSE"
             ]
             for q in queries:
                 try:
@@ -87,7 +89,7 @@ if DATABASE_URL:
                 except Exception as e:
                     conn.rollback()
                     print(f"Auto-migration info (non-fatal): {e}")
-            print("Auto-migration: medications table checks completed.")
+            print("Auto-migration: medications and responsibles table checks completed.")
     except Exception as e:
         print(f"Auto-migration database connection info: {e}")
 # ==================== MODELOS (TABELAS) ====================
@@ -172,6 +174,8 @@ class Responsible(Base):
     phone = Column(String(20), nullable=False)
     notify_sms = Column(Boolean, default=True)
     notify_email = Column(Boolean, default=False)
+    notify_whatsapp = Column(Boolean, default=True)
+    notify_call = Column(Boolean, default=False)
     created_at = Column(DateTime, default=datetime.utcnow)  # ou datetime.utcnow se mudar o import
 
 
@@ -263,6 +267,8 @@ class ResponsibleCreate(BaseModel):
     phone: str
     notify_sms: bool = True
     notify_email: bool = True 
+    notify_whatsapp: Optional[bool] = True
+    notify_call: Optional[bool] = False
 
 # Schemas para Cliente (Paciente)
 class ClienteLogin(BaseModel):
@@ -296,6 +302,8 @@ class ClienteResponsibleResponse(BaseModel):
     relationship: str
     phone: str
     notify_sms: bool
+    notify_whatsapp: Optional[bool] = True
+    notify_call: Optional[bool] = False
     model_config = ConfigDict(from_attributes=True)
 
 # Schema para Contatos de Emergência (APENAS 1x)
@@ -719,7 +727,7 @@ async def mark_not_taken(med_id: str):
         db.commit()
         
         #  Dispara notificação (assíncrono para não travar UI)
-        asyncio.create_task(notify_responsible_async(med))
+        asyncio.create_task(notify_responsible_async(med.id))
         
         return {"status": "success", "message": "❌ Não tomado. Responsável acionado."}
     except Exception as e:
@@ -727,10 +735,45 @@ async def mark_not_taken(med_id: str):
         raise HTTPException(500, str(e))
     finally:
         db.close()
-
-async def notify_responsible_async(medication):
-    """Placeholder para integração com WhatsApp/SMS (Twilio, Z-API, etc)"""
-    print(f"📱 [MOCK] ACIONANDO RESPONSÁVEL: {medication.name} não tomou {medication.name} às {medication.time}")
+ 
+async def notify_responsible_async(medication_id: uuid.UUID):
+    """Aciona responsável do cliente quando este não toma a medicação"""
+    db = SessionLocal()
+    try:
+        med = db.query(Medication).filter(Medication.id == medication_id).first()
+        if not med:
+            print("⚠️ notify_responsible_async: Medicamento não encontrado")
+            return
+            
+        user = db.query(User).filter(User.id == med.user_id).first()
+        paciente_nome = user.full_name if user else "O paciente"
+        
+        responsibles = db.query(Responsible).filter(Responsible.user_id == med.user_id).all()
+        
+        from datetime import datetime, timezone, timedelta
+        brasilia_tz = timezone(timedelta(hours=-3))
+        now = datetime.utcnow().replace(tzinfo=timezone.utc).astimezone(brasilia_tz)
+        dia = now.strftime("%d/%m")
+        horario = med.time.strftime('%H:%M') if med.time else now.strftime('%H:%M')
+        
+        # Mensagem formatada exatamente conforme o exemplo
+        mensagem = f"⚠️ *CR$ HOME CARE AI - ALERTA*\n\nA {paciente_nome} não tomou o remédio *{med.name}* das {horario} de hoje dia {dia}."
+        
+        for resp in responsibles:
+            whatsapp_habilitado = resp.notify_whatsapp if resp.notify_whatsapp is not None else True
+            ligacao_habilitada = resp.notify_call if resp.notify_call is not None else False
+            
+            if whatsapp_habilitado:
+                print(f"📱 Enviando WhatsApp para {resp.name} ({resp.phone}): {mensagem}")
+                enviar_whatsapp_custom(resp.phone, mensagem)
+                
+            if ligacao_habilitada:
+                print(f"📞 [MOCK CALL] Fazendo ligação telefônica para {resp.name} ({resp.phone}): {mensagem}")
+                
+    except Exception as e:
+        print(f"❌ Erro em notify_responsible_async: {e}")
+    finally:
+        db.close()
     # TODO: Integrar com API de mensagem aqui
     # await whatsapp_api.send(f"⚠️ Alerta: {medication.name} não foi tomado.")
 
@@ -808,7 +851,9 @@ async def get_client_responsibles(user_id: str, db: Session = Depends(get_db)):
             "name": r.name,
             "relationship": r.relationship,
             "phone": r.phone,
-            "notify_sms": r.notify_sms
+            "notify_sms": r.notify_sms,
+            "notify_whatsapp": r.notify_whatsapp if r.notify_whatsapp is not None else True,
+            "notify_call": r.notify_call if r.notify_call is not None else False
         } for r in responsibles
     ]
 
@@ -825,7 +870,9 @@ async def create_responsible(user_id: str, resp: ResponsibleCreate, db: Session 
         relationship=resp.relationship,
         phone=resp.phone,
         notify_sms=resp.notify_sms,
-        notify_email=resp.notify_email
+        notify_email=resp.notify_email,
+        notify_whatsapp=resp.notify_whatsapp if resp.notify_whatsapp is not None else True,
+        notify_call=resp.notify_call if resp.notify_call is not None else False
     )
     
     db.add(novo_resp)
@@ -1151,6 +1198,8 @@ async def update_responsible(
     responsible.phone = resp.phone
     responsible.notify_sms = resp.notify_sms
     responsible.notify_email = resp.notify_email
+    responsible.notify_whatsapp = resp.notify_whatsapp if resp.notify_whatsapp is not None else True
+    responsible.notify_call = resp.notify_call if resp.notify_call is not None else False
     
     db.commit()
     db.refresh(responsible)
@@ -1301,6 +1350,49 @@ def enviar_whatsapp(telefone: str, nome_remedio: str, dosagem: str) -> bool:
         print(f"❌ Falha de conexão WhatsApp: {e}")
         return False
 
+# Função auxiliar para enviar mensagem customizada pelo WhatsApp
+def enviar_whatsapp_custom(telefone: str, texto: str) -> bool:
+    token = os.getenv("WHATSAPP_TOKEN")
+    phone_id = os.getenv("WHATSAPP_PHONE_ID")
+    
+    if not token or not phone_id:
+        print("⚠️ WHATSAPP_TOKEN ou WHATSAPP_PHONE_ID ausentes no .env!")
+        return False
+        
+    if not telefone:
+        return False
+        
+    nums = re.sub(r'\D', '', telefone)
+    if len(nums) == 10 or len(nums) == 11:
+        nums = "55" + nums
+        
+    url = f"https://graph.facebook.com/v19.0/{phone_id}/messages"
+    headers = {
+        "Authorization": f"Bearer {token}",
+        "Content-Type": "application/json"
+    }
+    
+    data = {
+        "messaging_product": "whatsapp",
+        "to": nums,
+        "type": "text",
+        "text": {
+            "body": texto
+        }
+    }
+    
+    try:
+        response = requests.post(url, headers=headers, json=data)
+        if response.status_code in [200, 201]:
+            print(f"✅ WhatsApp Custom enviado com sucesso para {nums}")
+            return True
+        else:
+            print(f"❌ Erro da API WhatsApp Custom para {nums}: {response.text}")
+            return False
+    except Exception as e:
+        print(f"❌ Falha de conexão WhatsApp Custom: {e}")
+        return False
+
 # Rota fictícia para o Frontend não quebrar caso ainda tente enviar Web Push
 @app.post("/api/push/subscribe")
 async def dummy_subscribe():
@@ -1397,47 +1489,7 @@ from fastapi import HTTPException
 # =========================================================
 # =========================================================
 # Função para notificar responsável
-async def notify_responsible(medication, db):
-    """
-    Envia notificação ao responsável quando paciente não toma remédio
-    """
-    try:
-        # Busca responsável do cliente
-        from sqlalchemy import text
-        resp_query = text("""
-            SELECT name, phone 
-            FROM responsibles 
-            WHERE client_id = :client_id 
-            LIMIT 1
-        """)
-        
-        result = db.execute(resp_query, {"client_id": str(medication.user_id)}).first()
-        
-        if result:
-            resp_name = result[0]
-            resp_phone = result[1]
-            
-            # Mensagem para o responsável
-            message = (
-                f"⚠️ ALERTA DE MEDICAMENTO\n\n"
-                f"Paciente: {medication.name}\n"
-                f"Medicamento: {medication.name}\n"
-                f"Horário previsto: {medication.time.strftime('%H:%M')}\n\n"
-                f"O paciente NÃO tomou o medicamento no horário.\n"
-                f"Por favor, verifique!"
-            )
-            
-            # Aqui você pode integrar com WhatsApp/SMS
-            print(f"📱 Notificando responsável {resp_name}: {message}")
-            
-            # Opcional: Enviar via WhatsApp (Twilio, Z-API, etc)
-            # await send_whatsapp_message(resp_phone, message)
-            
-            return {"status": "sent", "to": resp_name}
-        
-    except Exception as e:
-        print(f"❌ Erro ao notificar responsável: {e}")
-        return None
+# (substituída por notify_responsible_async)
     
 # ============================================
 # 🚀 CONFIGURAÇÃO PARA VERCEL

@@ -1545,6 +1545,16 @@
                     <label class="form-label">Telefone *</label>
                     <input type="tel" class="form-input" id="resp-phone" placeholder="(61) 99999-9999" required>
                 </div>
+                <div class="form-group" style="margin-top: 15px; display: flex; flex-direction: column; gap: 10px;">
+                    <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; color: #8A9BB5;">
+                        <input type="checkbox" id="resp-notify-whatsapp" style="width: 18px; height: 18px; accent-color: #00D4FF;" checked>
+                        Receber aviso via WhatsApp
+                    </label>
+                    <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; color: #8A9BB5;">
+                        <input type="checkbox" id="resp-notify-call" style="width: 18px; height: 18px; accent-color: #00D4FF;">
+                        Receber aviso via Ligação telefônica
+                    </label>
+                </div>
                 <button type="submit" class="btn-submit">💾 Salvar Responsável</button>
             </form>
         </div>
@@ -3219,6 +3229,8 @@
                 container.innerHTML = responsiblesData.map(resp => {
                     const initials = (resp.name || 'R').split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
                     const phoneClean = (resp.phone || '').replace(/\D/g, '');
+                    const notifyWhatsapp = resp.notify_whatsapp !== false;
+                    const notifyCall = resp.notify_call === true;
                     return `
                         <div class="resp-card">
                             <div class="resp-header">
@@ -3237,7 +3249,13 @@
                                 </div>
                             </div>
                             <div class="med-dosage">📱 ${resp.phone || 'Sem telefone'}</div>
-                            <div class="resp-actions">
+                            <div class="med-dosage" style="margin-top: 5px; display: flex; gap: 10px; font-size: 0.85rem; color: #8A9BB5;">
+                                <span>Avisos por:</span>
+                                ${notifyWhatsapp ? '<span style="color: #25d366; font-weight: 600;">💬 WhatsApp</span>' : ''}
+                                ${notifyCall ? '<span style="color: #10b981; font-weight: 600;">📞 Ligação</span>' : ''}
+                                ${(!notifyWhatsapp && !notifyCall) ? '<span style="color: #ef4444;">Nenhum</span>' : ''}
+                            </div>
+                            <div class="resp-actions" style="margin-top: 15px;">
                                 <button class="btn-whatsapp" onclick="window.open('https://wa.me/55${phoneClean}','_blank')">💬 WhatsApp</button>
                                 <button class="btn-call" onclick="window.location.href='tel:${phoneClean}'">📞 Ligar</button>
                             </div>
@@ -3401,10 +3419,14 @@
                 document.getElementById('resp-name').value = resp.name || '';
                 document.getElementById('resp-relationship').value = resp.relationship || '';
                 document.getElementById('resp-phone').value = resp.phone || '';
+                document.getElementById('resp-notify-whatsapp').checked = resp.notify_whatsapp !== false;
+                document.getElementById('resp-notify-call').checked = resp.notify_call === true;
             } else {
                 title.textContent = '👨‍👦 Adicionar Responsável';
                 form.reset();
                 document.getElementById('resp-id').value = '';
+                document.getElementById('resp-notify-whatsapp').checked = true;
+                document.getElementById('resp-notify-call').checked = false;
             }
             
             modal.classList.add('active');
@@ -3584,7 +3606,9 @@
                 user_id: userId,
                 name: document.getElementById('resp-name').value,
                 relationship: document.getElementById('resp-relationship').value,
-                phone: document.getElementById('resp-phone').value
+                phone: document.getElementById('resp-phone').value,
+                notify_whatsapp: document.getElementById('resp-notify-whatsapp').checked,
+                notify_call: document.getElementById('resp-notify-call').checked
             };
             
             try {
@@ -4357,16 +4381,6 @@
                     showToast('✅ Medicamento confirmado como tomado!');
                     setTimeout(() => location.reload(), 800);
                 } else {
-                    // ✅ CORREÇÃO: Marcar como NÃO TOMADO no backend
-                    const med = medicationsData.find(m => m.id === medId);
-                    await fetch(`${API_URL}/api/medications/${medId}/not-taken`, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({
-                            not_taken_time: med?.time || new Date().toLocaleTimeString('pt-BR', {hour: '2-digit', minute:'2-digit'})
-                        })
-                    });
-                    
                     showToast('❌ Medicamento não tomado');
                     mostrarOpcaoReagendar(medId);
                 }
@@ -4446,7 +4460,7 @@
             }
         }
 
-        function fecharReagendamento(medId) {
+        async function fecharReagendamento(medId) {
             document.querySelectorAll('.modal-overlay').forEach(el => el.remove());
             
             if (monitoringState.notifiedMeds[medId]) {
@@ -4455,19 +4469,29 @@
             
             const med = medicationsData.find(m => m.id === medId);
             if (med) {
-                // ✅ CORREÇÃO: Marcar como NÃO TOMADO e atualizar estado local
-                updateLocalState(medId, 'not_taken', { declinedTime: med.time });
-                
-                // Atualizar o card para mostrar mensagem vermelha
-                const card = document.querySelector(`#card-med-${med.id} .med-actions-container`);
-                if (card) {
-                    card.innerHTML = renderMedicationActions({...med, taken_status: 'not_taken'});
+                try {
+                    // ✅ Marcar como NÃO TOMADO no backend e acionar responsável
+                    await fetch(`${API_URL}/api/medications/${medId}/not-taken`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' }
+                    });
+                    
+                    updateLocalState(medId, 'not_taken', { declinedTime: med.time });
+                    
+                    // Atualizar o card para mostrar mensagem vermelha
+                    const card = document.querySelector(`#card-med-${med.id} .med-actions-container`);
+                    if (card) {
+                        card.innerHTML = renderMedicationActions({...med, taken_status: 'not_taken'});
+                    }
+                    
+                    tocarAlertaMedicamento(med.name, med.dosage, "fechado");
+                    showToast('⚠️ Medicamento não tomado');
+                    setTimeout(() => location.reload(), 1000);
+                } catch (err) {
+                    console.error('❌ Erro ao fechar reagendamento:', err);
+                    showToast('❌ Erro de conexão ao salvar estado', true);
                 }
-                
-                tocarAlertaMedicamento(med.name, med.dosage, "fechado");
             }
-            
-            showToast('⚠️ Medicamento não tomado');
         }             
 
         // ============================================

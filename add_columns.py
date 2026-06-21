@@ -14,7 +14,9 @@ queries = [
     "ALTER TABLE medications ADD COLUMN taken_status VARCHAR(20) DEFAULT 'pending'",
     "ALTER TABLE medications ADD COLUMN reminder_count INTEGER DEFAULT 0",
     "ALTER TABLE medications ADD COLUMN responsible_notified BOOLEAN DEFAULT FALSE",
-    "ALTER TABLE medications ADD COLUMN last_taken_date DATE"
+    "ALTER TABLE medications ADD COLUMN last_taken_date DATE",
+    "ALTER TABLE responsibles ADD COLUMN notify_whatsapp BOOLEAN DEFAULT TRUE",
+    "ALTER TABLE responsibles ADD COLUMN notify_call BOOLEAN DEFAULT FALSE"
 ]
 
 with engine.connect() as conn:
