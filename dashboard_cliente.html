@@ -1852,15 +1852,19 @@
                 
                 const endpoints = [
                     `${API_URL}/api/cliente/${userId}/medications`,
-                    `${API_URL}/api/cliente/${userId}/appointments`
+                    `${API_URL}/api/cliente/${userId}/appointments`,
+                    `${API_URL}/api/cliente/${userId}/responsibles`,
+                    `${API_URL}/api/cliente/${userId}/emergency-contacts`
                 ];
                 
-                const [medsRes, apptsRes] = await Promise.all(
+                const [medsRes, apptsRes, respRes, contactsRes] = await Promise.all(
                     endpoints.map(url => fetch(url))
                 );
                 
                 if (medsRes.ok) medicationsData = await medsRes.json();
                 if (apptsRes.ok) appointmentsData = await apptsRes.json();
+                if (respRes.ok) responsiblesData = await respRes.json();
+                if (contactsRes.ok) contactsData = await contactsRes.json();
                 
                 refreshCurrentView();
             } catch (error) {
