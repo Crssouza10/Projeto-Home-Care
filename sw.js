@@ -8,6 +8,7 @@ const urlsToCache = [
 // Instalação do Service Worker
 self.addEventListener('install', event => {
   console.log('[SW] Instalando Service Worker...');
+  self.skipWaiting(); // ✅ Força a ativação imediata da nova versão
   event.waitUntil(
     caches.open(CACHE_NAME)
       .then(cache => {

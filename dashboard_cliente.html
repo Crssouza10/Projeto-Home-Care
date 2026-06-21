@@ -1792,13 +1792,37 @@
         // ============================================
         function renderCurrentScreen() {
             console.log('🎨 Renderizando tela:', currentScreen);
+            refreshCurrentView();
+        }
+
+        // ============================================
+        // ✅ NOVA FUNÇÃO: Atualiza a exibição da tela ativa
+        // ============================================
+        function refreshCurrentView() {
+            const targetDateStr = viewingSpecificDate || `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}-${String(new Date().getDate()).padStart(2, '0')}`;
+            const parts = targetDateStr.split('-');
+            const targetDateObj = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
+            
+            updateCountersForDate(targetDateStr);
             
             if (currentScreen === 'medications') {
-                loadMedicationsForDay(new Date().getDay());
+                const today = new Date();
+                today.setHours(0, 0, 0, 0);
+                const targetDateOnly = new Date(targetDateObj);
+                targetDateOnly.setHours(0, 0, 0, 0);
+                
+                if (targetDateOnly < today) {
+                    loadMedicationsHistory(targetDateStr);
+                } else {
+                    loadMedicationsForDay(targetDateObj.getDay());
+                }
             } 
             else if (currentScreen === 'appointments') {
-                const todayStr = new Date().toISOString().split('T')[0];
-                loadAppointmentsForDate(todayStr);
+                if (viewingSpecificDate) {
+                    loadAppointmentsForDate(viewingSpecificDate);
+                } else {
+                    loadAllFutureAppointments();
+                }
             } 
             else if (currentScreen === 'responsibles') {
                 loadResponsibles();
@@ -1806,8 +1830,32 @@
             else if (currentScreen === 'contacts') {
                 loadContacts();
             }
-            
-            updateCounters();
+        }
+
+        // ============================================
+        // ✅ NOVA FUNÇÃO: Recarrega todos os dados e atualiza a tela
+        // ============================================
+        async function reloadAndRefresh() {
+            try {
+                if (!userId) return;
+                console.log('🔄 Recarregando dados da API e atualizando tela...');
+                
+                const endpoints = [
+                    `${API_URL}/api/cliente/${userId}/medications`,
+                    `${API_URL}/api/cliente/${userId}/appointments`
+                ];
+                
+                const [medsRes, apptsRes] = await Promise.all(
+                    endpoints.map(url => fetch(url))
+                );
+                
+                if (medsRes.ok) medicationsData = await medsRes.json();
+                if (apptsRes.ok) appointmentsData = await apptsRes.json();
+                
+                refreshCurrentView();
+            } catch (error) {
+                console.error('❌ Erro ao recarregar dados da API:', error);
+            }
         }
         // ============================================
         // 🚀 INICIALIZAÇÃO UNIFICADA (ÚNICO DOMContentLoaded)
@@ -1889,20 +1937,23 @@
             }
             
             // ===== SERVICE WORKER =====
-            // if ('serviceWorker' in navigator) {
-            //    navigator.serviceWorker.register('/sw.js')
-            //        .then(reg => console.log('[PWA] SW registrado:', reg.scope))
-            //        .catch(err => console.log('[PWA] Erro ao registrar SW:', err));
-            //    
-            //    // Verifica atualizações do SW
-            //    navigator.serviceWorker.addEventListener('controllerchange', () => {
-            //        console.log('[PWA] Nova versão detectada! Recarregando...');
-            //        if (typeof showToast === 'function') {
-            //            showToast('🔄 Nova versão disponível! Recarregando...');
-            //        }
-            //        setTimeout(() => window.location.reload(), 2000);
-            //    });
-            // }
+            if ('serviceWorker' in navigator) {
+                navigator.serviceWorker.register('/sw.js')
+                    .then(reg => {
+                        console.log('[PWA] SW registrado:', reg.scope);
+                        reg.update(); // Proativamente força o SW a buscar atualizações
+                    })
+                    .catch(err => console.log('[PWA] Erro ao registrar SW:', err));
+                
+                // Verifica atualizações do SW
+                navigator.serviceWorker.addEventListener('controllerchange', () => {
+                    console.log('[PWA] Nova versão detectada! Recarregando...');
+                    if (typeof showToast === 'function') {
+                        showToast('🔄 Nova versão disponível! Recarregando...');
+                    }
+                    setTimeout(() => window.location.reload(), 1500);
+                });
+            }
             
             // ===== PWA INSTALL PROMPT =====
             let deferredPrompt = null;
@@ -3712,7 +3763,7 @@
                 
                 showToast(id ? '✅ Medicamento atualizado!' : '✅ Medicamento adicionado!');
                 closeModal('modal-medication');
-                loadMedications();
+                await reloadAndRefresh();
             } catch (error) {
                 showToast('❌ ' + error.message, true);
                 console.error('Erro ao salvar medicamento:', error);
@@ -3769,7 +3820,7 @@
                 
                 showToast(id ? '✅ Consulta atualizada!' : '✅ Consulta agendada!');
                 closeModal('modal-appointment');
-                loadAppointments();
+                await reloadAndRefresh();
             } catch (error) {
                 showToast('❌ ' + error.message, true);
                 console.error('❌ Erro detalhado:', error);
@@ -3812,7 +3863,7 @@
                 
                 showToast(id ? '✅ Responsável atualizado!' : '✅ Responsável adicionado!');
                 closeModal('modal-responsible');
-                loadResponsibles();
+                await reloadAndRefresh();
             } catch (error) {
                 showToast('❌ ' + error.message, true);
                 console.error(error);
@@ -3856,7 +3907,7 @@
                 
                 showToast(id ? '✅ Contato atualizado!' : '✅ Contato adicionado!');
                 closeModal('modal-contact');
-                loadContacts();
+                await reloadAndRefresh();
             } catch (error) {
                 showToast('❌ ' + error.message, true);
                 console.error(error);
@@ -3873,7 +3924,7 @@
                 const response = await fetch(`${API_URL}/api/medications/${id}`, { method: 'DELETE' });
                 if (!response.ok) throw new Error('Erro ao excluir');
                 showToast('🗑️ Medicamento excluído');
-                loadMedications();
+                await reloadAndRefresh();
             } catch (error) {
                 showToast('❌ Erro ao excluir: ' + error.message, true);
                 console.error(error);
@@ -3894,7 +3945,7 @@
                 }
                 
                 showToast('🗑️ Consulta excluída');
-                loadAppointments();
+                await reloadAndRefresh();
             } catch (error) {
                 showToast('❌ Erro ao excluir: ' + error.message, true);
                 console.error(error);
@@ -3910,7 +3961,7 @@
                     throw new Error(errorData.detail || 'Erro ao excluir');
                 }
                 showToast('🗑️ Responsável excluído');
-                loadResponsibles();
+                await reloadAndRefresh();
             } catch (error) {
                 showToast('❌ Erro ao excluir: ' + error.message, true);
                 console.error(error);
@@ -3926,7 +3977,7 @@
                     throw new Error(errorData.detail || 'Erro ao excluir');
                 }
                 showToast('🗑️ Contato excluído');
-                loadContacts();
+                await reloadAndRefresh();
             } catch (error) {
                 showToast('❌ Erro ao excluir: ' + error.message, true);
                 console.error(error);
@@ -3938,7 +3989,7 @@
             try {
                 await fetch(`${API_URL}/api/medications/${id}/take`, { method: 'POST' });
                 showToast('✅ Confirmado!');
-                loadMedications();
+                await reloadAndRefresh();
             } catch { alert('Erro'); }
         }
         
@@ -3948,7 +3999,7 @@
             try {
                 await fetch(`${API_URL}/api/appointments/${id}/confirm`, { method: 'POST' });
                 showToast('✅ Consulta confirmada!');
-                loadAppointments();
+                await reloadAndRefresh();
             } catch { alert('Erro'); }
         }
         
@@ -3957,7 +4008,7 @@
             try {
                 await fetch(`${API_URL}/api/appointments/${id}/cancel`, { method: 'POST' });
                 showToast('❌ Consulta cancelada');
-                loadAppointments();
+                await reloadAndRefresh();
             } catch { alert('Erro'); }
         }
         
@@ -4078,14 +4129,7 @@
         //    });
         //}
 
-        // ===== PWA REGISTRATION =====
-        // if ('serviceWorker' in navigator) {
-        //    window.addEventListener('load', () => {
-        //        navigator.serviceWorker.register('/sw.js')
-        //            .then(reg => console.log('[PWA] SW registrado:', reg.scope))
-        //            .catch(err => console.log('[PWA] Erro ao registrar SW:', err));
-        //    });
-        //}
+        // ===== PWA REGISTRATION (UNIFICADO NO DOMCONTENTLOADED) =====
 
         // ===== PWA INSTALL PROMPT =====
         let deferredPrompt = null;
