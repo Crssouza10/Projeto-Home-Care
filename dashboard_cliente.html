@@ -4723,10 +4723,8 @@
                     });
                 }
                 
-                // 3. Áudio de alerta (opcional - apenas para 3 horas antes)
-                if (tipo === '3horas') {
-                    await tocarAlertaConsulta(consulta.doctor_name, consulta.appointment_time, especialidade, mensagem);
-                }
+                // 3. Áudio de alerta (Habilitado para todos os lembretes)
+                await tocarAlertaConsulta(consulta.doctor_name, consulta.appointment_time, especialidade, mensagem);
                 
                 // 4. Toast notification
                 if (typeof showToast === 'function') {
@@ -4766,8 +4764,10 @@
                     console.log('🎵 Tocando áudio de consulta:', audioUrl);
                     const audio = new Audio(audioUrl);
                     audio.volume = 1.0;
-                    await audio.play();
-                    console.log('✅ Áudio de consulta tocando!');
+                    await audio.play().catch(err => {
+                        console.warn('⚠️ Autoplay do áudio bloqueado pela política do navegador. Interaja com a página para ouvir.', err);
+                    });
+                    console.log('✅ Tentativa de áudio de consulta concluída!');
                 }
             } catch (error) {
                 console.error('❌ Erro ao tocar áudio de consulta:', error);

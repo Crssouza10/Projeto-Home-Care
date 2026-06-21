@@ -529,8 +529,11 @@ async def generate_audio(request: dict):
 @app.get("/api/serve-audio")
 async def serve_audio(medication: str = "Seu medicamento", dosage: str = "conforme prescrição", instructions: str = ""):
     try:
-        # 1. Montar o texto a partir dos parâmetros da query string
-        text = f"Atenção! Lembrete de medicamento. Hora de tomar: {medication}, {dosage}. {instructions}"
+        # 1. Montar o texto a partir dos parâmetros da query string (personalizado para consulta)
+        if medication == "Consulta Médica":
+            text = f"Atenção! Lembrete de consulta. {instructions}"
+        else:
+            text = f"Atenção! Lembrete de medicamento. Hora de tomar: {medication}, {dosage}. {instructions}"
         
         # 2. Gerar áudio com gTTS (Google Text-to-Speech)
         tts = gTTS(text=text, lang='pt-br', slow=False)
