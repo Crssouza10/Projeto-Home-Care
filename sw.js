@@ -46,6 +46,11 @@ self.addEventListener('fetch', event => {
     return;
   }
   
+  // ✅ CORREÇÃO: Apenas intercepta/cacheia requisições GET (ignora PUT, POST, DELETE)
+  if (event.request.method !== 'GET') {
+    return;
+  }
+  
   event.respondWith(
     caches.match(event.request)
       .then(response => {

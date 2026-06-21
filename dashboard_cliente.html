@@ -1344,18 +1344,18 @@
             <button id="btn-modo-senior" class="btn-senior-toggle" onclick="toggleModoSenior()">👵 Modo Sênior</button>
             
             <div class="header-stat" onclick="showTodayCommitments()">
-                <div class="header-stat-icon">📋</div>
+                <div class="header-stat-icon">💊</div>
                 <div>
-                    <div class="header-stat-value" id="today-commitments">0</div>
-                    <div class="header-stat-label">Compromissos para hoje</div>
+                    <div class="header-stat-value" id="meds-commitments">0</div>
+                    <div class="header-stat-label" id="meds-label-header">compromisso(s) de tomar a(s) medicação(ões)</div>
                 </div>
             </div>            
             
             <div class="header-stat" onclick="showTodayCommitments()">
-                <div class="header-stat-icon">📋</div>
+                <div class="header-stat-icon">📅</div>
                 <div>
-                    <div class="header-stat-value" id="today-commitments">0</div>
-                    <div class="header-stat-label">Compromissos para hoje</div>
+                    <div class="header-stat-value" id="appts-commitments">0</div>
+                    <div class="header-stat-label" id="appts-label-header">consulta(s)</div>
                 </div>
             </div>
             <div class="header-date">
@@ -2403,12 +2403,22 @@
                 });
             }
             
-            const totalToday = medsToday + apptsToday;
-            document.getElementById('today-commitments').textContent = totalToday;
+            const months = ['janeiro','fevereiro','março','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'];
+            const todayFormatted = `${today.getDate()}/${months[today.getMonth()]}/${today.getFullYear()}`;
+            
+            const medsValEl = document.getElementById('meds-commitments');
+            const medsLabelEl = document.getElementById('meds-label-header');
+            const apptsValEl = document.getElementById('appts-commitments');
+            const apptsLabelEl = document.getElementById('appts-label-header');
+            
+            if (medsValEl) medsValEl.textContent = medsToday;
+            if (medsLabelEl) medsLabelEl.textContent = `${medsToday === 1 ? 'compromisso' : 'compromisso(s)'} de tomar a(s) medicação(ões) em ${todayFormatted}`;
+            
+            if (apptsValEl) apptsValEl.textContent = apptsToday;
+            if (apptsLabelEl) apptsLabelEl.textContent = `${apptsToday === 1 ? 'consulta' : 'consultas'} em ${todayFormatted}`;
             
             // Reseta para mostrar "hoje"
             viewingSpecificDate = null;
-            document.querySelector('.header-stat-label').textContent = 'Compromissos para hoje';
             
             // ✅ CORREÇÃO: Só gera calendário se dados estiverem carregados
             if (Array.isArray(appointmentsData) && Array.isArray(medicationsData)) {
@@ -2693,27 +2703,8 @@
             document.getElementById('tab-appts').textContent = futureAppointments.length;
         }
 
-        // =====================================================
-        // ✅ NOVA FUNÇÃO: Atualiza contadores para uma data específica
-        // =====================================================
         function updateCountersForDate(dateStr) {
             console.log('🔄 Atualizando contadores para:', dateStr);
-            
-            // Atualiza o texto do header
-            const parts = dateStr.split('-');
-            const day = String(parts[2]).padStart(2, '0');
-            const month = String(parts[1]).padStart(2, '0');
-            const year = parts[0];
-            const dateBR = `${day}/${month}/${year}`;
-            
-            // Verifica se é hoje
-            const today = new Date();
-            const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
-            if (dateStr === todayStr) {
-                document.querySelector('.header-stat-label').textContent = 'Compromissos para hoje';
-            } else {
-                document.querySelector('.header-stat-label').textContent = `Compromissos para ${dateBR}`;
-            }
             
             // Conta medicamentos para este dia da semana
             const selectedDayObj = new Date(dateStr + 'T00:00:00');
@@ -2735,8 +2726,23 @@
                 }
             });
             
-            const total = medsCount + apptsCount;
-            document.getElementById('today-commitments').textContent = total;
+            const parts = dateStr.split('-');
+            const year = parseInt(parts[0]);
+            const month = parseInt(parts[1]) - 1;
+            const day = parseInt(parts[2]);
+            const months = ['janeiro','fevereiro','março','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'];
+            const dateFormatted = `${day}/${months[month]}/${year}`;
+            
+            const medsValEl = document.getElementById('meds-commitments');
+            const medsLabelEl = document.getElementById('meds-label-header');
+            const apptsValEl = document.getElementById('appts-commitments');
+            const apptsLabelEl = document.getElementById('appts-label-header');
+            
+            if (medsValEl) medsValEl.textContent = medsCount;
+            if (medsLabelEl) medsLabelEl.textContent = `${medsCount === 1 ? 'compromisso' : 'compromisso(s)'} de tomar a(s) medicação(ões) em ${dateFormatted}`;
+            
+            if (apptsValEl) apptsValEl.textContent = apptsCount;
+            if (apptsLabelEl) apptsLabelEl.textContent = `${apptsCount === 1 ? 'consulta' : 'consultas'} em ${dateFormatted}`;
             
             // ✅ CORREÇÃO: Se a aba ativa for "Consultas", atualiza para total futuro
             if (currentScreen === 'appointments') {
@@ -2750,7 +2756,7 @@
                 document.getElementById('tab-appts').textContent = apptsCount;
             }
             
-            console.log(`✅ Medicamentos: ${medsCount}, Consultas: ${apptsCount}, Total: ${total}`);
+            console.log(`✅ Medicamentos: ${medsCount}, Consultas: ${apptsCount}`);
         }
         // ------------------------------
         //

@@ -5,7 +5,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
 # Importa os modelos e a Base do arquivo app.py
-from app import Base, User, EmergencyContact, Medication, Appointment, Responsible
+from app import Base, User, EmergencyContact, Medication, Appointment, Responsible, MedicationLog
 
 # URLs dos bancos
 LOCAL_URL = "postgresql://postgres:200466@localhost:5432/homecare_dev"
@@ -30,17 +30,18 @@ def main():
         EmergencyContact,
         Medication,
         Appointment,
-        Responsible
+        Responsible,
+        MedicationLog
     ]
 
-    print("Iniciando a cópia dos dados...")
+    print("Iniciando a copia dos dados...")
     for model in modelos:
         print(f"Migrando dados da tabela: {model.__tablename__}...")
         registros = session_l.query(model).all()
         
         count = 0
         for r in registros:
-            # Remove o objeto da sessão local para que seja tratado como novo
+            # Remove o objeto da sessao local para que seja tratado como novo
             session_l.expunge(r)
             sqlalchemy.orm.session.make_transient(r)
             
@@ -51,7 +52,7 @@ def main():
         session_r.commit()
         print(f"  -> {count} registros copiados.")
 
-    print("\n✅ Migração concluída com sucesso! O banco na nuvem agora tem todos os seus dados e tabelas.")
+    print("\n[MIGRACAO] Concluida com sucesso! O banco na nuvem agora tem todos os seus dados e tabelas.")
 
 if __name__ == "__main__":
     main()

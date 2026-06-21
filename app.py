@@ -1017,6 +1017,42 @@ async def delete_appointment(appt_id: str, db: Session = Depends(get_db)):
     return {"status": "sucesso", "mensagem": "Consulta excluída"}
 
 
+@app.post("/api/appointments/{appt_id}/confirm")
+async def confirm_appointment(appt_id: str, db: Session = Depends(get_db)):
+    """Confirmar uma consulta"""
+    try:
+        appt_uuid = uuid.UUID(appt_id)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="ID inválido")
+    
+    appointment = db.query(Appointment).filter(Appointment.id == appt_uuid).first()
+    if not appointment:
+        raise HTTPException(status_code=404, detail="Consulta não encontrada")
+    
+    appointment.status = "confirmed"
+    db.commit()
+    
+    return {"status": "sucesso", "mensagem": "Consulta confirmada"}
+
+
+@app.post("/api/appointments/{appt_id}/cancel")
+async def cancel_appointment(appt_id: str, db: Session = Depends(get_db)):
+    """Cancelar uma consulta"""
+    try:
+        appt_uuid = uuid.UUID(appt_id)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="ID inválido")
+    
+    appointment = db.query(Appointment).filter(Appointment.id == appt_uuid).first()
+    if not appointment:
+        raise HTTPException(status_code=404, detail="Consulta não encontrada")
+    
+    appointment.status = "cancelled"
+    db.commit()
+    
+    return {"status": "sucesso", "mensagem": "Consulta cancelada"}
+
+
 # --- 💊 MEDICATIONS - EDITAR E EXCLUIR ---
 
 @app.put("/api/medications/{med_id}")
