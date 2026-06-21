@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
-<h
+<head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Minha Saúde - CR$ HOME CARE AI</title>
@@ -3152,288 +3152,29 @@
                     
                     // ✅ LEMBRETE 1: 24 HORAS ANTES (janela 23-25h)
                     if (diffHoras >= 23 && diffHoras <= 25) {
-                        console.log('⏰ ALERTA 24h: ' + consulta.doctor_name);
-                        await enviarLembreteConsulta(consulta, '24horas');
+                        const key24 = `alerta_consulta_${consulta.id}_24h`;
+                        const expectedValue = `${consulta.appointment_date} ${consulta.appointment_time}`;
+                        if (localStorage.getItem(key24) !== expectedValue) {
+                            console.log('⏰ ALERTA 24h: ' + consulta.doctor_name);
+                            await enviarLembreteConsulta(consulta, '24horas');
+                            localStorage.setItem(key24, expectedValue);
+                        }
                     }
                     
                     // ✅ LEMBRETE 2: 3 HORAS ANTES (janela 2.5-3.5h)
                     if (diffHoras >= 2.5 && diffHoras <= 3.5) {
-                        console.log('⏰ ALERTA 3h: ' + consulta.doctor_name);
-                        await enviarLembreteConsulta(consulta, '3horas');
+                        const key3 = `alerta_consulta_${consulta.id}_3h`;
+                        const expectedValue = `${consulta.appointment_date} ${consulta.appointment_time}`;
+                        if (localStorage.getItem(key3) !== expectedValue) {
+                            console.log('⏰ ALERTA 3h: ' + consulta.doctor_name);
+                            await enviarLembreteConsulta(consulta, '3horas');
+                            localStorage.setItem(key3, expectedValue);
+                        }
                     }
                 }
             } catch (error) {
                 console.error('❌ Erro ao verificar lembretes:', error);
             }
-        }
-
-        async function enviarLembreteConsulta(consulta, tipo) {
-            try {
-                const mensagem = tipo === '24horas' 
-                    ? `Lembrete: Consulta amanhã às ${formatarHora(consulta.appointment_time)} com ${consulta.doctor_name}.`
-                    : `Lembrete: Consulta HOJE às ${formatarHora(consulta.appointment_time)} com ${consulta.doctor_name}.`;
-                
-                console.log('🔔 Enviando lembrete (' + tipo + '): ' + mensagem);
-                
-                // 1. Notificação visual
-                mostrarNotificacaoConsulta(consulta, tipo);
-                
-                // 2. Notificação do sistema
-                if ('Notification' in window && Notification.permission === 'granted') {
-                    new Notification('📅 Lembrete de Consulta', {
-                        body: mensagem,
-                        icon: '/icon-192x192.png',
-                        requireInteraction: true
-                    });
-                }
-                
-                // 3. Toast
-                if (typeof showToast === 'function') {
-                    showToast('📅 ' + (tipo === '24horas' ? 'Consulta amanhã' : 'Consulta hoje') + ': ' + consulta.doctor_name);
-                }
-                
-            } catch (error) {
-                console.error('❌ Erro ao enviar lembrete:', error);
-            }
-        }
-
-        function mostrarNotificacaoConsulta(consulta, tipo) {
-            const alerta = document.createElement('div');
-            alerta.className = 'notification-consulta';
-            
-            const titulo = tipo === '24horas' ? '📅 CONSULTA AMANHÃ' : '⏰ CONSULTA HOJE';
-            const dataFormatada = new Date(consulta.appointment_date + 'T00:00:00').toLocaleDateString('pt-BR');
-            
-            alerta.innerHTML = `
-                <div class="titulo">${titulo}</div>
-                <div class="medico"><strong>${consulta.doctor_name}</strong></div>
-                <div class="especialidade">${consulta.specialty || 'Médico'}</div>
-                <div class="detalhes">
-                    <div>📅 ${dataFormatada}</div>
-                    <div>⏰ ${formatarHora(consulta.appointment_time)}</div>
-                </div>
-                <button class="fechar" onclick="this.parentElement.remove()">Fechar</button>
-            `;
-            
-            document.body.appendChild(alerta);
-            
-            setTimeout(() => {
-                alerta.style.opacity = '0';
-                alerta.style.transition = 'opacity 0.5s';
-                setTimeout(() => alerta.remove(), 500);
-            }, 15000);
-        }
-
-        function formatarHora(hora) {
-            if (!hora) return '--:--';
-            const [h, m] = hora.split(':');
-            return h + ':' + m;
-        }
-      
-        async function enviarLembreteConsulta(consulta, tipo) {
-            try {
-                const mensagem = tipo === '24horas' 
-                    ? `Lembrete: Consulta amanhã às ${formatarHora(consulta.appointment_time)} com ${consulta.doctor_name}.`
-                    : `Lembrete: Consulta HOJE às ${formatarHora(consulta.appointment_time)} com ${consulta.doctor_name}.`;
-                
-                console.log(`🔔 Enviando: ${mensagem}`);
-                
-                // Notificação visual
-                mostrarNotificacaoConsulta(consulta, tipo);
-                
-                // Notificação do sistema
-                if ('Notification' in window && Notification.permission === 'granted') {
-                    new Notification('📅 Lembrete de Consulta', {
-                        body: mensagem,
-                        icon: '/icon-192x192.png',
-                        requireInteraction: true
-                    });
-                }
-                
-                // Toast
-                if (typeof showToast === 'function') {
-                    showToast(`📅 ${tipo === '24horas' ? 'Consulta amanhã' : 'Consulta hoje'}: ${consulta.doctor_name}`);
-                }
-                
-            } catch (error) {
-                console.error('❌ Erro ao enviar lembrete:', error);
-            }
-        }
-
-        function mostrarNotificacaoConsulta(consulta, tipo) {
-            const alerta = document.createElement('div');
-            alerta.className = 'notification-consulta';
-            
-            const titulo = tipo === '24horas' ? '📅 CONSULTA AMANHÃ' : '⏰ CONSULTA HOJE';
-            const dataFormatada = new Date(consulta.appointment_date + 'T00:00:00').toLocaleDateString('pt-BR');
-            
-            alerta.innerHTML = `
-                <div class="titulo">${titulo}</div>
-                <div class="medico"><strong>${consulta.doctor_name}</strong></div>
-                <div class="especialidade">${consulta.specialty || 'Médico'}</div>
-                <div class="detalhes">
-                    <div>📅 ${dataFormatada}</div>
-                    <div>⏰ ${formatarHora(consulta.appointment_time)}</div>
-                </div>
-                <button class="fechar" onclick="this.parentElement.remove()">Fechar</button>
-            `;
-            
-            document.body.appendChild(alerta);
-            
-            setTimeout(() => {
-                alerta.style.opacity = '0';
-                alerta.style.transition = 'opacity 0.5s';
-                setTimeout(() => alerta.remove(), 500);
-            }, 15000);
-        }
-
-        function formatarHora(hora) {
-            if (!hora) return '--:--';
-            const [h, m] = hora.split(':');
-            return `${h}:${m}`;
-        }
-
-        // ============================================
-        // 🔔 ENVIAR LEMBRETE DE CONSULTA
-        // ============================================
-        async function enviarLembreteConsulta(consulta, tipo) {
-            try {
-                const mensagem = tipo === '24horas' 
-                    ? `Lembrete: Você tem uma consulta amanhã às ${formatarHora(consulta.appointment_time)} com ${consulta.doctor_name}${consulta.specialty ? ` (${consulta.specialty})` : ''}.`
-                    : `Lembrete: Sua consulta com ${consulta.doctor_name} é hoje às ${formatarHora(consulta.appointment_time)}. Prepare-se!`;
-                
-                console.log(`🔔 Enviando lembrete (${tipo}): ${mensagem}`);
-                
-                // 1. Notificação visual na página
-                mostrarNotificacaoConsulta(consulta, tipo);
-                
-                // 2. Notificação do sistema (se permitido)
-                if ('Notification' in window && Notification.permission === 'granted') {
-                    new Notification('📅 Lembrete de Consulta', {
-                        body: mensagem,
-                        icon: '/icon-192x192.png',
-                        requireInteraction: true,
-                        tag: `consulta-${consulta.id}-${tipo}`
-                    });
-                }
-                
-                // 3. Áudio de alerta (opcional - apenas para 3 horas antes)
-                if (tipo === '3horas') {
-                    await tocarAlertaConsulta(consulta.doctor_name, consulta.appointment_time);
-                }
-                
-                // 4. Toast notification
-                showToast(`📅 ${tipo === '24horas' ? 'Consulta amanhã' : 'Consulta hoje'}: ${consulta.doctor_name}`);
-                
-                // 5. Marcar como notificado no backend (opcional)
-                await fetch(`${API_URL}/api/appointments/${consulta.id}/notify`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        notification_type: tipo,
-                        notified_at: new Date().toISOString()
-                    })
-                }).catch(() => {}); // Ignora erro se endpoint não existir
-                
-            } catch (error) {
-                console.error('❌ Erro ao enviar lembrete:', error);
-            }
-        }
-
-        // ============================================
-        // 🔊 ÁUDIO DE ALERTA PARA CONSULTAS
-        // ============================================
-        async function tocarAlertaConsulta(medico, horario) {
-            try {
-                const mensagem = `Atenção! Você tem uma consulta hoje às ${horario} com ${medico}. Prepare-se!`;
-                
-                const response = await fetch(`${API_URL}/api/generate-audio`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        medication: 'Consulta Médica',
-                        dosage: `Dr. ${medico}`,
-                        instructions: mensagem
-                    })
-                });
-                
-                const data = await response.json();
-                
-                if (data.status === 'success' && data.url) {
-                    const audioUrl = data.url.startsWith('http') 
-                        ? data.url 
-                        : `${API_URL}${data.url}`;
-                    
-                    const audio = new Audio(audioUrl);
-                    audio.volume = 1.0;
-                    await audio.play();
-                    console.log('✅ Áudio de consulta tocando!');
-                }
-            } catch (error) {
-                console.error('❌ Erro ao tocar áudio de consulta:', error);
-            }
-        }
-
-        // ============================================
-        // 📱 NOTIFICAÇÃO VISUAL NA PÁGINA
-        // ============================================
-        function mostrarNotificacaoConsulta(consulta, tipo) {
-            const alerta = document.createElement('div');
-            alerta.style.cssText = `
-                position: fixed;
-                top: 100px;
-                right: 20px;
-                background: linear-gradient(135deg, #667eea, #764ba2);
-                color: white;
-                padding: 24px;
-                border-radius: 16px;
-                box-shadow: 0 8px 24px rgba(0,0,0,0.4);
-                z-index: 10000;
-                max-width: 400px;
-                animation: slideInRight 0.5s ease;
-                border-left: 6px solid #f59e0b;
-            `;
-            
-            const titulo = tipo === '24horas' ? '📅 CONSULTA AMANHÃ' : '⏰ CONSULTA HOJE';
-            const dataFormatada = new Date(consulta.appointment_date + 'T00:00:00').toLocaleDateString('pt-BR');
-            
-            alerta.innerHTML = `
-                <div style="font-size: 1.2rem; font-weight: 800; margin-bottom: 8px;">${titulo}</div>
-                <div style="font-size: 1rem; margin-bottom: 4px;"><strong>${consulta.doctor_name}</strong></div>
-                <div style="font-size: 0.9rem; opacity: 0.9;">${consulta.specialty || 'Médico'}</div>
-                <div style="margin-top: 12px; padding-top: 12px; border-top: 1px solid rgba(255,255,255,0.3);">
-                    <div style="font-size: 0.85rem;">📅 ${dataFormatada}</div>
-                    <div style="font-size: 0.85rem;">⏰ ${formatarHora(consulta.appointment_time)}</div>
-                </div>
-                <button onclick="this.parentElement.remove()" style="
-                    margin-top: 12px;
-                    background: rgba(255,255,255,0.2);
-                    border: none;
-                    color: white;
-                    padding: 8px 16px;
-                    border-radius: 8px;
-                    cursor: pointer;
-                    font-weight: 600;
-                ">Fechar</button>
-            `;
-            
-            document.body.appendChild(alerta);
-            
-            // Remove automaticamente após 15 segundos
-            setTimeout(() => {
-                alerta.style.opacity = '0';
-                alerta.style.transition = 'opacity 0.5s';
-                setTimeout(() => alerta.remove(), 500);
-            }, 15000);
-        }
-
-        // ============================================
-        // 🕐 FORMATAR HORA (HH:MM para HH:MM)
-        // ============================================
-        function formatarHora(hora) {
-            if (!hora) return '--:--';
-            const [h, m] = hora.split(':');
-            return `${h}:${m}`;
         }
 
         // ============================================
@@ -4960,14 +4701,17 @@
         // ============================================
         async function enviarLembreteConsulta(consulta, tipo) {
             try {
-                const mensagem = tipo === '24horas' 
-                    ? `Lembrete: Você tem uma consulta amanhã às ${formatarHora(consulta.appointment_time)} com ${consulta.doctor_name}${consulta.specialty ? ` (${consulta.specialty})` : ''}.`
-                    : `Lembrete: Sua consulta com ${consulta.doctor_name} é hoje às ${formatarHora(consulta.appointment_time)}. Prepare-se!`;
+                const [ano, mes, dia] = consulta.appointment_date.split('-');
+                const dataFormatada = `${dia}/${mes}/${ano}`;
+                const horaFormatada = formatarHora(consulta.appointment_time);
+                const especialidade = consulta.specialty ? consulta.specialty : 'Médico';
+                
+                const mensagem = `Dia ${dataFormatada} Às ${horaFormatada} hs terá consulta com o ${especialidade} '${consulta.doctor_name}'`;
                 
                 console.log(`🔔 Enviando lembrete (${tipo}): ${mensagem}`);
                 
                 // 1. Notificação visual na página
-                mostrarNotificacaoConsulta(consulta, tipo);
+                mostrarNotificacaoConsulta(consulta, tipo, mensagem);
                 
                 // 2. Notificação do sistema (se permitido)
                 if ('Notification' in window && Notification.permission === 'granted') {
@@ -4981,11 +4725,13 @@
                 
                 // 3. Áudio de alerta (opcional - apenas para 3 horas antes)
                 if (tipo === '3horas') {
-                    await tocarAlertaConsulta(consulta.doctor_name, consulta.appointment_time);
+                    await tocarAlertaConsulta(consulta.doctor_name, consulta.appointment_time, especialidade, mensagem);
                 }
                 
                 // 4. Toast notification
-                showToast(`📅 ${tipo === '24horas' ? 'Consulta amanhã' : 'Consulta hoje'}: ${consulta.doctor_name}`);
+                if (typeof showToast === 'function') {
+                    showToast(mensagem);
+                }
                 
             } catch (error) {
                 console.error('❌ Erro ao enviar lembrete:', error);
@@ -4995,17 +4741,18 @@
         // ============================================
         // 🔊 ÁUDIO DE ALERTA PARA CONSULTAS
         // ============================================
-        async function tocarAlertaConsulta(medico, horario) {
+        async function tocarAlertaConsulta(medico, horario, especialidade, mensagemAudio) {
             try {
-                const mensagem = `Atenção! Você tem uma consulta hoje às ${horario} com ${medico}. Prepare-se!`;
+                // Remove aspas simples da mensagem para o áudio falado soar mais natural
+                const mensagemFalta = mensagemAudio.replace(/'/g, '').replace(' hs', ' horas');
                 
                 const response = await fetch(`${API_URL}/api/generate-audio`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                         medication: 'Consulta Médica',
-                        dosage: `Dr. ${medico}`,
-                        instructions: mensagem
+                        dosage: especialidade ? `${especialidade} ${medico}` : `Dr. ${medico}`,
+                        instructions: mensagemFalta
                     })
                 });
                 
@@ -5030,17 +4777,19 @@
         // ============================================
         // 📱 NOTIFICAÇÃO VISUAL NA PÁGINA
         // ============================================
-        function mostrarNotificacaoConsulta(consulta, tipo) {
+        function mostrarNotificacaoConsulta(consulta, tipo, mensagem) {
             const alerta = document.createElement('div');
             alerta.className = 'notification-consulta';
             
             const titulo = tipo === '24horas' ? '📅 CONSULTA AMANHÃ' : '⏰ CONSULTA HOJE';
-            const dataFormatada = new Date(consulta.appointment_date + 'T00:00:00').toLocaleDateString('pt-BR');
+            const [ano, mes, dia] = consulta.appointment_date.split('-');
+            const dataFormatada = `${dia}/${mes}/${ano}`;
             
             alerta.innerHTML = `
                 <div class="titulo">${titulo}</div>
-                <div class="medico"><strong>${consulta.doctor_name}</strong></div>
-                <div class="especialidade">${consulta.specialty || 'Médico'}</div>
+                <div class="mensagem-texto" style="font-size: 1.1rem; font-weight: 700; margin: 12px 0; line-height: 1.4; color: #FFF; background: rgba(0,0,0,0.25); padding: 12px; border-radius: 8px;">
+                    ${mensagem}
+                </div>
                 <div class="detalhes">
                     <div>📅 ${dataFormatada}</div>
                     <div>⏰ ${formatarHora(consulta.appointment_time)}</div>
