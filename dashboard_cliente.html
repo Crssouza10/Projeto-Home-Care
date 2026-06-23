@@ -2057,26 +2057,24 @@
             const today = new Date();
             today.setHours(0, 0, 0, 0);
             
-            const firstDay = new Date(currentCalendarYear, currentCalendarMonth, 1).getDay();
+            const firstDay = new Date(currentCalendarMonth === new Date().getMonth() ? 
+                currentCalendarYear : currentCalendarYear, currentCalendarMonth, 1).getDay();
             const daysInMonth = new Date(currentCalendarYear, currentCalendarMonth + 1, 0).getDate();
             const daysInPrevMonth = new Date(currentCalendarYear, currentCalendarMonth, 0).getDate();
-            
-            // ✅ CORREÇÃO: Separar dias com medicamentos (verde) e consultas (vermelho)
+
+            // Separar dias com eventos
             const daysWithMedications = new Set();
             const daysWithAppointments = new Set();
             const daysWithMultiple = new Set();
-            
-            // 🔹 Adicionar dias de medicamentos (VERDE)
+
+            // Medicamentos (verde)
             if (Array.isArray(medicationsData)) {
                 medicationsData.forEach(med => {
                     if (med.days_of_week && med.days_of_week.length > 0) {
                         for (let day = 1; day <= daysInMonth; day++) {
                             const currentLoopDateStr = `${currentCalendarYear}-${String(currentCalendarMonth+1).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
-                            
-                            // Verifica período de validade do medicamento
                             if (med.created_at && currentLoopDateStr < med.created_at) continue;
                             if (med.end_date && currentLoopDateStr > med.end_date) continue;
-                            
                             const dayOfWeek = new Date(currentCalendarYear, currentCalendarMonth, day).getDay();
                             if (med.days_of_week.includes(dayOfWeek)) {
                                 daysWithMedications.add(day);
@@ -2088,14 +2086,13 @@
                     }
                 });
             }
-            
-            // 🔹 Adicionar dias de consultas FUTURAS (VERMELHO)
+
+            // Consultas FUTURAS (vermelho)
             if (Array.isArray(appointmentsData)) {
                 appointmentsData.forEach(appt => {
                     const apptDate = new Date(appt.appointment_date + 'T00:00:00');
-                    // ✅ FILTRAR: Apenas consultas futuras no mês atual
-                    if (apptDate >= today && 
-                        apptDate.getMonth() === currentCalendarMonth && 
+                    if (apptDate >= today &&
+                        apptDate.getMonth() === currentCalendarMonth &&
                         apptDate.getFullYear() === currentCalendarYear) {
                         const day = apptDate.getDate();
                         daysWithAppointments.add(day);
@@ -2105,82 +2102,91 @@
                     }
                 });
             }
-            
-            // 🔹 Montar HTML do calendário
+
+            // Montar HTML
             let html = `
-                <div class="calendar-header">
-                    <div class="calendar-title">${monthNames[currentCalendarMonth]} ${currentCalendarYear}</div>
-                    <div class="calendar-nav">
-                        <div class="calendar-btn" onclick="changeMonth(-1)">‹</div>
-                        <div class="calendar-btn" onclick="changeMonth(1)">›</div>
-                    </div>
+            <div class="calendar-header">
+                <div class="calendar-title">${monthNames[currentCalendarMonth]} ${currentCalendarYear}</div>
+                <div class="calendar-nav">
+                    <div class="calendar-btn" onclick="changeMonth(-1)">‹</div>
+                    <div class="calendar-btn" onclick="changeMonth(1)">›</div>
                 </div>
-                <div class="calendar-grid">
-                    ${dayNames.map(d => `<div class="calendar-day-header">${d}</div>`).join('')}
+            </div>
+            <div class="calendar-grid">
+            ${dayNames.map(d => `<div class="calendar-day-header">${d}</div>`).join('')}
             `;
-            
-            // 🔹 Dias do mês anterior (cinza)
+
+            // Dias do mês anterior
             for (let i = firstDay - 1; i >= 0; i--) {
                 const day = daysInPrevMonth - i;
                 html += `<div class="calendar-day other-month">${day}</div>`;
             }
-            
-            // 🔹 Dias do mês atual
+
+            // Dias do mês atual
             for (let day = 1; day <= daysInMonth; day++) {
                 const classes = ['calendar-day'];
-                const isToday = today.getDate() === day && today.getMonth() === currentCalendarMonth && today.getFullYear() === currentCalendarYear;
-                const isSelected = selectedDate && selectedDate.getDate() === day && selectedDate.getMonth() === currentCalendarMonth && selectedDate.getFullYear() === currentCalendarYear;
-                
-                if (isToday) classes.push('today');
-                if (isSelected) classes.push('selected');
-                
-                // ✅ CORREÇÃO: Classes diferenciadas por tipo de evento
-                if (daysWithMultiple.has(day)) {
-                    classes.push('has-multiple-events'); // 🟢🔴 Ambos
-                } else if (daysWithAppointments.has(day)) {
-                    classes.push('has-appointment'); // 🔴 Apenas consulta
-                } else if (daysWithMedications.has(day)) {
-                    classes.push('has-event'); // 🟢 Apenas medicamento
+                const isToday = today.getDate() === day && 
+                            today.getMonth() === currentCalendarMonth && 
+                            today.getFullYear() === currentCalendarYear;
+                const isSelected = selectedDate && 
+                                selectedDate.getDate() === day && 
+                                selectedDate.getMonth() === currentCalendarMonth && 
+                                selectedDate.getFullYear() === currentCalendarYear;
+
+                if (isToday) {
+                    classes.push('today');
                 }
-                
+                if (isSelected) {
+                    classes.push('selected');
+                }
+
+                if (daysWithMultiple.has(day)) {
+                    classes.push('has-multiple-events');
+                } else if (daysWithAppointments.has(day)) {
+                    classes.push('has-appointment');
+                } else if (daysWithMedications.has(day)) {
+                    classes.push('has-event');
+                }
+
                 const dateStr = `${currentCalendarYear}-${String(currentCalendarMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
                 html += `<div class="${classes.join(' ')}" onclick="selectDay('${dateStr}')">${day}</div>`;
             }
-            
-            // 🔹 Dias do próximo mês (cinza)
+
+            // Dias do próximo mês
             const totalCells = firstDay + daysInMonth;
             const remainingCells = 42 - totalCells;
             for (let day = 1; day <= remainingCells; day++) {
                 html += `<div class="calendar-day other-month">${day}</div>`;
             }
-            
+
             html += '</div>';
-            
-            // ✅ NOVO: Adicionar legenda explicativa das cores
+
+            // Legenda
             html += `
-                <div class="calendar-legend">
-                    <div class="legend-item">
-                        <div class="legend-dot meds"></div>
-                        <span>Remédios</span>
-                    </div>
-                    <div class="legend-item">
-                        <div class="legend-dot appts"></div>
-                        <span>Consultas</span>
-                    </div>
-                    <div class="legend-item">
-                        <div class="legend-dot both"></div>
-                        <span>Ambos</span>
-                    </div>
+            <div class="calendar-legend">
+                <div class="legend-item">
+                    <div class="legend-dot meds"></div>
+                    <span>Remédios</span>
                 </div>
+                <div class="legend-item">
+                    <div class="legend-dot appts"></div>
+                    <span>Consultas</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-dot both"></div>
+                    <span>Ambos</span>
+                </div>
+            </div>
             `;
-            
+
             document.getElementById('calendar').innerHTML = html;
             
-            // ✅ DEBUG: Log para verificar se dias foram marcados
             console.log('📅 Calendário gerado:', {
+                mes: monthNames[currentCalendarMonth],
+                ano: currentCalendarYear,
                 dias_medicamentos: daysWithMedications.size,
                 dias_consultas: daysWithAppointments.size,
-                dias_ambos: daysWithMultiple.size
+                dia_selecionado: selectedDate ? selectedDate.getDate() : 'nenhum'
             });
         }
 
