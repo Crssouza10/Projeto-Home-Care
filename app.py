@@ -106,6 +106,19 @@ try:
 except Exception as e:
     print(f"⚠️ Erro ao verificar/adicionar coluna box_image: {e}")
 
+# Garante que as colunas de informações clínicas existem na tabela users
+try:
+    with engine.connect() as conn:
+        conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS age INTEGER;"))
+        conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS allergies TEXT;"))
+        conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS conditions TEXT;"))
+        conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS blood_type VARCHAR(10);"))
+        conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS health_insurance VARCHAR(100);"))
+        conn.commit()
+        print("✅ Colunas clínicas adicionadas/verificadas com sucesso na tabela users.")
+except Exception as e:
+    print(f"⚠️ Erro ao verificar/adicionar colunas clínicas na tabela users: {e}")
+
 
 # ==================== MODELOS (TABELAS) ====================
 
@@ -120,6 +133,13 @@ class User(Base):
     is_active = Column(Boolean, default=True)
     created_at = Column(DateTime, default=datetime.utcnow)  # ou datetime.utcnow se mudar o import
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    # NOVAS COLUNAS CLÍNICAS
+    age = Column(Integer, nullable=True)
+    allergies = Column(Text, nullable=True)
+    conditions = Column(Text, nullable=True)
+    blood_type = Column(String(10), nullable=True)
+    health_insurance = Column(String(100), nullable=True)
 
 class Medication(Base):
     __tablename__ = "medications"
@@ -237,6 +257,13 @@ class UserResponse(BaseModel):
     is_active: bool
     created_at: datetime
     model_config = ConfigDict(from_attributes=True)
+
+class ClinicalInfoUpdate(BaseModel):
+    age: Optional[int] = None
+    allergies: Optional[str] = None
+    conditions: Optional[str] = None
+    blood_type: Optional[str] = None
+    health_insurance: Optional[str] = None
 
 class MedicationCreate(BaseModel):
     user_id: uuid.UUID
@@ -527,6 +554,51 @@ async def cliente_login(credentials: dict, db: Session = Depends(get_db)):
             "email": user.email,
             "phone": user.phone
         }
+    }
+
+@app.get("/api/cliente/{user_id}/clinical-info")
+async def get_clinical_info(user_id: str, db: Session = Depends(get_db)):
+    try:
+        user_uuid = uuid.UUID(user_id)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="ID de usuário inválido")
+    
+    user = db.query(User).filter(User.id == user_uuid).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="Usuário não encontrado")
+        
+    return {
+        "age": user.age,
+        "allergies": user.allergies,
+        "conditions": user.conditions,
+        "blood_type": user.blood_type,
+        "health_insurance": user.health_insurance,
+        "full_name": user.full_name,
+        "phone": user.phone,
+        "email": user.email
+    }
+
+@app.put("/api/cliente/{user_id}/clinical-info")
+async def update_clinical_info(user_id: str, info: ClinicalInfoUpdate, db: Session = Depends(get_db)):
+    try:
+        user_uuid = uuid.UUID(user_id)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="ID de usuário inválido")
+    
+    user = db.query(User).filter(User.id == user_uuid).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="Usuário não encontrado")
+    
+    user.age = info.age
+    user.allergies = info.allergies
+    user.conditions = info.conditions
+    user.blood_type = info.blood_type
+    user.health_insurance = info.health_insurance
+    db.commit()
+    
+    return {
+        "status": "success",
+        "message": "Informações clínicas atualizadas com sucesso"
     }
 
 # ========================================================

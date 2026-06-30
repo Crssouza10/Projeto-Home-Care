@@ -1328,7 +1328,7 @@
 
     <header class="header">
         <div class="header-left">
-            <div class="header-avatar">👤</div>
+            <div class="header-avatar" onclick="openClinicalInfoModal()" style="cursor: pointer;" title="Perfil Clínico">👤</div>
             <div class="header-info">
                 <h2 id="greeting">Boa noite!</h2>
                 <div class="user-name" id="user-name">Eliane Amorzinho</div>
@@ -1621,6 +1621,87 @@
                     <textarea class="form-textarea" id="contact-notes" placeholder="Ex: Plantão 24h..."></textarea>
                 </div>
                 <button type="submit" class="btn-submit">💾 Salvar Contato</button>
+            </form>
+        </div>
+    <!-- MODAL PERFIL CLÍNICO / INFORMAÇÕES MÉDICAS -->
+    <div class="modal" id="modal-clinical-info">
+        <div class="modal-content" style="max-width: 500px;">
+            <div class="modal-header" style="border-bottom: 1px solid rgba(0, 212, 255, 0.15); padding-bottom: 15px; margin-bottom: 20px;">
+                <h3 class="modal-title" style="display: flex; align-items: center; gap: 10px;">📋 Ficha Médica</h3>
+                <button class="modal-close" onclick="closeModal('modal-clinical-info')">&times;</button>
+            </div>
+            
+            <!-- View Mode -->
+            <div id="clinical-view-mode">
+                <div style="display: flex; flex-direction: column; gap: 15px; margin-bottom: 25px;">
+                    <div style="background: rgba(0, 212, 255, 0.05); border: 1px solid rgba(0, 212, 255, 0.1); padding: 12px; border-radius: 10px; display: flex; justify-content: space-between;">
+                        <span style="color: #8A9BB5; font-weight: 500;">Paciente:</span>
+                        <strong style="color: #FFFFFF;" id="clinical-view-name">-</strong>
+                    </div>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                        <div style="background: rgba(0, 212, 255, 0.05); border: 1px solid rgba(0, 212, 255, 0.1); padding: 12px; border-radius: 10px;">
+                            <div style="color: #8A9BB5; font-size: 0.8rem; margin-bottom: 4px;">Idade</div>
+                            <strong style="color: #FFFFFF; font-size: 1.1rem;" id="clinical-view-age">-</strong>
+                        </div>
+                        <div style="background: rgba(0, 212, 255, 0.05); border: 1px solid rgba(0, 212, 255, 0.1); padding: 12px; border-radius: 10px;">
+                            <div style="color: #8A9BB5; font-size: 0.8rem; margin-bottom: 4px;">Tipo Sanguíneo</div>
+                            <strong style="color: #FFFFFF; font-size: 1.1rem; color: #ef4444;" id="clinical-view-blood">-</strong>
+                        </div>
+                    </div>
+                    <div style="background: rgba(0, 212, 255, 0.05); border: 1px solid rgba(0, 212, 255, 0.1); padding: 12px; border-radius: 10px;">
+                        <div style="color: #8A9BB5; font-size: 0.8rem; margin-bottom: 4px;">Alergias</div>
+                        <div style="color: #FFFFFF; font-weight: 600; min-height: 20px; white-space: pre-wrap;" id="clinical-view-allergies">-</div>
+                    </div>
+                    <div style="background: rgba(0, 212, 255, 0.05); border: 1px solid rgba(0, 212, 255, 0.1); padding: 12px; border-radius: 10px;">
+                        <div style="color: #8A9BB5; font-size: 0.8rem; margin-bottom: 4px;">Doenças Pré-existentes</div>
+                        <div style="color: #FFFFFF; font-weight: 600; min-height: 20px; white-space: pre-wrap;" id="clinical-view-conditions">-</div>
+                    </div>
+                    <div style="background: rgba(0, 212, 255, 0.05); border: 1px solid rgba(0, 212, 255, 0.1); padding: 12px; border-radius: 10px;">
+                        <div style="color: #8A9BB5; font-size: 0.8rem; margin-bottom: 4px;">Plano de Saúde</div>
+                        <strong style="color: #FFFFFF;" id="clinical-view-insurance">-</strong>
+                    </div>
+                </div>
+                <button type="button" class="btn-submit" onclick="toggleClinicalEdit(true)" style="background: linear-gradient(135deg, #667eea, #764ba2);">✏️ Editar Ficha Médica</button>
+            </div>
+
+            <!-- Edit Mode -->
+            <form id="form-clinical-info" onsubmit="saveClinicalInfo(event)" style="display: none;">
+                <div class="form-row">
+                    <div class="form-group" style="flex: 1;">
+                        <label class="form-label">Idade</label>
+                        <input type="number" class="form-input" id="clinical-edit-age" placeholder="Ex: 75">
+                    </div>
+                    <div class="form-group" style="flex: 1;">
+                        <label class="form-label">Tipo Sanguíneo</label>
+                        <select class="form-select" id="clinical-edit-blood">
+                            <option value="">Selecione...</option>
+                            <option value="A+">A+</option>
+                            <option value="A-">A-</option>
+                            <option value="B+">B+</option>
+                            <option value="B-">B-</option>
+                            <option value="AB+">AB+</option>
+                            <option value="AB-">AB-</option>
+                            <option value="O+">O+</option>
+                            <option value="O-">O-</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Alergias</label>
+                    <textarea class="form-textarea" id="clinical-edit-allergies" placeholder="Ex: Dipirona, Penicilina, Corante vermelho... (deixe em branco se nenhuma)"></textarea>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Doenças Pré-existentes</label>
+                    <textarea class="form-textarea" id="clinical-edit-conditions" placeholder="Ex: Hipertensão, Diabetes Tipo 2, Alzheimer..."></textarea>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Plano de Saúde</label>
+                    <input type="text" class="form-input" id="clinical-edit-insurance" placeholder="Ex: Unimed, Amil, SUS...">
+                </div>
+                <div style="display: flex; gap: 10px; margin-top: 20px;">
+                    <button type="button" class="btn-logout" onclick="toggleClinicalEdit(false)" style="flex: 1; margin: 0; padding: 12px;">Cancelar</button>
+                    <button type="submit" class="btn-submit" style="flex: 2; margin: 0; padding: 12px;">💾 Salvar</button>
+                </div>
             </form>
         </div>
     </div>
@@ -2369,6 +2450,97 @@
             
             showToast(`📅 Dia ${dayStr}/${monthStr}/${yearStr} selecionado`);
         }
+        // =====================================================
+        // 📋 FICHA MÉDICA E PERFIL CLÍNICO DO PACIENTE
+        // =====================================================
+        let clinicalData = {
+            age: null,
+            allergies: '',
+            conditions: '',
+            blood_type: '',
+            health_insurance: '',
+            full_name: ''
+        };
+
+        async function openClinicalInfoModal() {
+            try {
+                if (!userId) return;
+                
+                // Busca as informações clínicas da API
+                const res = await fetch(`${API_URL}/api/cliente/${userId}/clinical-info`);
+                if (res.ok) {
+                    clinicalData = await res.json();
+                }
+                
+                // Preenche o modo de visualização
+                document.getElementById('clinical-view-name').textContent = clinicalData.full_name || '-';
+                document.getElementById('clinical-view-age').textContent = clinicalData.age ? `${clinicalData.age} anos` : 'Não informado';
+                document.getElementById('clinical-view-blood').textContent = clinicalData.blood_type || 'Não informado';
+                document.getElementById('clinical-view-allergies').textContent = clinicalData.allergies || 'Nenhuma alergia relatada';
+                document.getElementById('clinical-view-allergies').style.color = clinicalData.allergies ? '#ef4444' : '#FFFFFF';
+                document.getElementById('clinical-view-conditions').textContent = clinicalData.conditions || 'Nenhuma doença crônica relatada';
+                document.getElementById('clinical-view-insurance').textContent = clinicalData.health_insurance || 'Não informado';
+                
+                // Reseta para o modo de exibição normal
+                toggleClinicalEdit(false);
+                
+                openModal('modal-clinical-info');
+            } catch (error) {
+                console.error("Erro ao carregar ficha médica:", error);
+                showToast("❌ Erro ao carregar informações clínicas");
+            }
+        }
+
+        function toggleClinicalEdit(editMode) {
+            const viewDiv = document.getElementById('clinical-view-mode');
+            const editForm = document.getElementById('form-clinical-info');
+            
+            if (editMode) {
+                document.getElementById('clinical-edit-age').value = clinicalData.age || '';
+                document.getElementById('clinical-edit-blood').value = clinicalData.blood_type || '';
+                document.getElementById('clinical-edit-allergies').value = clinicalData.allergies || '';
+                document.getElementById('clinical-edit-conditions').value = clinicalData.conditions || '';
+                document.getElementById('clinical-edit-insurance').value = clinicalData.health_insurance || '';
+                
+                viewDiv.style.display = 'none';
+                editForm.style.display = 'block';
+            } else {
+                viewDiv.style.display = 'block';
+                editForm.style.display = 'none';
+            }
+        }
+
+        async function saveClinicalInfo(event) {
+            event.preventDefault();
+            
+            const payload = {
+                age: document.getElementById('clinical-edit-age').value ? parseInt(document.getElementById('clinical-edit-age').value) : null,
+                blood_type: document.getElementById('clinical-edit-blood').value,
+                allergies: document.getElementById('clinical-edit-allergies').value,
+                conditions: document.getElementById('clinical-edit-conditions').value,
+                health_insurance: document.getElementById('clinical-edit-insurance').value
+            };
+            
+            try {
+                showToast("⏳ Salvando...");
+                const response = await fetch(`${API_URL}/api/cliente/${userId}/clinical-info`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                
+                if (response.ok) {
+                    showToast("✅ Ficha médica atualizada!");
+                    closeModal('modal-clinical-info');
+                } else {
+                    showToast("❌ Erro ao salvar ficha médica");
+                }
+            } catch (error) {
+                console.error("Erro ao salvar ficha médica:", error);
+                showToast("❌ Erro ao salvar ficha médica");
+            }
+        }
+
         // =====================================================
         // 📷 UPLOAD DA IMAGEM DA CAIXA DO REMÉDIO
         // =====================================================
