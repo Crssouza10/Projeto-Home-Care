@@ -85,7 +85,11 @@ app.mount("/static", StaticFiles(directory="static"), name="static")
 
 # ===== BANCO DE DADOS =====
 DATABASE_URL = os.getenv("DATABASE_URL")
-if DATABASE_URL and DATABASE_URL.startswith("postgres://"):
+if not DATABASE_URL:
+    # Fallback para o banco Supabase de produção/homologação para evitar crash na Vercel
+    DATABASE_URL = "postgresql://postgres.rmhiwdsqdbtedfrkubjo:Projetohomecare@aws-1-us-west-1.pooler.supabase.com:6543/postgres"
+    print("⚠️ DATABASE_URL não configurada. Utilizando fallback do Supabase.")
+elif DATABASE_URL.startswith("postgres://"):
     DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
 
 print(f"DATABASE_URL: {'Configurada' if DATABASE_URL else 'NAO CONFIGURADA'}")
