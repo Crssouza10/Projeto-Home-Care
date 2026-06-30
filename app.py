@@ -97,6 +97,15 @@ engine = create_engine(DATABASE_URL)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
 
+# Garante que a coluna box_image existe na tabela medications
+try:
+    with engine.connect() as conn:
+        conn.execute(text("ALTER TABLE medications ADD COLUMN IF NOT EXISTS box_image TEXT;"))
+        conn.commit()
+        print("✅ Coluna box_image verificada/adicionada com sucesso na tabela medications.")
+except Exception as e:
+    print(f"⚠️ Erro ao verificar/adicionar coluna box_image: {e}")
+
 
 # ==================== MODELOS (TABELAS) ====================
 
@@ -131,6 +140,7 @@ class Medication(Base):
     reminder_count = Column(Integer, default=0)
     responsible_notified = Column(Boolean, default=False)
     last_taken_date = Column(Date, nullable=True)
+    box_image = Column(Text, nullable=True)
 
 # -------------------------------------------------------
 # MODELO PARA PUSH SUBSCRIPTIONS (TABELA NOVA)
@@ -255,6 +265,7 @@ class MedicationResponse(BaseModel):
     reminder_count: Optional[int] = 0
     responsible_notified: Optional[bool] = False
     last_taken_date: Optional[date] = None
+    box_image: Optional[str] = None
     
     model_config = ConfigDict(from_attributes=True)
 
@@ -291,6 +302,7 @@ class ClienteMedicationResponse(BaseModel):
     taken_status: Optional[str] = "pending"
     is_active: Optional[bool] = True
     last_taken_date: Optional[date] = None
+    box_image: Optional[str] = None
     model_config = ConfigDict(from_attributes=True)
 
 class ClienteAppointmentResponse(BaseModel):
@@ -469,7 +481,8 @@ async def get_medication_history(user_id: str, date: str, db: Session = Depends(
                 "taken_time": log.get("actual_time"),
                 "created_at": med.created_at.strftime("%Y-%m-%d") if med.created_at else None,
                 "end_date": med.end_date,
-                "is_history": True
+                "is_history": True,
+                "box_image": med.box_image
             })
         
         return resultado
@@ -604,7 +617,8 @@ async def get_client_medications(user_id: str, db: Session = Depends(get_db)):
             "is_active": med.is_active,
             "created_at": med.created_at.strftime("%Y-%m-%d") if med.created_at else None,
             "end_date": med.end_date,
-            "last_taken_date": med.last_taken_date.isoformat() if med.last_taken_date else None
+            "last_taken_date": med.last_taken_date.isoformat() if med.last_taken_date else None,
+            "box_image": med.box_image
         })
     
     return resultado
@@ -743,6 +757,21 @@ async def mark_not_taken(med_id: str):
         raise HTTPException(500, str(e))
     finally:
         db.close()
+ 
+@app.put("/api/medications/{med_id}/box-image")
+async def save_medication_box_image(med_id: str, data: dict, db: Session = Depends(get_db)):
+    try:
+        med_uuid = uuid.UUID(med_id)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="ID de medicamento inválido")
+    
+    med = db.query(Medication).filter(Medication.id == med_uuid).first()
+    if not med:
+        raise HTTPException(status_code=404, detail="Medicamento não encontrado")
+    
+    med.box_image = data.get("box_image")
+    db.commit()
+    return {"status": "success", "message": "Imagem da caixa do remédio salva com sucesso"}
  
 async def notify_responsible_async(medication_id: uuid.UUID):
     """Aciona responsável do cliente quando este não toma a medicação"""
