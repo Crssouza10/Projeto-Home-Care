@@ -1495,6 +1495,7 @@ async def check_reminders(db: Session = Depends(get_db)):
 async def upload_prescription(file: UploadFile = File(...)):
     try:
         import base64
+        import os
         # 1. Ler o arquivo enviado
         contents = await file.read()
         filename = file.filename.lower()
