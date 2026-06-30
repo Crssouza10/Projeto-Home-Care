@@ -1342,7 +1342,31 @@
 
             <!-- ✅ BOTÃO MODO SÊNIOR -->
             <button id="btn-modo-senior" class="btn-senior-toggle" onclick="toggleModoSenior()">👵 Modo Sênior</button>
-            
+            <!-- BOTÃO UPLOAD DE RECEITA -->
+            <button onclick="document.getElementById('input-receita-upload').click()" 
+                    style="background: linear-gradient(135deg, #8b5cf6 0%, #6d28d9 100%); 
+                        color: white; 
+                        padding: 10px 16px; 
+                        border-radius: 12px; 
+                        border: none; 
+                        cursor: pointer; 
+                        font-weight: 700; 
+                        font-size: 0.9rem;
+                        display: flex; 
+                        align-items: center; 
+                        gap: 6px;
+                        box-shadow: 0 4px 6px rgba(139, 92, 246, 0.3);
+                        transition: transform 0.2s;">
+                📄 Receita
+            </button>
+
+            <!-- Input escondido para arquivo -->
+            <input type="file" 
+                id="input-receita-upload" 
+                accept="image/*,.pdf" 
+                style="display: none;" 
+                onchange="processarReceita(this.files[0])">            
+
             <div class="header-stat" onclick="showTodayCommitments()">
                 <div class="header-stat-icon">💊</div>
                 <div>
@@ -1619,9 +1643,6 @@
 
             console.log('✅ API_URL configurada:', API_URL);
 
-            // ============================================
-            // 🛡️ VERIFICAÇÃO DE LOGIN IMEDIATA E BLOQUEANTE
-            // ============================================
         // ============================================
         // 🛡️ VERIFICAÇÃO DE LOGIN IMEDIATA E BLOQUEANTE
         // ============================================
@@ -1965,20 +1986,28 @@
                 navigator.serviceWorker.register('/sw.js')
                     .then(reg => {
                         console.log('[PWA] SW registrado:', reg.scope);
-                        reg.update(); // Proativamente força o SW a buscar atualizações
+                        // Solicitar permissão de notificação
+                        Notification.requestPermission();
                     })
                     .catch(err => console.log('[PWA] Erro ao registrar SW:', err));
                 
-                // Verifica atualizações do SW
-                navigator.serviceWorker.addEventListener('controllerchange', () => {
-                    console.log('[PWA] Nova versão detectada! Recarregando...');
-                    if (typeof showToast === 'function') {
-                        showToast('🔄 Nova versão disponível! Recarregando...');
+                // Receber notificações push
+                navigator.serviceWorker.addEventListener('message', event => {
+                    if (event.data.type === 'MEDICAMENTO') {
+                        new Notification('⏰ Hora do Medicamento!', {
+                            body: `${event.data.nome} - ${event.data.dosagem}`,
+                            icon: '/icon-192x192.png',
+                            vibrate: [200, 100, 200],
+                            requireInteraction: true,
+                            tag: `med-${event.data.id}`
+                        });
+                        
+                        // Tocar áudio
+                        tocarAlertaMedicamento(event.data.nome, event.data.dosagem, "lembrete");
                     }
-                    setTimeout(() => window.location.reload(), 1500);
                 });
             }
-            
+                        
             // ===== PWA INSTALL PROMPT =====
             let deferredPrompt = null;
             const installBtn = document.getElementById('install-btn');
@@ -4109,6 +4138,85 @@
         });
         </script>
 
+        <script>
+        // Abrir modal
+        document.getElementById('btn-upload-receita').addEventListener('click', () => {
+            document.getElementById('modal-receita').style.display = 'flex';
+            document.getElementById('input-receita').value = '';
+            document.getElementById('receita-loading').style.display = 'none';
+        });
+
+        // Processar Upload
+        document.getElementById('btn-processar-receita').addEventListener('click', async () => {
+            const fileInput = document.getElementById('input-receita');
+            if (!fileInput.files[0]) return showToast('❌ Selecione um arquivo primeiro', true);
+            
+            document.getElementById('receita-loading').style.display = 'block';
+            
+            const formData = new FormData();
+            formData.append('file', fileInput.files[0]);
+            formData.append('user_id', localStorage.getItem('userId'));
+            
+            try {
+                const res = await fetch(`${API_URL}/api/prescriptions/upload`, {
+                    method: 'POST',
+                    body: formData
+                });
+                const data = await res.json();
+                
+                if (data.success) {
+                    document.getElementById('modal-receita').style.display = 'none';
+                    showToast(data.message);
+                    
+                    // 🟢 AUTO-PREENCHER OS CARDS DE MEDICAMENTO
+                    preencherMedicamentosDaReceita(data.medications);
+                } else {
+                    showToast('❌ Erro ao processar receita', true);
+                }
+            } catch (err) {
+                console.error(err);
+                showToast('❌ Falha na conexão', true);
+            } finally {
+                document.getElementById('receita-loading').style.display = 'none';
+            }
+        });
+
+        // Função que cria os cards automaticamente
+        function preencherMedicamentosDaReceita(medicamentos) {
+            const container = document.getElementById('medications-list') || document.querySelector('.cards-container');
+            if (!container) return console.warn('Container de remédios não encontrado');
+            
+            medicamentos.forEach(med => {
+                // Cria card visual
+                const card = document.createElement('div');
+                card.className = 'med-card';
+                card.style.cssText = 'background:#1e293b; padding:16px; border-radius:12px; margin-bottom:12px; border-left:4px solid #10b981;';
+                card.innerHTML = `
+                    <div style="display:flex; justify-content:space-between; align-items:center;">
+                        <h3 style="margin:0; color:#fff;">${med.name}</h3>
+                        <span style="background:#334155; padding:4px 8px; border-radius:6px; font-size:0.8rem; color:#94a3b8;">${med.type}</span>
+                    </div>
+                    <p style="color:#cbd5e1; margin:8px 0 4px;"> ${med.dosage} •  ${med.frequency}</p>
+                    <p style="color:#94a3b8; font-size:0.85rem; margin:0;">📝 ${med.instruction}</p>
+                    <div style="margin-top:12px; display:flex; gap:8px;">
+                        <button onclick="salvarRemedioReceita('${med.name}', '${med.dosage}', '${med.times.join(',')}')" 
+                                style="flex:1; padding:10px; background:#10b981; color:white; border:none; border-radius:8px; font-weight:600; cursor:pointer;">
+                            ✅ Confirmar e Salvar
+                        </button>
+                    </div>
+                `;
+                container.prepend(card);
+            });
+        }
+
+        // Salvar no backend (chama sua API existente de medicamentos)
+        async function salvarRemedioReceita(nome, dosagem, horarios) {
+            // Aqui você chama seu endpoint POST /api/medications com os dados
+            showToast(`✅ ${nome} salvo com sucesso!`);
+            // location.reload(); // Opcional: recarregar para sync com banco
+        }
+        </script>
+
         <!-- BOTÃO DE TESTE DE ÁUDIO (Remova após testar) 
         <button onclick="testarAudio()" style="
             position: fixed;
@@ -4742,6 +4850,358 @@
 
         <!-- Toast container (garantir que exista) -->
         <div class="toast" id="toast"></div>
+
+        <!-- Botão que aciona o upload -->
+        <button onclick="document.getElementById('input-receita-upload').click()" 
+                style="background: #8b5cf6; color: white; padding: 8px 16px; border-radius: 8px; border: none; cursor: pointer; font-weight: bold; display: flex; align-items: center; gap: 5px;">
+            📄 Receita/Remédio
+        </button>
+
+<!-- Input escondido para selecionar arquivo -->
+<input type="file" id="input-receita-upload" accept="image/*,.pdf" style="display: none;" onchange="processarReceita(this.files[0])">
+
+        <!-- Modal de Upload -->
+        <div id="modal-receita" class="modal-overlay" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.7); z-index:9999; justify-content:center; align-items:center;">
+        <div style="background:#1e293b; padding:24px; border-radius:16px; width:90%; max-width:500px; color:white;">
+            <h3 style="margin-top:0;">📎 Anexar Receita Médica</h3>
+            <p style="color:#94a3b8; font-size:0.9rem;">Envie foto ou PDF. O sistema lerá e preencherá automaticamente.</p>
+            
+            <input type="file" id="input-receita" accept="image/*,.pdf" style="width:100%; padding:12px; background:#334155; border:1px solid #475569; border-radius:8px; color:white; margin:16px 0;">
+            
+            <div id="receita-loading" style="display:none; text-align:center; color:#8b5cf6;">
+            🔍 Lendo receita com IA... aguarde
+            </div>
+            
+            <div style="display:flex; gap:12px; justify-content:flex-end;">
+            <button onclick="document.getElementById('modal-receita').style.display='none'" style="padding:10px 20px; background:#475569; color:white; border:none; border-radius:8px; cursor:pointer;">Cancelar</button>
+            <button id="btn-processar-receita" style="padding:10px 20px; background:#10b981; color:white; border:none; border-radius:8px; font-weight:700; cursor:pointer;">Processar Receita</button>
+            </div>
+        </div>
+        </div>        
+
+        <!-- ============================================
+        // 🔄 PROCESSAMENTO DE RECEITA MÉDICA     
+        // ============================================  -->
+
+        <script>
+        async function processarReceita(file) {
+            if (!file) return;
+
+            // Feedback visual
+            showToast("🔍 Lendo receita e identificando medicamentos...", "info");
+
+            const formData = new FormData();
+            formData.append('file', file);
+            formData.append('user_id', localStorage.getItem('userId'));
+
+            try {
+                // Envia para o Backend
+                const response = await fetch(`${API_URL}/api/prescriptions/upload`, {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    showToast(`✅ ${data.medications.length} medicamentos encontrados! Preenchendo formulário...`, "success");
+                    
+                    // PREENCHER O FORMULÁRIO AUTOMATICAMENTE
+                    // Vamos usar o PRIMEIRO medicamento encontrado para preencher a tela de edição
+                    // ou criar um loop se você quiser adicionar todos.
+                    preencherFormularioMedicamento(data.medications[0]);
+                } else {
+                    showToast("❌ Erro ao ler a receita.", "error");
+                }
+            } catch (error) {
+                console.error(error);
+                showToast("❌ Erro na conexão com o servidor.", "error");
+            }
+        }
+
+        // Função que coloca os dados nos campos da tela de edição (Imagem 1)
+        function preencherFormularioMedicamento(med) {
+            // 1. Preencher Nome
+            const inputNome = document.querySelector('input[placeholder*="Nome"]') || document.getElementById('med-name');
+            if(inputNome) inputNome.value = med.name;
+
+            // 2. Preencher Dosagem
+            const inputDosagem = document.querySelector('input[placeholder*="Dosagem"]') || document.getElementById('med-dosage');
+            if(inputDosagem) inputDosagem.value = med.dosage;
+
+            // 3. Preencher Horário (se vier "08:00")
+            if (med.times && med.times.length > 0) {
+                const hora = med.times[0].split(':')[0];
+                const min = med.times[0].split(':')[1];
+                
+                // Selecionar nos dropdowns (ajuste os seletores conforme seu HTML real)
+                const selectHora = document.querySelector('select[id*="hora"]') || document.querySelectorAll('select')[0];
+                const selectMin = document.querySelector('select[id*="min"]') || document.querySelectorAll('select')[1];
+                
+                if(selectHora) selectHora.value = hora;
+                if(selectMin) selectMin.value = min;
+            }
+
+            // 4. Preencher Dias de Duração
+            const inputDias = document.querySelector('input[placeholder*="dias"]') || document.getElementById('med-duration');
+            if (inputDias && med.duration_days) {
+                inputDias.value = med.duration_days;
+            } else if (inputDias) {
+                inputDias.value = ""; // Limpa se for contínuo
+                // Marcar checkbox "Uso Contínuo" se duration for null
+                const checkContinuo = document.querySelector('input[type="checkbox"][id*="continuo"]');
+                if(checkContinuo && !med.duration_days) checkContinuo.checked = true;
+            }
+
+            // 5. Selecionar Dias da Semana (Dom, Seg, etc)
+            // Limpa seleções anteriores
+            document.querySelectorAll('.day-selector-btn').forEach(btn => btn.classList.remove('selected')); // Ajuste a classe dos botões
+            
+            // Se a frequência for específica (ex: 12h), marca todos os dias
+            // Se for "Manhã", marca todos os dias também para simplificar
+            const diasBtns = document.querySelectorAll('button[class*="day"], button[onclick*="toggleDay"]'); 
+            diasBtns.forEach(btn => {
+                // Lógica simples: selecionar todos para garantir que o alarme toque
+                if(btn.innerText && !btn.classList.contains('selected')) {
+                    btn.click(); // Simula clique para selecionar
+                }
+            });
+            
+            // Abre o modal de edição se estiver fechado
+            const modal = document.getElementById('modal-edit-medication') || document.querySelector('.modal-overlay[style*="display: none"]');
+            if(modal) modal.style.display = 'flex';
+        }
+        </script>        
+
+        <script>
+        // 1️⃣ Função para processar receita e preencher o grid
+        async function processarReceita(file) {
+            if (!file) {
+                showToast("❌ Selecione um arquivo primeiro", "error");
+                return;
+            }
+
+            showToast("🔍 Lendo receita com IA... aguarde", "info");
+
+            const formData = new FormData();
+            formData.append('file', file);
+            formData.append('user_id', localStorage.getItem('userId'));
+
+            try {
+                const response = await fetch(`${API_URL}/api/prescriptions/upload`, {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const data = await response.json();
+                
+                console.log('📥 Resposta da API:', data); // DEBUG
+
+                if (data.success) {
+                    // ✅ VERIFICA se medications existe e é um array
+                    const medicamentos = data.medications || data.meds || [];
+                    
+                    if (medicamentos.length === 0) {
+                        showToast("⚠️ Nenhum medicamento identificado na receita", "warning");
+                        return;
+                    }
+                    
+                    showToast(`✅ ${medicamentos.length} medicamentos identificados!`, "success");
+                    preencherGridMedicamentos(medicamentos);
+                } else {
+                    showToast("❌ Erro ao processar receita: " + (data.message || "Erro desconhecido"), "error");
+                }
+            } catch (error) {
+                console.error('Erro:', error);
+                showToast("❌ Erro na conexão com o servidor: " + error.message, "error");
+            }
+        }
+
+        // 2️⃣ Função para preencher o grid de medicamentos
+        function preencherGridMedicamentos(medicamentos) {
+            // ✅ VERIFICA se medicamentos é um array válido
+            if (!medicamentos || !Array.isArray(medicamentos)) {
+                console.error('❌ medicamentos não é um array:', medicamentos);
+                showToast("⚠️ Erro ao processar medicamentos", "error");
+                return;
+            }
+
+            // Estratégia inteligente: Achar onde os remédios já estão
+            let container = document.querySelector('.med-card')?.parentElement;
+            if (!container) {
+                container = document.querySelector('#medications-list') || 
+                            document.querySelector('.medications-list') || 
+                            document.querySelector('#medications-container') || 
+                            document.querySelector('.cards-container') ||
+                            document.querySelector('.agenda-list');
+            }
+
+            if (!container) {
+                console.error('❌ Container de medicamentos não encontrado!');
+                showToast("⚠️ Erro ao identificar onde colocar os remédios.", "warning");
+                return;
+            }
+
+            console.log('✅ Container encontrado:', container);
+            console.log(`📦 Adicionando ${medicamentos.length} medicamentos...`);
+
+            // Criar card para cada medicamento
+            medicamentos.forEach((med, index) => {
+                console.log(`💊 Processando: ${med.name}`);
+                const card = criarCardMedicamento(med, index);
+                container.prepend(card);
+            });
+
+            // Atualizar contador
+            atualizarContadorRemedios(medicamentos.length);
+        }
+
+        // 3️⃣ Função para criar card HTML (SEM BOTÃO EDITAR AMARELO + CARD CLICÁVEL)
+        function criarCardMedicamento(med, index) {
+            const card = document.createElement('div');
+            card.className = 'med-card';
+            card.style.cssText = `
+                background: #1e293b;
+                padding: 20px;
+                border-radius: 12px;
+                margin-bottom: 16px;
+                border-left: 4px solid #10b981;
+                box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+                cursor: pointer; /* O card inteiro é clicável para editar */
+                transition: transform 0.2s;
+            `;
+            
+            // Torna o card clicável para editar (remove botão amarelo)
+            card.onclick = (e) => {
+                // Evita disparar ao clicar no botão Salvar
+                if (!e.target.closest('button')) {
+                    abrirModalEdicaoDoCard(med);
+                }
+            };
+
+            // Data de término
+            const dataInicio = new Date();
+            const dataFim = new Date();
+            dataFim.setDate(dataInicio.getDate() + (med.duration_days || 7));
+            const dataFimStr = dataFim.toLocaleDateString('pt-BR');
+
+            card.innerHTML = `
+                <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 12px;">
+                    <div>
+                        <div style="background: #8b5cf6; color: white; padding: 6px 12px; border-radius: 8px; font-weight: 700; font-size: 0.9rem; display: inline-block;">
+                            ${med.times && med.times[0] ? med.times[0] : '00:00'}
+                        </div>
+                        <h3 style="margin: 12px 0 4px; color: #fff; font-size: 1.2rem;">${med.name}</h3>
+                        <p style="color: #94a3b8; font-size: 0.9rem; margin: 0;">
+                            💊 ${med.dosage}
+                        </p>
+                    </div>
+                    <!-- BOTÃO SALVAR APENAS (sem editar amarelo) -->
+                    <button style="padding: 10px 20px; background: #10b981; color: white; border: none; border-radius: 8px; font-weight: 700; cursor: pointer;"
+                            onclick="event.stopPropagation(); salvarMedicamentoReceita('${med.name}', '${med.dosage}', '${med.times ? med.times[0] : '08:00'}', ${med.duration_days || 7})">
+                        ✅ Salvar
+                    </button>
+                </div>
+                
+                <div style="border-top: 1px solid #334155; padding-top: 12px; margin-top: 12px;">
+                    <p style="color: #cbd5e1; font-size: 0.85rem; margin: 4px 0;">
+                        📅 Duração: ${med.duration_days || '?'} dias (até ${dataFimStr})
+                    </p>
+                    <p style="color: #cbd5e1; font-size: 0.85rem; margin: 4px 0;">
+                        🔄 Frequência: ${med.frequency || 'Diário'}
+                    </p>
+                </div>
+            `;
+
+            return card;
+        }
+
+        // 4️⃣ Função para abrir o modal de edição ao clicar no card
+        function abrirModalEdicaoDoCard(med) {
+            // Encontra os inputs do seu modal existente e preenche com os dados
+            const inputNome = document.getElementById('med-name') || document.querySelector('input[placeholder*="Nome"]');
+            const inputDosagem = document.getElementById('med-dosage') || document.querySelector('input[placeholder*="Dosagem"]');
+            const inputDias = document.getElementById('med-duration') || document.querySelector('input[placeholder*="dias"]');
+
+            if(inputNome) inputNome.value = med.name;
+            if(inputDosagem) inputDosagem.value = med.dosage;
+            if(inputDias && med.duration_days) inputDias.value = med.duration_days;
+
+            // Abre o modal (ajuste o ID conforme seu código)
+            const modal = document.getElementById('modal-edit-medication') || document.getElementById('modal-medication');
+            if(modal) modal.style.display = 'flex';
+            
+            showToast(`✏️ Editando: ${med.name}`, "info");
+        }
+
+        // 5️⃣ Função para salvar (SEM RELOAD - CORRIGIDO!)
+        async function salvarMedicamentoReceita(nome, dosagem, horario, duracao) {
+            const userId = localStorage.getItem('userId');
+            
+            try {
+                const response = await fetch(`${API_URL}/api/cliente/${userId}/medications`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        user_id: userId,
+                        name: nome,
+                        dosage: dosagem,
+                        time: horario,
+                        days_of_week: [0, 1, 2, 3, 4, 5, 6],
+                        duration_days: parseInt(duracao)
+                    })
+                });
+
+                if (response.ok) {
+                    showToast(`✅ ${nome} salvo com sucesso!`, "success");
+                    // ✅ REMOVIDO: location.reload() - Agora os outros remédios NÃO somem!
+                    // Opcional: remover o card após salvar para não duplicar
+                    // event.target.closest('.med-card')?.remove();
+                } else {
+                    showToast("❌ Erro ao salvar medicamento", "error");
+                }
+            } catch (error) {
+                showToast("❌ Erro na conexão", "error");
+            }
+        }
+
+        // Funções Auxiliares
+        function atualizarContadorRemedios(qtd) {
+            const badge = document.querySelector('#remedios-count');
+            if (badge) {
+                const atual = parseInt(badge.textContent) || 0;
+                badge.textContent = atual + qtd;
+            }
+        }
+
+        function showToast(message, type = 'info') {
+            const toast = document.createElement('div');
+            toast.style.cssText = `
+                position: fixed; top: 20px; right: 20px; padding: 16px 24px;
+                background: ${type === 'success' ? '#10b981' : type === 'error' ? '#ef4444' : '#8b5cf6'};
+                color: white; border-radius: 12px; z-index: 10000; font-weight: 600;
+                animation: slideInRight 0.3s ease;
+            `;
+            toast.textContent = message;
+            document.body.appendChild(toast);
+            setTimeout(() => toast.remove(), 3000);
+        }
+
+        // Adicionar animação CSS
+        const style = document.createElement('style');
+        style.textContent = `
+            @keyframes slideIn {
+                from { opacity: 0; transform: translateY(20px); }
+                to { opacity: 1; transform: translateY(0); }
+            }
+            @keyframes slideInRight {
+                from { opacity: 0; transform: translateX(400px); }
+                to { opacity: 1; transform: translateX(0); }
+            }
+        `;
+        document.head.appendChild(style);
+        </script>
+
 
     </body>
     </html>

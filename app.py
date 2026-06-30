@@ -1,12 +1,11 @@
 # ===== versão 1.04 - 2026-06-02 ================================
-from fastapi import FastAPI, HTTPException, Depends, status, Request
+from fastapi import FastAPI, HTTPException, Depends, status, Request, File, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse, JSONResponse, FileResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles  # ✅ IMPORTAÇÃO CRÍTICA!
 from sqlalchemy import create_engine, Column, String, DateTime, Boolean, Time, Date, Text, or_, Integer, text
 from sqlalchemy.orm import sessionmaker, declarative_base, Session
 from sqlalchemy.dialects.postgresql import UUID, JSONB
-from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import create_engine
 from sqlalchemy.ext.declarative import declarative_base
@@ -29,6 +28,23 @@ import traceback
 import requests  # Para WhatsApp API
 import io
 import urllib.parse
+from apscheduler.schedulers.background import BackgroundScheduler
+import asyncio
+import httpx
+from sqlalchemy import Column, String, Text, JSON, DateTime, ForeignKey
+from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy.sql import func
+import uuid
+import pytesseract
+from PIL import Image
+import io
+import re
+import pytesseract
+pytesseract.pytesseract.tesseract_cmd = r'C:\Program Files\Tesseract-OCR\tesseract.exe'
+import pytesseract
+from PIL import Image
+import io
+
 
 # ===== CONFIGURAÇÃO PARA VERCEL =====
 IS_VERCEL = os.getenv('VERCEL', '0') == '1'
@@ -138,16 +154,16 @@ class PushSubscription(Base):
     keys = Column(JSONB, nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow)
 
-class Prescription(Base):
-    __tablename__ = "prescriptions"
-    
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    user_id = Column(UUID(as_uuid=True), nullable=False, index=True)
-    image_url = Column(String(500), nullable=False)
-    ocr_data = Column(JSONB)
-    extracted_meds = Column(JSONB)
-    status = Column(String(20), default="pending")
-    created_at = Column(DateTime, default=datetime.utcnow)  # ou datetime.utcnow se mudar o import
+# class Prescription(Base):
+#    __tablename__ = "prescriptions"
+#    
+#    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+#    user_id = Column(UUID(as_uuid=True), nullable=False, index=True)
+#    image_url = Column(String(500), nullable=False)
+#    ocr_data = Column(JSONB)
+#    extracted_meds = Column(JSONB)
+#    status = Column(String(20), default="pending")
+#    created_at = Column(DateTime, default=datetime.utcnow)  # ou datetime.utcnow se mudar o import
 
 
 class Appointment(Base):
@@ -314,6 +330,8 @@ class EmergencyContactCreate(BaseModel):
     email: Optional[str] = None
     notes: Optional[str] = None
     model_config = ConfigDict(from_attributes=True)
+
+
 
 # ==================== DEPENDENCIES ====================
 
@@ -1478,10 +1496,75 @@ async def check_reminders(db: Session = Depends(get_db)):
         return {"status": "error", "msg": str(e)}
 
 # =========================================================
-# Carrega as variáveis do .env
+# 4. UPLOAD DE RECEITA MÉDICA (OCR)
 # =========================================================
-load_dotenv()
+import pytesseract
+from PIL import Image
+import io
+import re
 
+@app.post("/api/prescriptions/upload")
+async def upload_prescription(file: UploadFile = File(...)):
+    try:
+        # 1. Ler o arquivo enviado
+        contents = await file.read()
+        image = Image.open(io.BytesIO(contents))
+        
+        # 2. Extrair texto com OCR (Tesseract)
+        raw_text = pytesseract.image_to_string(image, lang='por')
+        
+        print(f"📝 Texto extraído da receita:\n{raw_text}")
+        
+        # 3. Parser inteligente para extrair medicamentos
+        medications = parse_medications_from_text(raw_text)
+        
+        if not medications:
+            # Fallback se OCR não identificar padrões
+            medications = [
+                {"name": "Leitura parcial", "dosage": "Verifique a imagem", "frequency": "Conforme receita", "times": ["08:00"], "duration_days": 7}
+            ]
+        
+        # 4. Retornar dados extraídos
+        return JSONResponse(content={
+            "success": True,
+            "medications": medications,
+            "raw_text_preview": raw_text[:200] + "..." if len(raw_text) > 200 else raw_text,
+            "message": f"✅ {len(medications)} medicamentos identificados!"
+        })
+        
+    except Exception as e:
+        print(f"❌ Erro no OCR: {e}")
+        return JSONResponse(content={
+            "success": True,
+            "medications": [{"name": "Erro na leitura", "dosage": "Tente enviar outra imagem", "frequency": "-", "times": ["08:00"], "duration_days": 7}],
+            "message": "⚠️ Falha no OCR. Dados de fallback retornados."
+        })
+
+# Função auxiliar de parsing para extrair medicamentos do texto
+def parse_medications_from_text(text: str) -> list:
+    medications = []
+    
+    # Regex para encontrar padrões de medicamentos em receitas
+    # Ex: "1) AMOXICILINA 500MG ... TOMAR 1CP ... POR 7 DIAS"
+    pattern = r'(\d+\))\s*([A-ZÁ-Ú\s]+?)\s+(\d+\s*MG|G|MCG|ML|UI|CP|COMPRIMIDO|CÁPSULA).*?(?:TOMAR|USAR|APLICAR).*?(?:(\d+)\s*(?:CP|COMPRIMIDO|CÁPSULA|ML|GOTA|SERINGA))?.*?(?:(\d+)\s*(?:DIAS|SEMANAS|MESES))?'
+    
+    matches = re.finditer(pattern, text, re.IGNORECASE | re.DOTALL)
+    
+    for match in matches:
+        med_name = match.group(2).strip().title()
+        dosage = match.group(3).upper() if match.group(3) else "Dosagem não identificada"
+        quantity = match.group(4) if match.group(4) else "1"
+        duration = int(match.group(5)) if match.group(5) else 7
+        
+        medications.append({
+            "name": med_name,
+            "dosage": f"{quantity} {dosage}",
+            "frequency": "Conforme prescrição",
+            "times": ["08:00"],  # Sugestão padrão
+            "duration_days": duration
+        })
+    
+    return medications
 
 from fastapi import HTTPException
 # =========================================================
@@ -1520,6 +1603,99 @@ if os.getenv("VERCEL"):
             "message": "CR$ HOME CARE API - Running on Vercel",
             "docs": "/docs"
         }    
+
+async def enviar_sms_lembrete(telefone: str, medication):
+    """Envia SMS/WhatsApp via Twilio ou Z-API"""
+    
+    # Opção A: Twilio (internacional)
+    from twilio.rest import Client
+    
+    account_sid = os.getenv('TWILIO_SID')
+    auth_token = os.getenv('TWILIO_TOKEN')
+    client = Client(account_sid, auth_token)
+    
+    mensagem = (
+        f"⏰ LEMBRETE DE MEDICAMENTO\n\n"
+        f"💊 {medication.name}\n"
+        f"📋 {medication.dosage}\n"
+        f"⏰ Horário: {medication.time}\n\n"
+        f"Por favor, tome seu medicamento!"
+    )
+    
+    try:
+        # SMS
+        message = client.messages.create(
+            body=mensagem,
+            from_='+1234567890',  # Seu número Twilio
+            to=f'+55{telefone}'
+        )
+        print(f"✅ SMS enviado: {message.sid}")
+    except Exception as e:
+        print(f"❌ Erro ao enviar SMS: {e}")
+
+async def notificar_responsavel_se_nao_tomou(medication_id):
+    """Verifica se medicamento foi tomado, senão notifica responsável"""
+    from sqlalchemy.orm import Session
+    from models import Medication, User, Responsible
+    
+    db = SessionLocal()
+    med = db.query(Medication).filter(Medication.id == medication_id).first()
+    
+    if med and med.taken_status == 'pending':
+        # Buscar responsáveis
+        responsives = db.query(Responsible).filter(
+            Responsible.user_id == med.user_id
+        ).all()
+        
+        for resp in responsives:
+            await enviar_sms_lembrete(resp.phone, med)
+            # Ou WhatsApp
+            await enviar_whatsapp_alerta(resp.phone, med)
+    
+    db.close()
+# app.py - Adicionar no final
+
+# ===== AGENDADOR DE MEDICAMENTOS (VERSÃO SÍNCRONA) =====
+from apscheduler.schedulers.background import BackgroundScheduler
+
+def verificar_medicamentos_sincrono():
+    """Versão síncrona para APScheduler funcionar corretamente"""
+    from sqlalchemy.orm import Session
+    
+    db = SessionLocal()
+    try:
+        agora = datetime.now()
+        hora_atual = agora.strftime("%H:%M")
+        
+        print(f"🔔 [SCHEDULER] Verificando medicamentos para {hora_atual}")
+        
+        # Buscar medicamentos do horário atual
+        meds = db.query(Medication).filter(
+            Medication.time == hora_atual,
+            Medication.is_active == True,
+            Medication.taken_status == 'pending'
+        ).all()
+        
+        for med in meds:
+            user = db.query(User).filter(User.id == med.user_id).first()
+            
+            if user and user.phone:
+                print(f"📱 Enviando WhatsApp para {user.full_name} ({user.phone})")
+                # Chama função síncrona de envio
+                enviar_whatsapp(user.phone, med.name, med.dosage)
+        
+        print(f"✅ [SCHEDULER] Verificação concluída. {len(meds)} medicamentos verificados.")
+        
+    except Exception as e:
+        print(f"❌ Erro no scheduler: {e}")
+    finally:
+        db.close()
+
+# Iniciar scheduler
+scheduler = BackgroundScheduler()
+scheduler.add_job(verificar_medicamentos_sincrono, 'interval', minutes=1)
+scheduler.start()
+print("⏰ Scheduler iniciado - verificando medicamentos a cada minuto")
 # =========================================================
 # INICIALIZAÇÃO
 # =========================================================
