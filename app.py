@@ -43,16 +43,15 @@ from sqlalchemy import Column, String, Text, JSON, DateTime, ForeignKey
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.sql import func
 import uuid
-import pytesseract
-from PIL import Image
-import io
-import re
-import pytesseract
-pytesseract.pytesseract.tesseract_cmd = r'C:\Program Files\Tesseract-OCR\tesseract.exe'
-os.environ['TESSDATA_PREFIX'] = os.path.join(os.path.dirname(__file__), 'tessdata')
-import pytesseract
-from PIL import Image
-import io
+# pytesseract e PIL
+try:
+    import pytesseract
+    from PIL import Image
+    if sys.platform.startswith('win'):
+        pytesseract.pytesseract.tesseract_cmd = r'C:\Program Files\Tesseract-OCR\tesseract.exe'
+    os.environ['TESSDATA_PREFIX'] = os.path.join(os.path.dirname(__file__), 'tessdata')
+except Exception as e:
+    print(f"Aviso: pytesseract ou PIL não puderam ser inicializados ({e})")
 
 
 # ===== CONFIGURAÇÃO PARA VERCEL =====
@@ -1489,10 +1488,8 @@ async def check_reminders(db: Session = Depends(get_db)):
 # =========================================================
 # 4. UPLOAD DE RECEITA MÉDICA (OCR)
 # =========================================================
-import pytesseract
-from PIL import Image
-import io
-import re
+
+
 
 @app.post("/api/prescriptions/upload")
 async def upload_prescription(file: UploadFile = File(...)):
