@@ -1494,69 +1494,112 @@ async def check_reminders(db: Session = Depends(get_db)):
 @app.post("/api/prescriptions/upload")
 async def upload_prescription(file: UploadFile = File(...)):
     try:
+        import base64
         # 1. Ler o arquivo enviado
         contents = await file.read()
         filename = file.filename.lower()
+        mime_type = file.content_type or "image/jpeg"
         
-        raw_text = ""
-        
-        # Se for PDF
-        if filename.endswith('.pdf') or file.content_type == 'application/pdf':
-            print("📄 Arquivo recebido é um PDF. Tentando extração direta de texto...")
-            try:
-                import pdfplumber
-                with pdfplumber.open(io.BytesIO(contents)) as pdf:
-                    raw_text = "".join(page.extract_text() or "" for page in pdf.pages).strip()
-            except Exception as e:
-                print(f"⚠️ Erro ao extrair texto direto do PDF: {e}")
+        # Inferir mime type se indefinido
+        if filename.endswith('.pdf'):
+            mime_type = 'application/pdf'
+        elif filename.endswith('.png'):
+            mime_type = 'image/png'
+        elif filename.endswith('.jpg') or filename.endswith('.jpeg'):
+            mime_type = 'image/jpeg'
             
-            # Se for um PDF escaneado (sem texto digital), renderizar em imagens e rodar OCR
-            if not raw_text:
-                print("📷 PDF escaneado (sem texto digital). Renderizando páginas em imagens para rodar OCR...")
-                import pypdfium2 as pdfium
-                pdf = pdfium.PdfDocument(io.BytesIO(contents))
-                text_list = []
-                for page in pdf:
-                    bitmap = page.render(scale=2)  # Renderizar em boa resolução (144 DPI)
-                    pil_img = bitmap.to_pil()
-                    page_text = pytesseract.image_to_string(pil_img, lang='por')
-                    if page_text.strip():
-                        text_list.append(page_text)
-                raw_text = "\n".join(text_list)
-        else:
-            # Se for imagem
-            image = Image.open(io.BytesIO(contents))
-            # 2. Extrair texto com OCR (Tesseract)
-            raw_text = pytesseract.image_to_string(image, lang='por')
+        gemini_key = os.getenv("GEMINI_API_KEY")
+        if not gemini_key:
+            raise HTTPException(
+                status_code=500, 
+                detail="GEMINI_API_KEY nao configurada no servidor. Adicione a chave nas variaveis de ambiente."
+            )
+            
+        # Converte para base64
+        base64_data = base64.b64encode(contents).decode("utf-8")
         
-        print(f"📝 Texto extraído da receita:\n{raw_text}")
+        # API REST do Gemini 2.5 Flash
+        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={gemini_key}"
+        headers = {"Content-Type": "application/json"}
         
-        # 3. Parser inteligente para extrair medicamentos
-        medications = parse_medications_from_text(raw_text)
+        prompt = (
+            "Voce e um assistente medico especialista em transcricao de receitas. "
+            "Analise o documento enviado (imagem ou PDF) e extraia todos os medicamentos listados. "
+            "Retorne as informacoes estruturadas estritamente no seguinte formato JSON:\n"
+            "[\n"
+            "  {\n"
+            "    \"name\": \"Nome do Medicamento\",\n"
+            "    \"dosage\": \"Dosagem e quantidade (ex: 500mg, 1 comprimido, 10 gotas)\",\n"
+            "    \"frequency\": \"Frequencia de uso (ex: A cada 8 horas, 1 vez ao dia)\",\n"
+            "    \"times\": [\"08:00\", \"16:00\", \"00:00\"],\n"
+            "    \"duration_days\": 7\n"
+            "  }\n"
+            "]\n\n"
+            "Instrucoes:\n"
+            "1. 'times': Lista de horarios sugeridos HH:MM baseados na frequencia da receita. Se a receita indicar horarios especificos (ex: tomar as 08h e as 20h), use-os. Caso contrario, sugira horarios padrao (ex: a cada 12h use ['08:00', '20:00']).\n"
+            "2. 'duration_days': Quantidade de dias do tratamento (inteiro). Se nao mencionado, use 7 por padrao.\n"
+            "3. Retorne APENAS o array JSON. Nao inclua markdown (como ```json) ou qualquer outro texto explicativo."
+        )
         
-        if not medications:
-            # Fallback se OCR não identificar padrões
-            medications = [
-                {"name": "Leitura parcial", "dosage": "Verifique a imagem", "frequency": "Conforme receita", "times": ["08:00"], "duration_days": 7}
-            ]
+        payload = {
+            "contents": [
+                {
+                    "parts": [
+                        {"text": prompt},
+                        {
+                            "inlineData": {
+                                "mimeType": mime_type,
+                                "data": base64_data
+                            }
+                        }
+                    ]
+                }
+            ],
+            "generationConfig": {
+                "responseMimeType": "application/json"
+            }
+        }
         
-        # 4. Retornar dados extraídos
+        print(f"📡 Enviando receita para o Gemini 2.5 Flash ({mime_type})...")
+        
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            response = await client.post(url, headers=headers, json=payload)
+            
+        if response.status_code != 200:
+            error_detail = response.text
+            print(f"❌ Erro da API do Gemini: {error_detail}")
+            raise HTTPException(status_code=502, detail=f"Erro da API do Gemini (Status {response.status_code})")
+            
+        resp_json = response.json()
+        
+        try:
+            generated_text = resp_json["candidates"][0]["content"]["parts"][0]["text"].strip()
+            print(f"🤖 Resposta do Gemini:\n{generated_text}")
+            
+            if generated_text.startswith("```"):
+                generated_text = re.sub(r"^```(?:json)?\n", "", generated_text)
+                generated_text = re.sub(r"\n```$", "", generated_text)
+                generated_text = generated_text.strip()
+                
+            medications = json.loads(generated_text)
+        except Exception as parse_error:
+            print(f"❌ Erro ao parsear JSON do Gemini: {parse_error}")
+            raise HTTPException(status_code=500, detail="Erro ao parsear dados extraidos pelo Gemini.")
+            
         return JSONResponse(content={
             "success": True,
             "medications": medications,
-            "raw_text_preview": raw_text[:200] + "..." if len(raw_text) > 200 else raw_text,
-            "message": f"✅ {len(medications)} medicamentos identificados!"
+            "raw_text_preview": "Extraido via Gemini 2.5 Flash",
+            "message": f"✅ {len(medications)} medicamentos identificados com IA!"
         })
         
+    except HTTPException as http_ex:
+        raise http_ex
     except Exception as e:
-        print(f"❌ Erro no OCR/Processamento: {e}")
+        print(f"🔥 Erro no upload de receita: {e}")
         import traceback
         traceback.print_exc()
-        return JSONResponse(content={
-            "success": True,
-            "medications": [{"name": "Erro na leitura", "dosage": "Tente enviar outra imagem", "frequency": "-", "times": ["08:00"], "duration_days": 7}],
-            "message": f"⚠️ Falha no OCR. Erro: {str(e)}"
-        })
+        raise HTTPException(status_code=500, detail=str(e))
 
 # Função auxiliar de parsing para extrair medicamentos do texto
 def parse_medications_from_text(text: str) -> list:
