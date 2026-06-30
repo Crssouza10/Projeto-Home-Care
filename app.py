@@ -1,4 +1,13 @@
 # ===== versão 1.04 - 2026-06-02 ================================
+import sys
+# Garante codificação UTF-8 para evitar erros de unicode no console (especialmente no Windows)
+if sys.platform.startswith('win'):
+    try:
+        sys.stdout.reconfigure(encoding='utf-8')
+        sys.stderr.reconfigure(encoding='utf-8')
+    except AttributeError:
+        pass
+
 from fastapi import FastAPI, HTTPException, Depends, status, Request, File, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse, JSONResponse, FileResponse, StreamingResponse
@@ -19,7 +28,6 @@ from gtts import gTTS
 from hashlib import sha256
 from pathlib import Path
 import os
-import sys
 import uuid
 import json
 import re
@@ -41,6 +49,7 @@ import io
 import re
 import pytesseract
 pytesseract.pytesseract.tesseract_cmd = r'C:\Program Files\Tesseract-OCR\tesseract.exe'
+os.environ['TESSDATA_PREFIX'] = os.path.join(os.path.dirname(__file__), 'tessdata')
 import pytesseract
 from PIL import Image
 import io
@@ -1508,10 +1517,38 @@ async def upload_prescription(file: UploadFile = File(...)):
     try:
         # 1. Ler o arquivo enviado
         contents = await file.read()
-        image = Image.open(io.BytesIO(contents))
+        filename = file.filename.lower()
         
-        # 2. Extrair texto com OCR (Tesseract)
-        raw_text = pytesseract.image_to_string(image, lang='por')
+        raw_text = ""
+        
+        # Se for PDF
+        if filename.endswith('.pdf') or file.content_type == 'application/pdf':
+            print("📄 Arquivo recebido é um PDF. Tentando extração direta de texto...")
+            try:
+                import pdfplumber
+                with pdfplumber.open(io.BytesIO(contents)) as pdf:
+                    raw_text = "".join(page.extract_text() or "" for page in pdf.pages).strip()
+            except Exception as e:
+                print(f"⚠️ Erro ao extrair texto direto do PDF: {e}")
+            
+            # Se for um PDF escaneado (sem texto digital), renderizar em imagens e rodar OCR
+            if not raw_text:
+                print("📷 PDF escaneado (sem texto digital). Renderizando páginas em imagens para rodar OCR...")
+                import pypdfium2 as pdfium
+                pdf = pdfium.PdfDocument(io.BytesIO(contents))
+                text_list = []
+                for page in pdf:
+                    bitmap = page.render(scale=2)  # Renderizar em boa resolução (144 DPI)
+                    pil_img = bitmap.to_pil()
+                    page_text = pytesseract.image_to_string(pil_img, lang='por')
+                    if page_text.strip():
+                        text_list.append(page_text)
+                raw_text = "\n".join(text_list)
+        else:
+            # Se for imagem
+            image = Image.open(io.BytesIO(contents))
+            # 2. Extrair texto com OCR (Tesseract)
+            raw_text = pytesseract.image_to_string(image, lang='por')
         
         print(f"📝 Texto extraído da receita:\n{raw_text}")
         
@@ -1533,11 +1570,13 @@ async def upload_prescription(file: UploadFile = File(...)):
         })
         
     except Exception as e:
-        print(f"❌ Erro no OCR: {e}")
+        print(f"❌ Erro no OCR/Processamento: {e}")
+        import traceback
+        traceback.print_exc()
         return JSONResponse(content={
             "success": True,
             "medications": [{"name": "Erro na leitura", "dosage": "Tente enviar outra imagem", "frequency": "-", "times": ["08:00"], "duration_days": 7}],
-            "message": "⚠️ Falha no OCR. Dados de fallback retornados."
+            "message": f"⚠️ Falha no OCR. Erro: {str(e)}"
         })
 
 # Função auxiliar de parsing para extrair medicamentos do texto
