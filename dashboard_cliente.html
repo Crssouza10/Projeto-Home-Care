@@ -1841,6 +1841,9 @@
             const parts = targetDateStr.split('-');
             const targetDateObj = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
             
+            // ✅ Regenera o calendário para garantir que os marcadores de eventos (remédios/consultas) estejam atualizados
+            generateCalendar();
+            
             updateCountersForDate(targetDateStr);
             
             if (currentScreen === 'medications') {
@@ -2102,34 +2105,44 @@
                     if (med.days_of_week && med.days_of_week.length > 0) {
                         for (let day = 1; day <= daysInMonth; day++) {
                             const currentLoopDateStr = `${currentCalendarYear}-${String(currentCalendarMonth+1).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
-                            if (med.created_at && currentLoopDateStr < med.created_at) continue;
-                            if (med.end_date && currentLoopDateStr > med.end_date) continue;
+                            if (med.created_at) {
+                                const medCreatedDate = med.created_at.split('T')[0].split(' ')[0];
+                                if (currentLoopDateStr < medCreatedDate) continue;
+                            }
+                            if (med.end_date) {
+                                const medEndDate = med.end_date.split('T')[0].split(' ')[0];
+                                if (currentLoopDateStr > medEndDate) continue;
+                            }
                             const dayOfWeek = new Date(currentCalendarYear, currentCalendarMonth, day).getDay();
                             if (med.days_of_week.includes(dayOfWeek)) {
                                 daysWithMedications.add(day);
-                                if (daysWithAppointments.has(day)) {
-                                    daysWithMultiple.add(day);
-                                }
                             }
                         }
                     }
                 });
             }
 
-            // Consultas FUTURAS (vermelho)
+            // Consultas (vermelho)
             if (Array.isArray(appointmentsData)) {
                 appointmentsData.forEach(appt => {
-                    const apptDate = new Date(appt.appointment_date + 'T00:00:00');
-                    if (apptDate >= today &&
-                        apptDate.getMonth() === currentCalendarMonth &&
-                        apptDate.getFullYear() === currentCalendarYear) {
-                        const day = apptDate.getDate();
-                        daysWithAppointments.add(day);
-                        if (daysWithMedications.has(day)) {
-                            daysWithMultiple.add(day);
+                    if (appt.appointment_date) {
+                        const parts = appt.appointment_date.split('T')[0].split(' ')[0].split('-');
+                        const apptYear = parseInt(parts[0]);
+                        const apptMonth = parseInt(parts[1]) - 1; // 0-indexed
+                        const apptDay = parseInt(parts[2]);
+                        
+                        if (apptMonth === currentCalendarMonth && apptYear === currentCalendarYear) {
+                            daysWithAppointments.add(apptDay);
                         }
                     }
                 });
+            }
+
+            // Preenche os dias com múltiplos eventos (medicamento + consulta no mesmo dia)
+            for (let day = 1; day <= daysInMonth; day++) {
+                if (daysWithMedications.has(day) && daysWithAppointments.has(day)) {
+                    daysWithMultiple.add(day);
+                }
             }
 
             // Montar HTML
