@@ -1355,7 +1355,7 @@
             <!-- ✅ BOTÃO MODO SÊNIOR -->
             <button id="btn-modo-senior" class="btn-senior-toggle" onclick="toggleModoSenior()">👵 Modo Sênior</button>
             <!-- BOTÃO UPLOAD DE RECEITA -->
-            <button id="btn-upload-receita" 
+            <button id="btn-upload-receita" onclick="openReceitaModal()"
                     style="background: linear-gradient(135deg, #8b5cf6 0%, #6d28d9 100%); 
                         color: white; 
                         padding: 10px 16px; 
@@ -3825,6 +3825,12 @@
             const durationVal = document.getElementById('med-duration').value;
             const durationDays = (!isContinuous && durationVal) ? parseInt(durationVal) : null;
 
+            const formatLocalDate = (d) => {
+                const pad = (n) => String(n).padStart(2, '0');
+                return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+            };
+            const startDateStr = selectedDate ? formatLocalDate(selectedDate) : formatLocalDate(new Date());
+
             const payload = {
                 user_id: userId,
                 name: document.getElementById('med-name').value,
@@ -3832,7 +3838,8 @@
                 time: timeValue, // Formato garantido: "18:37"
                 days_of_week: days,
                 is_continuous: isContinuous,
-                duration_days: durationDays
+                duration_days: durationDays,
+                start_date: startDateStr
             };
                 
             try {
@@ -4419,12 +4426,13 @@
 
         <script>
         // Abrir modal
-        document.getElementById('btn-upload-receita').addEventListener('click', () => {
+        // Abrir modal
+        function openReceitaModal() {
             document.getElementById('modal-receita').style.display = 'flex';
             document.getElementById('input-receita-camera').value = '';
             document.getElementById('input-receita-arquivo').value = '';
             document.getElementById('receita-loading').style.display = 'none';
-        });
+        }
 
         // Função unificada para processar arquivo selecionado ou capturado
         async function processarArquivoReceita(file) {
@@ -5139,7 +5147,7 @@
         <div class="toast" id="toast"></div>
 
         <!-- Botão que aciona o upload -->
-        <button onclick="document.getElementById('modal-receita').style.display='flex'" 
+        <button onclick="openReceitaModal()" 
                 style="background: #8b5cf6; color: white; padding: 8px 16px; border-radius: 8px; border: none; cursor: pointer; font-weight: bold; display: flex; align-items: center; gap: 5px;">
             📄 Receita/Remédio
         </button>

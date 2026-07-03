@@ -274,6 +274,7 @@ class MedicationCreate(BaseModel):
     is_continuous: bool = False
     duration_days: Optional[int] = None
     end_date: Optional[str] = None
+    start_date: Optional[str] = None
 
 from typing import Optional, List  # ✅ Certifique-se que este import existe no topo do arquivo
 
@@ -695,6 +696,17 @@ async def get_client_medications(user_id: str, db: Session = Depends(get_db)):
     
     return resultado
 
+def get_actual_start_date(start_date: date, days_of_week: list) -> date:
+    if not days_of_week:
+        return start_date
+    for i in range(7):
+        candidate = start_date + timedelta(days=i)
+        py_day = candidate.weekday()
+        custom_day = 0 if py_day == 6 else py_day + 1
+        if custom_day in days_of_week:
+            return candidate
+    return start_date
+
 @app.post("/api/cliente/{user_id}/medications", status_code=status.HTTP_201_CREATED)
 async def create_medication(user_id: str, med: MedicationCreate, db: Session = Depends(get_db)):
     try:
@@ -702,11 +714,23 @@ async def create_medication(user_id: str, med: MedicationCreate, db: Session = D
     except ValueError:
         raise HTTPException(status_code=400, detail="ID de usuário inválido")
     
+    # 1. Determinar a data de início com base no start_date recebido (ou hoje se nulo)
+    start_dt = date.today()
+    if getattr(med, 'start_date', None):
+        try:
+            start_dt = datetime.strptime(med.start_date, "%Y-%m-%d").date()
+        except ValueError:
+            pass
+            
+    # 2. Calcular a primeira ocorrência real baseada nos dias da semana
+    actual_start = get_actual_start_date(start_dt, med.days_of_week)
+    
+    # 3. Calcular data final do tratamento
     end_date = None
     if hasattr(med, 'is_continuous') and med.is_continuous:
-        end_date = None  # Contínuo não tem data de fim, ou você pode colocar (date.today() + timedelta(days=3650)).strftime("%Y-%m-%d")
+        end_date = None
     elif hasattr(med, 'duration_days') and med.duration_days is not None and med.duration_days > 0:
-        end_date = (date.today() + timedelta(days=med.duration_days - 1)).strftime("%Y-%m-%d")
+        end_date = (actual_start + timedelta(days=med.duration_days - 1)).strftime("%Y-%m-%d")
     
     nova_med = Medication(
         user_id=user_uuid,
@@ -715,7 +739,8 @@ async def create_medication(user_id: str, med: MedicationCreate, db: Session = D
         time=med.time,
         days_of_week=med.days_of_week,
         is_continuous=getattr(med, 'is_continuous', False),
-        end_date=end_date  # ← Apenas o VALOR da variável
+        end_date=end_date,
+        created_at=datetime.combine(actual_start, time(0, 0, 0)) # O tratamento inicia no primeiro dia de fato
     )
     
     db.add(nova_med)
@@ -1236,11 +1261,21 @@ async def update_medication(
     medication.time = med.time
     medication.days_of_week = med.days_of_week
     
+    start_dt = medication.created_at.date() if medication.created_at else date.today()
+    if getattr(med, 'start_date', None):
+        try:
+            start_dt = datetime.strptime(med.start_date, "%Y-%m-%d").date()
+        except ValueError:
+            pass
+            
+    actual_start = get_actual_start_date(start_dt, med.days_of_week)
+    medication.created_at = datetime.combine(actual_start, time(0, 0, 0))
+    
     if hasattr(med, 'is_continuous') and med.is_continuous:
         medication.end_date = None
         medication.is_continuous = True
     elif hasattr(med, 'duration_days') and med.duration_days is not None and med.duration_days > 0:
-        medication.end_date = (date.today() + timedelta(days=med.duration_days - 1)).strftime("%Y-%m-%d")
+        medication.end_date = (actual_start + timedelta(days=med.duration_days - 1)).strftime("%Y-%m-%d")
         medication.is_continuous = False
     else:
         medication.end_date = None
