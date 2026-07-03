@@ -1148,6 +1148,18 @@
                 border-radius: 8px;
             }
             
+            /* Ajuste para imagens de medicamentos não vazarem da tela no mobile */
+            .med-card-body-flex {
+                flex-direction: column !important;
+                align-items: flex-start !important;
+                gap: 8px !important;
+            }
+            .med-box-image {
+                width: 100% !important;
+                height: 120px !important;
+                margin-top: 4px;
+            }
+            
             /* Calendário compacto */
             .calendar-container { padding: 6px; }
             .calendar-day { font-size: 0.6rem; padding: 2px; }
@@ -1343,7 +1355,7 @@
             <!-- ✅ BOTÃO MODO SÊNIOR -->
             <button id="btn-modo-senior" class="btn-senior-toggle" onclick="toggleModoSenior()">👵 Modo Sênior</button>
             <!-- BOTÃO UPLOAD DE RECEITA -->
-            <button onclick="document.getElementById('input-receita-upload').click()" 
+            <button id="btn-upload-receita" 
                     style="background: linear-gradient(135deg, #8b5cf6 0%, #6d28d9 100%); 
                         color: white; 
                         padding: 10px 16px; 
@@ -1359,13 +1371,6 @@
                         transition: transform 0.2s;">
                 📄 Receita
             </button>
-
-            <!-- Input escondido para arquivo -->
-            <input type="file" 
-                id="input-receita-upload" 
-                accept="image/*,.pdf" 
-                style="display: none;" 
-                onchange="processarReceita(this.files[0])">            
 
             <div class="header-stat" onclick="showTodayCommitments()">
                 <div class="header-stat-icon">💊</div>
@@ -3678,8 +3683,8 @@
                 form.reset();
                 document.getElementById('med-id').value = '';
                 document.getElementById('med-duration').value = '';
-                document.getElementById('med-continuous').checked = false;
-                document.querySelectorAll('#med-days .day-chip').forEach(chip => chip.classList.remove('active'));
+                document.getElementById('med-continuous').checked = true;
+                document.querySelectorAll('#med-days .day-chip').forEach(chip => chip.classList.add('active'));
             }
             
             // Lógica para desabilitar o input se for contínuo
@@ -4416,19 +4421,19 @@
         // Abrir modal
         document.getElementById('btn-upload-receita').addEventListener('click', () => {
             document.getElementById('modal-receita').style.display = 'flex';
-            document.getElementById('input-receita').value = '';
+            document.getElementById('input-receita-camera').value = '';
+            document.getElementById('input-receita-arquivo').value = '';
             document.getElementById('receita-loading').style.display = 'none';
         });
 
-        // Processar Upload
-        document.getElementById('btn-processar-receita').addEventListener('click', async () => {
-            const fileInput = document.getElementById('input-receita');
-            if (!fileInput.files[0]) return showToast('❌ Selecione um arquivo primeiro', true);
+        // Função unificada para processar arquivo selecionado ou capturado
+        async function processarArquivoReceita(file) {
+            if (!file) return;
             
             document.getElementById('receita-loading').style.display = 'block';
             
             const formData = new FormData();
-            formData.append('file', fileInput.files[0]);
+            formData.append('file', file);
             formData.append('user_id', localStorage.getItem('userId'));
             
             try {
@@ -4440,7 +4445,7 @@
                 
                 if (data.success) {
                     document.getElementById('modal-receita').style.display = 'none';
-                    showToast(data.message);
+                    showToast(data.message || 'Receita processada!');
                     
                     // 🟢 AUTO-PREENCHER OS CARDS DE MEDICAMENTO
                     preencherMedicamentosDaReceita(data.medications);
@@ -4453,6 +4458,14 @@
             } finally {
                 document.getElementById('receita-loading').style.display = 'none';
             }
+        }
+
+        // Registrar listeners para capturar seleção automática
+        document.getElementById('input-receita-camera').addEventListener('change', (e) => {
+            processarArquivoReceita(e.target.files[0]);
+        });
+        document.getElementById('input-receita-arquivo').addEventListener('change', (e) => {
+            processarArquivoReceita(e.target.files[0]);
         });
 
         // Função que cria os cards automaticamente
@@ -5126,32 +5139,40 @@
         <div class="toast" id="toast"></div>
 
         <!-- Botão que aciona o upload -->
-        <button onclick="document.getElementById('input-receita-upload').click()" 
+        <button onclick="document.getElementById('modal-receita').style.display='flex'" 
                 style="background: #8b5cf6; color: white; padding: 8px 16px; border-radius: 8px; border: none; cursor: pointer; font-weight: bold; display: flex; align-items: center; gap: 5px;">
             📄 Receita/Remédio
         </button>
 
-<!-- Input escondido para selecionar arquivo -->
-<input type="file" id="input-receita-upload" accept="image/*,.pdf" style="display: none;" onchange="processarReceita(this.files[0])">
-
         <!-- Modal de Upload -->
         <div id="modal-receita" class="modal-overlay" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.7); z-index:9999; justify-content:center; align-items:center;">
-        <div style="background:#1e293b; padding:24px; border-radius:16px; width:90%; max-width:500px; color:white;">
-            <h3 style="margin-top:0;">📎 Anexar Receita Médica</h3>
-            <p style="color:#94a3b8; font-size:0.9rem;">Envie foto ou PDF. O sistema lerá e preencherá automaticamente.</p>
+        <div style="background:#1e293b; padding:24px; border-radius:16px; width:90%; max-width:500px; color:white; box-shadow: 0 10px 25px rgba(0,0,0,0.5);">
+            <h3 style="margin-top:0; font-size:1.4rem; font-weight:800; display:flex; align-items:center; gap:8px;">📎 Anexar Receita Médica</h3>
+            <p style="color:#94a3b8; font-size:0.95rem; margin-bottom:20px;">Envie uma foto ou arquivo PDF. O sistema lerá e preencherá tudo automaticamente com IA.</p>
             
-            <input type="file" id="input-receita" accept="image/*,.pdf" style="width:100%; padding:12px; background:#334155; border:1px solid #475569; border-radius:8px; color:white; margin:16px 0;">
-            
-            <div id="receita-loading" style="display:none; text-align:center; color:#8b5cf6;">
-            🔍 Lendo receita com IA... aguarde
+            <div style="display:flex; flex-direction:column; gap:16px; margin:20px 0;">
+                <button onclick="document.getElementById('input-receita-camera').click()" 
+                        style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); color:white; padding:18px; border-radius:12px; border:none; cursor:pointer; font-weight:700; font-size:1.1rem; display:flex; align-items:center; justify-content:center; gap:10px; box-shadow: 0 4px 10px rgba(16,185,129,0.25);">
+                    📸 Tirar Foto com o Celular
+                </button>
+                <button onclick="document.getElementById('input-receita-arquivo').click()" 
+                        style="background: #334155; color:white; padding:16px; border-radius:12px; border:1px solid #475569; cursor:pointer; font-weight:600; font-size:1rem; display:flex; align-items:center; justify-content:center; gap:10px;">
+                    📁 Escolher da Galeria ou PDF
+                </button>
             </div>
             
-            <div style="display:flex; gap:12px; justify-content:flex-end;">
-            <button onclick="document.getElementById('modal-receita').style.display='none'" style="padding:10px 20px; background:#475569; color:white; border:none; border-radius:8px; cursor:pointer;">Cancelar</button>
-            <button id="btn-processar-receita" style="padding:10px 20px; background:#10b981; color:white; border:none; border-radius:8px; font-weight:700; cursor:pointer;">Processar Receita</button>
+            <input type="file" id="input-receita-camera" accept="image/*" capture="environment" style="display: none;">
+            <input type="file" id="input-receita-arquivo" accept="image/*,.pdf" style="display: none;">
+            
+            <div id="receita-loading" style="display:none; text-align:center; color:#8b5cf6; padding:10px; font-weight:bold;">
+                🔍 Lendo receita com IA... aguarde
+            </div>
+            
+            <div style="display:flex; gap:12px; justify-content:flex-end; margin-top:20px;">
+                <button onclick="document.getElementById('modal-receita').style.display='none'" style="padding:10px 20px; background:#475569; color:white; border:none; border-radius:8px; cursor:pointer; font-weight:600;">Cancelar</button>
             </div>
         </div>
-        </div>        
+        </div>
 
         <!-- ============================================
         // 🔄 PROCESSAMENTO DE RECEITA MÉDICA     
