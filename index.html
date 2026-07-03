@@ -970,9 +970,14 @@
         }
 
         // Fechar modal ao clicar fora
-        document.getElementById('register-modal').addEventListener('click', function(e) {
-            if (e.target === this) {
-                closeRegister();
+        document.addEventListener('DOMContentLoaded', () => {
+            const regModal = document.getElementById('register-modal');
+            if (regModal) {
+                regModal.addEventListener('click', function(e) {
+                    if (e.target === this) {
+                        closeRegister();
+                    }
+                });
             }
         });
 

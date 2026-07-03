@@ -1121,6 +1121,11 @@ async def create_user(user: UserCreate, db: Session = Depends(get_db)):
     existing = db.query(User).filter(User.email == user.email).first()
     if existing:
         raise HTTPException(status_code=400, detail="Email já cadastrado")
+        
+    if user.phone:
+        existing_phone = db.query(User).filter(User.phone == user.phone).first()
+        if existing_phone:
+            raise HTTPException(status_code=400, detail="Telefone já cadastrado por outro usuário")
     
     password_hash = sha256(user.password.encode()).hexdigest()
     db_user = User(full_name=user.full_name, email=user.email, phone=user.phone, password_hash=password_hash)

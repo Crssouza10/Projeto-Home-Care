@@ -52,6 +52,11 @@ self.addEventListener('fetch', event => {
     return;
   }
   
+  // ✅ CORREÇÃO: Não intercepta/cacheia chamadas de API
+  if (event.request.url.includes('/api/')) {
+    return;
+  }
+  
   event.respondWith(
     caches.match(event.request)
       .then(response => {
