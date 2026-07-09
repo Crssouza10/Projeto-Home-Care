@@ -1067,6 +1067,90 @@
             margin-top: 8px;
         }
         
+        /* ===== MODAL DE DELETE INTELIGENTE (REQUISITO 7) ===== */
+        .delete-modal-content {
+            max-width: 420px !important;
+            text-align: center;
+        }
+        
+        .delete-modal-content .warning-icon {
+            font-size: 3rem;
+            display: block;
+            margin-bottom: 12px;
+        }
+        
+        .delete-modal-content .delete-options {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            margin-top: 16px;
+        }
+        
+        .delete-option-btn {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 16px;
+            border-radius: 14px;
+            border: 2px solid rgba(138, 155, 181, 0.2);
+            background: rgba(17, 27, 51, 0.6);
+            color: #FFFFFF;
+            font-weight: 600;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-align: left;
+        }
+        
+        .delete-option-btn:hover {
+            border-color: rgba(0, 212, 255, 0.4);
+            background: rgba(0, 212, 255, 0.1);
+        }
+        
+        .delete-option-btn.today-option:hover {
+            border-color: #f59e0b;
+            background: rgba(245, 158, 11, 0.15);
+        }
+        
+        .delete-option-btn.future-option:hover {
+            border-color: #ef4444;
+            background: rgba(239, 68, 68, 0.15);
+        }
+        
+        .delete-option-btn.all-option:hover {
+            border-color: #dc2626;
+            background: rgba(220, 38, 38, 0.2);
+        }
+        
+        .delete-option-btn .option-icon {
+            font-size: 1.5rem;
+            width: 40px;
+            text-align: center;
+            flex-shrink: 0;
+        }
+        
+        .delete-option-btn .option-info {
+            flex: 1;
+        }
+        
+        .delete-option-btn .option-title {
+            font-weight: 700;
+            font-size: 1rem;
+            color: #FFFFFF;
+        }
+        
+        .delete-option-btn .option-desc {
+            font-size: 0.8rem;
+            color: #8A9BB5;
+            margin-top: 2px;
+        }
+        
+        .delete-option-btn .option-count {
+            font-size: 0.75rem;
+            color: #f59e0b;
+            font-weight: 700;
+        }
+
         @media (max-width: 768px) {
             .header { padding: 20px; }
             .main-container { padding: 0 20px 20px; }
@@ -1711,6 +1795,47 @@
         </div>
     </div>
     
+    <!-- MODAL DE DELETE INTELIGENTE (REQUISITO 7) -->
+    <div class="modal" id="modal-delete-medication">
+        <div class="modal-content delete-modal-content">
+            <div class="modal-header">
+                <h3 class="modal-title">🗑️ Excluir Medicamento</h3>
+                <button class="modal-close" onclick="closeModal('modal-delete-medication')">&times;</button>
+            </div>
+            <span class="warning-icon">⚠️</span>
+            <p style="color:#C5D0E0; margin-bottom:4px; font-size:1rem;">
+                Como deseja excluir <strong id="delete-med-name" style="color:#00D4FF;">este medicamento</strong>?
+            </p>
+            <div class="delete-options">
+                <button class="delete-option-btn today-option" onclick="confirmDeleteMed('today')">
+                    <span class="option-icon">📅</span>
+                    <div class="option-info">
+                        <div class="option-title">Só hoje</div>
+                        <div class="option-desc">Cancela apenas a dose de hoje. Próximas doses continuam.</div>
+                    </div>
+                    <span class="option-count" id="delete-count-today">1 dose</span>
+                </button>
+                <button class="delete-option-btn future-option" onclick="confirmDeleteMed('future')">
+                    <span class="option-icon">📆</span>
+                    <div class="option-info">
+                        <div class="option-title">Hoje e futuras</div>
+                        <div class="option-desc">Cancela hoje + todas as próximas. Preserva histórico passado.</div>
+                    </div>
+                    <span class="option-count" id="delete-count-future">--</span>
+                </button>
+                <button class="delete-option-btn all-option" onclick="confirmDeleteMed('all')">
+                    <span class="option-icon">🗑️</span>
+                    <div class="option-info">
+                        <div class="option-title">Excluir tudo</div>
+                        <div class="option-desc">Remove completamente o medicamento e todo seu histórico.</div>
+                    </div>
+                    <span class="option-count" style="color:#ef4444;">Total</span>
+                </button>
+            </div>
+            <button onclick="closeModal('modal-delete-medication')" style="margin-top:16px; padding:10px 24px; background:rgba(138,155,181,0.2); border:1px solid rgba(138,155,181,0.3); border-radius:10px; color:#8A9BB5; cursor:pointer; font-weight:600;">Cancelar</button>
+        </div>
+    </div>
+
     <!-- FAB -->
     <button class="fab" id="fab-btn" onclick="handleFabClick()">+</button>
     
@@ -4018,15 +4143,60 @@
         }
         
         // ===== DELETE FUNCTIONS =====
+        // ===== NOVO: DELETE INTELIGENTE (REQUISITO 7) =====
+        let pendingDeleteMedId = null;
+        let pendingDeleteMedName = '';
+
         async function deleteMedication(id) {
-            if (!confirm('Deseja excluir este medicamento?')) return;
+            // Busca contagem de schedules para exibir no modal
             try {
-                const response = await fetch(`${API_URL}/api/medications/${id}`, { method: 'DELETE' });
-                if (!response.ok) throw new Error('Erro ao excluir');
-                showToast('🗑️ Medicamento excluído');
+                const res = await fetch(`${API_URL}/api/medications/${id}/schedules/count`);
+                const counts = await res.json();
+                
+                // Encontra o nome do medicamento
+                const med = medicationsData.find(m => m.id === id);
+                const medName = med ? med.name : 'este medicamento';
+                
+                pendingDeleteMedId = id;
+                pendingDeleteMedName = medName;
+                
+                // Atualiza o modal
+                document.getElementById('delete-med-name').textContent = medName;
+                document.getElementById('delete-count-future').textContent = 
+                    `${counts.futuros_pendentes} dose(s) futura(s)`;
+                
+                openModal('modal-delete-medication');
+            } catch (error) {
+                console.error('Erro ao contar schedules:', error);
+                // Fallback: delete direto
+                if (!confirm('Deseja excluir este medicamento?')) return;
+                await doDeleteMedication(id, 'all');
+            }
+        }
+
+        async function confirmDeleteMed(scope) {
+            closeModal('modal-delete-medication');
+            if (!pendingDeleteMedId) return;
+            await doDeleteMedication(pendingDeleteMedId, scope);
+        }
+
+        async function doDeleteMedication(id, scope) {
+            try {
+                showToast('⏳ Excluindo...');
+                const response = await fetch(`${API_URL}/api/medications/${id}?scope=${scope}`, { 
+                    method: 'DELETE' 
+                });
+                
+                if (!response.ok) {
+                    const err = await response.json().catch(() => ({}));
+                    throw new Error(err.detail || 'Erro ao excluir');
+                }
+                
+                const result = await response.json();
+                showToast('✅ ' + result.mensagem);
                 await reloadAndRefresh();
             } catch (error) {
-                showToast('❌ Erro ao excluir: ' + error.message, true);
+                showToast('❌ Erro ao excluir: ' + error.message);
                 console.error(error);
             }
         }

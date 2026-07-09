@@ -43,6 +43,8 @@ from sqlalchemy import Column, String, Text, JSON, DateTime, ForeignKey
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.sql import func
 import uuid
+# scheduler_engine - motor de recorrência (regras 5a-5d)
+from scheduler_engine import generate_medication_schedules, get_schedule_summary, is_review_needed
 # pytesseract e PIL
 try:
     import pytesseract
@@ -118,6 +120,29 @@ try:
         print("✅ Colunas clínicas adicionadas/verificadas com sucesso na tabela users.")
 except Exception as e:
     print(f"⚠️ Erro ao verificar/adicionar colunas clínicas na tabela users: {e}")
+
+# Garante que a tabela medication_schedules existe
+try:
+    with engine.connect() as conn:
+        conn.execute(text("""
+            CREATE TABLE IF NOT EXISTS medication_schedules (
+                id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+                medication_id UUID NOT NULL,
+                user_id UUID NOT NULL,
+                scheduled_date DATE NOT NULL,
+                scheduled_time TIME NOT NULL,
+                status VARCHAR(20) DEFAULT 'pending',
+                confirmed_at TIMESTAMP,
+                created_at TIMESTAMP DEFAULT NOW()
+            );
+            CREATE INDEX IF NOT EXISTS idx_schedules_med_id ON medication_schedules(medication_id);
+            CREATE INDEX IF NOT EXISTS idx_schedules_user_id ON medication_schedules(user_id);
+            CREATE INDEX IF NOT EXISTS idx_schedules_date ON medication_schedules(scheduled_date);
+        """))
+        conn.commit()
+        print("✅ Tabela medication_schedules verificada/criada com sucesso.")
+except Exception as e:
+    print(f"⚠️ Erro ao verificar/criar tabela medication_schedules: {e}")
 
 
 # ==================== MODELOS (TABELAS) ====================
@@ -240,6 +265,22 @@ class EmergencyContact(Base):
     email = Column(String(150), nullable=True)
     notes = Column(Text, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)  # ou datetime.utcnow se mudar o import
+
+
+# ==================== NOVO MODELO: MedicationSchedule ====================
+# Armazena cada ocorrência individual de um medicamento (suporte às regras 5a-5d)
+class MedicationSchedule(Base):
+    __tablename__ = "medication_schedules"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    medication_id = Column(UUID(as_uuid=True), nullable=False, index=True)
+    user_id = Column(UUID(as_uuid=True), nullable=False, index=True)
+    scheduled_date = Column(Date, nullable=False)
+    scheduled_time = Column(Time, nullable=False)
+    status = Column(String(20), default="pending")  # pending, taken, skipped, cancelled
+    confirmed_at = Column(DateTime, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
 
 # ==================== PYDANTIC SCHEMAS ====================
 
@@ -728,10 +769,11 @@ async def create_medication(user_id: str, med: MedicationCreate, db: Session = D
     # 3. Calcular data final do tratamento
     end_date = None
     if hasattr(med, 'is_continuous') and med.is_continuous:
-        end_date = None
+        end_date = None  # Contínuo não tem data final
     elif hasattr(med, 'duration_days') and med.duration_days is not None and med.duration_days > 0:
         end_date = (actual_start + timedelta(days=med.duration_days - 1)).strftime("%Y-%m-%d")
     
+    # 4. Criar o medicamento
     nova_med = Medication(
         user_id=user_uuid,
         name=med.name,
@@ -740,19 +782,146 @@ async def create_medication(user_id: str, med: MedicationCreate, db: Session = D
         days_of_week=med.days_of_week,
         is_continuous=getattr(med, 'is_continuous', False),
         end_date=end_date,
-        created_at=datetime.combine(actual_start, time(0, 0, 0)) # O tratamento inicia no primeiro dia de fato
+        created_at=datetime.combine(actual_start, time(0, 0, 0))
     )
     
     db.add(nova_med)
+    db.flush()  # Garante que nova_med.id esteja disponível
+    
+    # 5. ✅ NOVO: Gerar schedules automaticamente usando o scheduler_engine
+    time_obj = datetime.strptime(med.time, "%H:%M").time() if isinstance(med.time, str) else med.time
+    schedules = generate_medication_schedules(
+        user_id=user_uuid,
+        medication_id=nova_med.id,
+        med_time=time_obj,
+        days_of_week=med.days_of_week if med.days_of_week else [0, 1, 2, 3, 4, 5, 6],
+        start_date=actual_start,
+        duration_days=getattr(med, 'duration_days', None),
+        is_continuous=getattr(med, 'is_continuous', False),
+    )
+    
+    # Inserir schedules no banco
+    for s in schedules:
+        db.add(MedicationSchedule(
+            medication_id=nova_med.id,
+            user_id=user_uuid,
+            scheduled_date=s["scheduled_date"],
+            scheduled_time=s["scheduled_time"],
+            status=s["status"],
+        ))
+    
     db.commit()
     db.refresh(nova_med)
     
-    return {"status": "sucesso", "id": str(nova_med.id)}
+    # Resumo para o frontend
+    summary = get_schedule_summary(schedules, med.days_of_week, actual_start, 
+                                   datetime.strptime(end_date, "%Y-%m-%d").date() if end_date else None)
+    
+    return {
+        "status": "sucesso",
+        "id": str(nova_med.id),
+        "schedules_gerados": len(schedules),
+        "resumo": summary,
+    }
 
 
 # =========================================================
 #  ROTAS DE ESTADO DO MEDICAMENTO (FLUXO DE 7 ESTADOS)
 # =========================================================
+
+# =========================================================
+# 📅 NOVAS ROTAS: MEDICATION SCHEDULES
+# =========================================================
+
+@app.get("/api/medications/{med_id}/schedules")
+async def get_medication_schedules(med_id: str, db: Session = Depends(get_db)):
+    """Lista todos os schedules de um medicamento (histórico completo)"""
+    try:
+        med_uuid = uuid.UUID(med_id)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="ID inválido")
+    
+    schedules = db.query(MedicationSchedule).filter(
+        MedicationSchedule.medication_id == med_uuid
+    ).order_by(MedicationSchedule.scheduled_date).all()
+    
+    return [{
+        "id": str(s.id),
+        "scheduled_date": s.scheduled_date.isoformat(),
+        "scheduled_time": s.scheduled_time.strftime("%H:%M"),
+        "status": s.status,
+        "confirmed_at": s.confirmed_at.isoformat() if s.confirmed_at else None,
+    } for s in schedules]
+
+
+@app.get("/api/medications/{med_id}/schedules/count")
+async def count_future_schedules(med_id: str, db: Session = Depends(get_db)):
+    """Conta quantos schedules futuros (hoje em diante) existem - para o modal de delete"""
+    try:
+        med_uuid = uuid.UUID(med_id)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="ID inválido")
+    
+    today = date.today()
+    
+    total = db.query(MedicationSchedule).filter(
+        MedicationSchedule.medication_id == med_uuid
+    ).count()
+    
+    past = db.query(MedicationSchedule).filter(
+        MedicationSchedule.medication_id == med_uuid,
+        MedicationSchedule.scheduled_date < today
+    ).count()
+    
+    future = db.query(MedicationSchedule).filter(
+        MedicationSchedule.medication_id == med_uuid,
+        MedicationSchedule.scheduled_date >= today
+    ).count()
+    
+    future_pending = db.query(MedicationSchedule).filter(
+        MedicationSchedule.medication_id == med_uuid,
+        MedicationSchedule.scheduled_date >= today,
+        MedicationSchedule.status == "pending"
+    ).count()
+    
+    return {
+        "total": total,
+        "passados": past,
+        "futuros": future,
+        "futuros_pendentes": future_pending,
+    }
+
+
+@app.post("/api/schedules/{schedule_id}/take")
+async def mark_schedule_taken(schedule_id: str, db: Session = Depends(get_db)):
+    """Marca um schedule específico como tomado (NOVO - por ocorrência)"""
+    try:
+        sched_uuid = uuid.UUID(schedule_id)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="ID inválido")
+    
+    sched = db.query(MedicationSchedule).filter(
+        MedicationSchedule.id == sched_uuid
+    ).first()
+    
+    if not sched:
+        raise HTTPException(status_code=404, detail="Schedule não encontrado")
+    
+    sched.status = "taken"
+    sched.confirmed_at = datetime.now()
+    
+    # Também atualiza o medication_log para compatibilidade
+    db.add(MedicationLog(
+        user_id=sched.user_id,
+        medication_id=sched.medication_id,
+        scheduled_datetime=datetime.combine(sched.scheduled_date, sched.scheduled_time),
+        status="taken",
+        confirmed_at=datetime.now(),
+    ))
+    
+    db.commit()
+    
+    return {"status": "success", "message": "✅ Registrado como tomado"}
 
 @app.post("/api/medications/{med_id}/take")
 async def mark_taken(med_id: str):
@@ -1299,8 +1468,13 @@ async def update_medication(
 
 
 @app.delete("/api/medications/{med_id}")
-async def delete_medication(med_id: str, db: Session = Depends(get_db)):
-    """Excluir um medicamento (soft delete)"""
+async def delete_medication(med_id: str, scope: str = "all", db: Session = Depends(get_db)):
+    """
+    Excluir medicamento com opções de escopo (Requisito 7):
+    - scope=today: Cancela apenas schedules de hoje
+    - scope=future: Cancela schedules de hoje em diante, preserva passado
+    - scope=all: Soft delete total (comportamento padrão)
+    """
     try:
         med_uuid = uuid.UUID(med_id)
     except ValueError:
@@ -1310,11 +1484,67 @@ async def delete_medication(med_id: str, db: Session = Depends(get_db)):
     if not medication:
         raise HTTPException(status_code=404, detail="Medicação não encontrada")
     
-    # Soft delete: apenas marca como inativo
-    medication.is_active = False
-    db.commit()
+    today = date.today()
     
-    return {"status": "sucesso", "mensagem": "Medicação excluída"}
+    if scope == "today":
+        # Cancela apenas os schedules de HOJE
+        updated = db.query(MedicationSchedule).filter(
+            MedicationSchedule.medication_id == med_uuid,
+            MedicationSchedule.scheduled_date == today,
+            MedicationSchedule.status == "pending"
+        ).update({"status": "cancelled"})
+        db.commit()
+        return {
+            "status": "sucesso",
+            "mensagem": f"{updated} dose(s) de hoje cancelada(s). Próximas doses mantidas.",
+            "scope": "today",
+            "cancelados": updated,
+        }
+    
+    elif scope == "future":
+        # Cancela schedules de hoje em diante, preserva os passados
+        updated = db.query(MedicationSchedule).filter(
+            MedicationSchedule.medication_id == med_uuid,
+            MedicationSchedule.scheduled_date >= today,
+            MedicationSchedule.status == "pending"
+        ).update({"status": "cancelled"})
+        
+        # Atualiza end_date do medicamento para ontem
+        medication.end_date = (today - timedelta(days=1)).strftime("%Y-%m-%d")
+        
+        db.commit()
+        
+        # Conta quantos schedules passados permanecem
+        past_count = db.query(MedicationSchedule).filter(
+            MedicationSchedule.medication_id == med_uuid,
+            MedicationSchedule.scheduled_date < today,
+        ).count()
+        
+        return {
+            "status": "sucesso",
+            "mensagem": f"{updated} dose(s) futuras canceladas. {past_count} registros passados preservados no histórico.",
+            "scope": "future",
+            "cancelados": updated,
+            "historico_preservado": past_count,
+        }
+    
+    else:  # scope == "all"
+        # Soft delete: marca medicamento como inativo
+        medication.is_active = False
+        
+        # Cancela todos os schedules pendentes
+        db.query(MedicationSchedule).filter(
+            MedicationSchedule.medication_id == med_uuid,
+            MedicationSchedule.status == "pending"
+        ).update({"status": "cancelled"})
+        
+        db.commit()
+        
+        return {
+            "status": "sucesso",
+            "mensagem": "Medicação excluída completamente.",
+            "scope": "all",
+        }
 
 
 # --- 👥 RESPONSIBLES - EDITAR E EXCLUIR ---
