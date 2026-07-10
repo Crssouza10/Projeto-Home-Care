@@ -1541,33 +1541,6 @@ async def get_review_needed_medications(user_id: str = None, db: Session = Depen
     return resultado
 
 
-# ==================== ROTA TEMPORÁRIA: MIGRAÇÃO REVIEW COLUMNS ====================
-@app.post("/api/admin/migrate-review-columns")
-async def migrate_review_columns(db: Session = Depends(get_db)):
-    """Executa migração das colunas de revisão no banco de produção."""
-    results = []
-    try:
-        db.execute(text("ALTER TABLE medications ADD COLUMN IF NOT EXISTS start_date VARCHAR(10)"))
-        results.append("start_date OK")
-    except Exception as e:
-        results.append(f"start_date ERRO: {e}")
-    
-    try:
-        db.execute(text("ALTER TABLE medications ADD COLUMN IF NOT EXISTS continuous_months INTEGER DEFAULT 6"))
-        results.append("continuous_months OK")
-    except Exception as e:
-        results.append(f"continuous_months ERRO: {e}")
-    
-    try:
-        db.execute(text("UPDATE medications SET start_date = to_char(created_at, 'YYYY-MM-DD') WHERE is_continuous = true AND start_date IS NULL"))
-        results.append("backfill OK")
-    except Exception as e:
-        results.append(f"backfill ERRO: {e}")
-    
-    db.commit()
-    return {"status": "concluído", "resultados": results}
-
-
 @app.delete("/api/medications/{med_id}")
 async def delete_medication(med_id: str, scope: str = "all", db: Session = Depends(get_db)):
     """
