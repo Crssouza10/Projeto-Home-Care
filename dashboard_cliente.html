@@ -1544,6 +1544,19 @@
                 <h3 class="modal-title" id="med-modal-title">💊 Adicionar Medicamento</h3>
                 <button class="modal-close" onclick="closeModal('modal-medication')">&times;</button>
             </div>
+            
+            <!-- 📷 BOTÃO OCR - FOTOGRAFAR RECEITA -->
+            <div id="ocr-section" style="margin-bottom: 16px; padding: 14px; background: rgba(0,212,255,0.05); border: 2px dashed rgba(0,212,255,0.3); border-radius: 14px; text-align: center; cursor: pointer;" onclick="document.getElementById('ocr-file-input').click()">
+                <span style="font-size: 1.8rem; display: block; margin-bottom: 6px;">📷</span>
+                <span style="color: #00D4FF; font-weight: 700; font-size: 1rem;">Fotografar Receita Médica</span>
+                <span style="display: block; color: #8A9BB5; font-size: 0.8rem; margin-top: 4px;">A IA preenche os campos automaticamente</span>
+            </div>
+            <div id="ocr-loading" style="display: none; text-align: center; padding: 14px; color: #f59e0b; font-weight: 600;">
+                ⏳ Analisando receita com IA...
+            </div>
+            <div id="ocr-result" style="display: none; margin-bottom: 12px; padding: 10px; background: rgba(16,185,129,0.15); border: 1px solid rgba(16,185,129,0.3); border-radius: 10px; text-align: center; font-size: 0.9rem; color: #10b981;"></div>
+            <input type="file" id="ocr-file-input" accept="image/*" capture="environment" style="display: none;" onchange="handleOCRUpload(event)">
+            
             <form id="form-medication" onsubmit="saveMedication(event)">
                 <input type="hidden" id="med-id">
                 <div class="form-group">
@@ -3825,6 +3838,11 @@
                 title.textContent = '💊 Adicionar Medicamento';
                 form.reset();
                 document.getElementById('med-id').value = '';
+                // Reset OCR section
+                document.getElementById('ocr-section').style.display = 'block';
+                document.getElementById('ocr-loading').style.display = 'none';
+                document.getElementById('ocr-result').style.display = 'none';
+                document.getElementById('med-id').value = '';
                 document.getElementById('med-duration').value = '';
                 document.getElementById('med-continuous').checked = true;
                 document.querySelectorAll('#med-days .day-chip').forEach(chip => chip.classList.add('active'));
@@ -3938,6 +3956,111 @@
             });
         });
 
+
+        // ===== OCR: FOTOGRAFAR RECEITA E PREENCHER AUTOMATICAMENTE =====
+        async function handleOCRUpload(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            
+            // Mostra loading
+            document.getElementById('ocr-section').style.display = 'none';
+            document.getElementById('ocr-loading').style.display = 'block';
+            
+            try {
+                const formData = new FormData();
+                formData.append('file', file);
+                
+                const response = await fetch(`${API_URL}/api/prescriptions/upload`, {
+                    method: 'POST',
+                    body: formData,
+                });
+                
+                if (!response.ok) {
+                    const err = await response.json().catch(() => ({}));
+                    throw new Error(err.detail || 'Erro ao processar receita');
+                }
+                
+                const result = await response.json();
+                const medications = result.medications || [];
+                
+                if (medications.length === 0) {
+                    throw new Error('Nenhum medicamento encontrado na receita');
+                }
+                
+                // Pega o primeiro medicamento extraído
+                const med = medications[0];
+                
+                // Preenche os campos do formulário
+                document.getElementById('med-name').value = med.name || '';
+                document.getElementById('med-dosage').value = med.dosage || '';
+                
+                // Preenche duração
+                if (med.duration_days) {
+                    document.getElementById('med-duration').value = med.duration_days;
+                }
+                
+                // Preenche horário (primeiro da lista)
+                if (med.times && med.times.length > 0) {
+                    const [h, m] = med.times[0].split(':');
+                    document.getElementById('med-hour').value = h;
+                    document.getElementById('med-minute').value = m;
+                }
+                
+                // Mapeia frequência para days_of_week
+                const freq = (med.frequency || '').toLowerCase();
+                let days = [0,1,2,3,4,5,6]; // default: todos os dias
+                
+                if (freq.includes('semana') || freq.includes('7 dias')) {
+                    days = [0,1,2,3,4,5,6];
+                } else if (freq.includes('12 horas') || freq.includes('12h')) {
+                    days = [0,1,2,3,4,5,6]; // 2x ao dia, todos os dias
+                } else if (freq.includes('8 horas') || freq.includes('8h')) {
+                    days = [0,1,2,3,4,5,6]; // 3x ao dia, todos os dias
+                } else if (freq.includes('6 horas') || freq.includes('6h')) {
+                    days = [0,1,2,3,4,5,6];
+                } else if (freq.includes('dia sim') || freq.includes('alternado')) {
+                    days = [0,2,4,6]; // dias alternados
+                }
+                
+                // Atualiza chips de dias da semana
+                document.querySelectorAll('#med-days .day-chip').forEach(chip => {
+                    const day = parseInt(chip.dataset.day);
+                    if (days.includes(day)) {
+                        chip.classList.add('active');
+                    } else {
+                        chip.classList.remove('active');
+                    }
+                });
+                
+                // Mostra resultado
+                document.getElementById('ocr-loading').style.display = 'none';
+                document.getElementById('ocr-result').style.display = 'block';
+                document.getElementById('ocr-result').textContent = 
+                    `✅ ${medications.length} medicamento(s) identificado(s)! Confira os dados e salve.`;
+                
+                showToast(`✅ Receita analisada: ${med.name}`);
+                
+            } catch (error) {
+                console.error('Erro OCR:', error);
+                document.getElementById('ocr-loading').style.display = 'none';
+                document.getElementById('ocr-section').style.display = 'block';
+                document.getElementById('ocr-result').style.display = 'block';
+                document.getElementById('ocr-result').style.background = 'rgba(239,68,68,0.15)';
+                document.getElementById('ocr-result').style.borderColor = 'rgba(239,68,68,0.3)';
+                document.getElementById('ocr-result').style.color = '#ef4444';
+                document.getElementById('ocr-result').textContent = '❌ ' + error.message;
+                
+                setTimeout(() => {
+                    document.getElementById('ocr-result').style.display = 'none';
+                    document.getElementById('ocr-result').style.background = 'rgba(16,185,129,0.15)';
+                    document.getElementById('ocr-result').style.borderColor = 'rgba(16,185,129,0.3)';
+                    document.getElementById('ocr-result').style.color = '#10b981';
+                }, 5000);
+            }
+            
+            // Limpa o input para permitir re-upload da mesma foto
+            event.target.value = '';
+        }
 
         // ===== SAVE FUNCTIONS =====
         async function saveMedication(e) {
