@@ -1452,6 +1452,7 @@
             <div class="header-info">
                 <h2 id="greeting">Boa noite!</h2>
                 <div class="user-name" id="user-name">Eliane Amorzinho</div>
+                <div style="font-size: 0.7rem; color: #00D4FF; opacity: 0.8; margin-top: 2px; font-weight: 500;">v2.1.0 (build 2026-07-10)</div>
             </div>
         </div>
         <div class="header-right">
@@ -1760,6 +1761,8 @@
                 <button type="submit" class="btn-submit">💾 Salvar Contato</button>
             </form>
         </div>
+    </div>
+    
     <!-- MODAL PERFIL CLÍNICO / INFORMAÇÕES MÉDICAS -->
     <div class="modal" id="modal-clinical-info">
         <div class="modal-content" style="max-width: 500px;">
@@ -1881,6 +1884,27 @@
                 </button>
             </div>
             <button onclick="closeModal('modal-delete-medication')" style="margin-top:16px; padding:10px 24px; background:rgba(138,155,181,0.2); border:1px solid rgba(138,155,181,0.3); border-radius:10px; color:#8A9BB5; cursor:pointer; font-weight:600;">Cancelar</button>
+        </div>
+    </div>
+
+    <!-- MODAL CALENDÁRIO INDIVIDUAL DO MEDICAMENTO -->
+    <div class="modal" id="modal-medication-calendar">
+        <div class="modal-content" style="max-width: 450px;">
+            <div class="modal-header">
+                <h3 class="modal-title" id="med-calendar-title">📅 Calendário de Uso</h3>
+                <button class="modal-close" onclick="closeModal('modal-medication-calendar')">&times;</button>
+            </div>
+            <div style="text-align: center; margin-bottom: 12px;">
+                <h4 id="med-calendar-name" style="margin: 0; color: #00D4FF; font-size: 1.2rem;">Nome do Remédio</h4>
+                <p id="med-calendar-details" style="margin: 4px 0 0; color: #8A9BB5; font-size: 0.9rem;">Dosagem e Horário</p>
+            </div>
+            
+            <!-- Calendário individual -->
+            <div class="calendar-container" id="med-individual-calendar" style="background: rgba(30,41,59,0.5); padding: 12px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.05); margin-bottom: 8px;"></div>
+            
+            <div style="margin-top: 16px; text-align: center;">
+                <button onclick="closeModal('modal-medication-calendar')" style="padding:10px 24px; background:rgba(138,155,181,0.2); border:1px solid rgba(138,155,181,0.3); border-radius:10px; color:#8A9BB5; cursor:pointer; font-weight:600; width: 100%;">Fechar</button>
+            </div>
         </div>
     </div>
 
@@ -2847,57 +2871,65 @@
                         </div>
                     `;
                     document.getElementById('tab-meds').textContent = '0';
-                    return;
+                } else {
+                    // Ordena por horário
+                    medicationsData.sort((a, b) => (a.time || '').localeCompare(b.time || ''));
+                    
+                    container.innerHTML = medicationsData.map(med => {
+                        const diasSemana = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
+                        let diasText = med.days_of_week && med.days_of_week.length > 0 
+                            ? med.days_of_week.map(d => diasSemana[d]).join(', ') 
+                            : 'Todos os dias';
+                        
+                        // ✅ Renderiza status histórico
+                        const actionsHTML = renderMedicationHistoryActions(med);
+                        
+                        return `
+                            <div class="med-card" id="card-med-${med.id}">
+                                <div class="med-card-header">
+                                    <div class="med-time-badge">${med.time || '--:--'}</div>
+                                    <div class="card-actions-group">
+                                        <button class="card-icon-btn attach-image" onclick="triggerBoxImageUpload('${med.id}')" title="Anexar Caixa do Remédio" style="background:#FFFFFF; color:#f59e0b; border-color: rgba(245,158,11,0.2);">📷</button>
+                                        <button class="card-icon-btn calendar" onclick="showMedicationCalendar('${med.id}')" title="Ver Dias de Uso" style="background:#FFFFFF; color:#10b981; border-color: rgba(16,185,129,0.2);">📅</button>
+                                    </div>
+                                </div>
+                                <div class="med-card-body-flex" style="display: flex; justify-content: space-between; align-items: center; gap: 15px; margin-bottom: 12px;">
+                                    <div class="med-card-info" style="flex: 1;">
+                                        <div class="med-name" style="margin-bottom: 4px;">${med.name || 'Sem nome'}</div>
+                                        <div class="med-dosage" style="margin-bottom: 8px;"> 💉  ${med.dosage || ''}</div>
+                                        <div class="med-days" style="margin-bottom: 0;"> 📆  ${diasText}</div>
+                                        ${med.is_review_needed ? `
+                                        <div class="med-review-alert" style="margin-top: 10px;">
+                                            <span class="review-icon">⚠️</span>
+                                            <span class="review-text">Revisão necessária — consulte seu médico</span>
+                                        </div>` : ''}
+                                    </div>
+                                    ${med.box_image ? `
+                                        <div class="med-box-image" style="width: 140px; height: 80px; overflow: hidden; border-radius: 8px; border: 1px solid rgba(0,0,0,0.1); cursor: pointer;" onclick="viewFullBoxImage('${med.box_image}')">
+                                            <img src="${med.box_image}" style="width: 100%; height: 100%; object-fit: cover;" alt="Caixa do Remédio" />
+                                        </div>
+                                    ` : ''}
+                                </div>
+                                ${actionsHTML}
+                            </div>
+                        `;
+                    }).join('');
+                    
+                    document.getElementById('tab-meds').textContent = medicationsData.length;
                 }
                 
-                // Ordena por horário
-                medicationsData.sort((a, b) => (a.time || '').localeCompare(b.time || ''));
-                
-                container.innerHTML = medicationsData.map(med => {
-                    const diasSemana = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
-                    let diasText = med.days_of_week && med.days_of_week.length > 0 
-                        ? med.days_of_week.map(d => diasSemana[d]).join(', ') 
-                        : 'Todos os dias';
-                    
-                    // ✅ Renderiza status histórico
-                    const actionsHTML = renderMedicationHistoryActions(med);
-                    
-                    return `
-                        <div class="med-card" id="card-med-${med.id}">
-                            <div class="med-card-header">
-                                <div class="med-time-badge">${med.time || '--:--'}</div>
-                                <div class="card-actions-group">
-                                    <button class="card-icon-btn attach-image" onclick="triggerBoxImageUpload('${med.id}')" title="Anexar Caixa do Remédio" style="background:#FFFFFF; color:#f59e0b; border-color: rgba(245,158,11,0.2);">📷</button>
-                                </div>
-                            </div>
-                            <div class="med-card-body-flex" style="display: flex; justify-content: space-between; align-items: center; gap: 15px; margin-bottom: 12px;">
-                                <div class="med-card-info" style="flex: 1;">
-                                    <div class="med-name" style="margin-bottom: 4px;">${med.name || 'Sem nome'}</div>
-                                    <div class="med-dosage" style="margin-bottom: 8px;"> 💉  ${med.dosage || ''}</div>
-                                    <div class="med-days" style="margin-bottom: 0;"> 📆  ${diasText}</div>
-                                    ${med.is_review_needed ? `
-                                    <div class="med-review-alert" style="margin-top: 10px;">
-                                        <span class="review-icon">⚠️</span>
-                                        <span class="review-text">Revisão necessária — consulte seu médico</span>
-                                    </div>` : ''}
-                                </div>
-                                ${med.box_image ? `
-                                    <div class="med-box-image" style="width: 140px; height: 80px; overflow: hidden; border-radius: 8px; border: 1px solid rgba(0,0,0,0.1); cursor: pointer;" onclick="viewFullBoxImage('${med.box_image}')">
-                                        <img src="${med.box_image}" style="width: 100%; height: 100%; object-fit: cover;" alt="Caixa do Remédio" />
-                                    </div>
-                                ` : ''}
-                            </div>
-                            ${actionsHTML}
-                        </div>
-                    `;
-                }).join('');
-                
-                document.getElementById('tab-meds').textContent = medicationsData.length;
+                // 🟢 Renderizar também os medicamentos escaneados que ainda não foram salvos
+                if (typeof renderScannedMedications === 'function') {
+                    renderScannedMedications();
+                }
                 
             } catch (e) { 
                 console.error('Erro ao carregar histórico:', e);
                 container.innerHTML = `<div class="empty-state"><span class="icon"> ❌ </span><p>Erro ao carregar histórico</p></div>`;
                 document.getElementById('tab-meds').textContent = '0';
+                if (typeof renderScannedMedications === 'function') {
+                    renderScannedMedications();
+                }
             }
         }
 
@@ -3142,48 +3174,53 @@
                     </div>
                 `;
                 document.getElementById('tab-meds').textContent = '0';
-                return;
+            } else {
+                // Ordena por horário
+                medsOnDay.sort((a, b) => (a.time || '').localeCompare(b.time || ''));
+                
+                container.innerHTML = medsOnDay.map(med => {
+                    const diasSemana = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
+                    let diasText = med.days_of_week && med.days_of_week.length > 0 
+                        ? med.days_of_week.map(d => diasSemana[d]).join(', ') 
+                        : 'Todos os dias';
+                    
+                    return `
+                        <div class="med-card" id="card-med-${med.id}">
+                            <div class="med-card-header">
+                                <div class="med-time-badge">${med.time || '--:--'}</div>
+                                <div class="card-actions-group">
+                                    <button class="card-icon-btn attach-image" onclick="triggerBoxImageUpload('${med.id}')" title="Anexar Caixa do Remédio" style="background:#FFFFFF; color:#f59e0b; border-color: rgba(245,158,11,0.2);">📷</button>
+                                    <button class="card-icon-btn calendar" onclick="showMedicationCalendar('${med.id}')" title="Ver Dias de Uso" style="background:#FFFFFF; color:#10b981; border-color: rgba(16,185,129,0.2);">📅</button>
+                                    <button class="card-icon-btn edit" onclick="editMed('${med.id}')" title="Editar">✏️</button>
+                                    <button class="card-icon-btn delete" onclick="deleteMedication('${med.id}')" title="Excluir">🗑️</button>
+                                </div>
+                            </div>
+                            <div class="med-card-body-flex" style="display: flex; justify-content: space-between; align-items: center; gap: 15px; margin-bottom: 12px;">
+                                <div class="med-card-info" style="flex: 1;">
+                                    <div class="med-name" style="margin-bottom: 4px;">${med.name || 'Sem nome'}</div>
+                                    <div class="med-dosage" style="margin-bottom: 8px;">💉 ${med.dosage || ''}</div>
+                                    <div class="med-days" style="margin-bottom: 0;">📅 ${diasText}</div>
+                                </div>
+                                ${med.box_image ? `
+                                    <div class="med-box-image" style="width: 140px; height: 80px; overflow: hidden; border-radius: 8px; border: 1px solid rgba(0,0,0,0.1); cursor: pointer;" onclick="viewFullBoxImage('${med.box_image}')">
+                                        <img src="${med.box_image}" style="width: 100%; height: 100%; object-fit: cover;" alt="Caixa do Remédio" />
+                                    </div>
+                                ` : ''}
+                            </div>
+                            <div class="med-actions-container" id="card-med-${med.id}-actions">
+                                ${renderMedicationActions(med)}
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+                
+                document.getElementById('tab-meds').textContent = medsOnDay.length;
             }
             
-            // Ordena por horário
-            medsOnDay.sort((a, b) => (a.time || '').localeCompare(b.time || ''));
-            
-            container.innerHTML = medsOnDay.map(med => {
-                const diasSemana = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
-                let diasText = med.days_of_week && med.days_of_week.length > 0 
-                    ? med.days_of_week.map(d => diasSemana[d]).join(', ') 
-                    : 'Todos os dias';
-                
-                return `
-                    <div class="med-card" id="card-med-${med.id}">
-                        <div class="med-card-header">
-                            <div class="med-time-badge">${med.time || '--:--'}</div>
-                            <div class="card-actions-group">
-                                <button class="card-icon-btn attach-image" onclick="triggerBoxImageUpload('${med.id}')" title="Anexar Caixa do Remédio" style="background:#FFFFFF; color:#f59e0b; border-color: rgba(245,158,11,0.2);">📷</button>
-                                <button class="card-icon-btn edit" onclick="editMed('${med.id}')" title="Editar">✏️</button>
-                                <button class="card-icon-btn delete" onclick="deleteMedication('${med.id}')" title="Excluir">🗑️</button>
-                            </div>
-                        </div>
-                        <div class="med-card-body-flex" style="display: flex; justify-content: space-between; align-items: center; gap: 15px; margin-bottom: 12px;">
-                            <div class="med-card-info" style="flex: 1;">
-                                <div class="med-name" style="margin-bottom: 4px;">${med.name || 'Sem nome'}</div>
-                                <div class="med-dosage" style="margin-bottom: 8px;">💉 ${med.dosage || ''}</div>
-                                <div class="med-days" style="margin-bottom: 0;">📅 ${diasText}</div>
-                            </div>
-                            ${med.box_image ? `
-                                <div class="med-box-image" style="width: 140px; height: 80px; overflow: hidden; border-radius: 8px; border: 1px solid rgba(0,0,0,0.1); cursor: pointer;" onclick="viewFullBoxImage('${med.box_image}')">
-                                    <img src="${med.box_image}" style="width: 100%; height: 100%; object-fit: cover;" alt="Caixa do Remédio" />
-                                </div>
-                            ` : ''}
-                        </div>
-                        <div class="med-actions-container" id="card-med-${med.id}-actions">
-                            ${renderMedicationActions(med)}
-                        </div>
-                    </div>
-                `;
-            }).join('');
-            
-            document.getElementById('tab-meds').textContent = medsOnDay.length;
+            // 🟢 Renderizar também os medicamentos escaneados que ainda não foram salvos
+            if (typeof renderScannedMedications === 'function') {
+                renderScannedMedications();
+            }
         }
         // ------------------------------
         // -- função showScreen corrigida para considerar data específica --
@@ -3850,9 +3887,16 @@
    
         // ===== MODAIS =====
         function openMedModal(med = null) {
+            console.log('🔓 [DIAGNÓSTICO] openMedModal chamado. Med:', med);
             const modal = document.getElementById('modal-medication');
             const title = document.getElementById('med-modal-title');
             const form = document.getElementById('form-medication');
+            
+            if (!modal) {
+                console.error('❌ [DIAGNÓSTICO] Elemento modal-medication NÃO encontrado no DOM!');
+                alert('❌ Erro de interface: Modal de medicamento não encontrado.');
+                return;
+            }
             
             if (med) {
                 title.textContent = '✏️ Editar Medicamento';
@@ -3979,7 +4023,14 @@
         }
         
         function openModal(modalId) {
-            document.getElementById(modalId).classList.add('active');
+            const el = document.getElementById(modalId);
+            if (el) {
+                el.classList.add('active');
+                console.log(`🔓 [DIAGNÓSTICO] ClassList do modal ${modalId} após add:`, el.classList.toString());
+                console.log(`🔓 [DIAGNÓSTICO] Computed style display do modal ${modalId}:`, window.getComputedStyle(el).display);
+            } else {
+                console.error(`❌ [DIAGNÓSTICO] Elemento ${modalId} não encontrado em openModal!`);
+            }
         }
 
         function closeModal(modalId) {
@@ -4104,6 +4155,7 @@
         // ===== SAVE FUNCTIONS =====
         async function saveMedication(e) {
             e.preventDefault();
+            console.log('💾 [DIAGNÓSTICO] saveMedication acionado!');
             const btn = e.target.querySelector('.btn-submit');
             const originalText = btn.textContent;
             btn.disabled = true;
@@ -4111,6 +4163,7 @@
             
             const id = document.getElementById('med-id').value;
             const days = Array.from(document.querySelectorAll('#med-days .day-chip.active')).map(chip => parseInt(chip.dataset.day));
+            console.log(`💊 [DIAGNÓSTICO] ID do remédio (vazio se novo): "${id}", Dias da semana:`, days);
             
             // ✅ Obtém horário dos selects (formato 24h garantido: "HH:MM")
             let timeValue = getFormattedTime();
@@ -4118,6 +4171,7 @@
                 // Fallback para compatibilidade com edição (input hidden)
                 timeValue = document.getElementById('med-time')?.value;
             }
+            console.log('⏰ [DIAGNÓSTICO] Horário obtido:', timeValue);
 
             if (!timeValue) {
                 alert('⏰ Selecione hora e minuto!');
@@ -4129,12 +4183,14 @@
             const isContinuous = document.getElementById('med-continuous').checked;
             const durationVal = document.getElementById('med-duration').value;
             const durationDays = (!isContinuous && durationVal) ? parseInt(durationVal) : null;
+            console.log(`📋 [DIAGNÓSTICO] Contínuo: ${isContinuous}, Duração em dias:`, durationDays);
 
             const formatLocalDate = (d) => {
                 const pad = (n) => String(n).padStart(2, '0');
                 return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
             };
             const startDateStr = selectedDate ? formatLocalDate(selectedDate) : formatLocalDate(new Date());
+            console.log('📅 [DIAGNÓSTICO] Data de início:', startDateStr);
 
             const payload = {
                 user_id: userId,
@@ -4146,6 +4202,7 @@
                 duration_days: durationDays,
                 start_date: startDateStr
             };
+            console.log('📡 [DIAGNÓSTICO] Payload a enviar:', payload);
                 
             try {
                 const url = id 
@@ -4328,14 +4385,20 @@
         let pendingDeleteMedName = '';
 
         async function deleteMedication(id) {
+            console.log('🗑️ [DIAGNÓSTICO] deleteMedication chamado para ID:', id);
             // Busca contagem de schedules para exibir no modal
             try {
-                const res = await fetch(`${API_URL}/api/medications/${id}/schedules/count`);
+                const countUrl = `${API_URL}/api/medications/${id}/schedules/count`;
+                console.log('📡 [DIAGNÓSTICO] Buscando contagem em:', countUrl);
+                const res = await fetch(countUrl);
+                console.log('📡 [DIAGNÓSTICO] Resposta da contagem recebida. Status:', res.status);
                 const counts = await res.json();
+                console.log('📊 [DIAGNÓSTICO] Contagens decodificadas:', counts);
                 
                 // Encontra o nome do medicamento
                 const med = medicationsData.find(m => m.id === id);
                 const medName = med ? med.name : 'este medicamento';
+                console.log('💊 [DIAGNÓSTICO] Nome do medicamento resolvido:', medName);
                 
                 pendingDeleteMedId = id;
                 pendingDeleteMedName = medName;
@@ -4345,39 +4408,51 @@
                 document.getElementById('delete-count-future').textContent = 
                     `${counts.futuros_pendentes} dose(s) futura(s)`;
                 
+                console.log('🔓 [DIAGNÓSTICO] Abrindo modal modal-delete-medication...');
                 openModal('modal-delete-medication');
             } catch (error) {
-                console.error('Erro ao contar schedules:', error);
+                console.error('🔥 [DIAGNÓSTICO] Erro ao contar schedules:', error);
+                alert('⚠️ Ocorreu um erro ao obter detalhes do medicamento:\n' + error.message + '\n\nTentando deleção direta...');
                 // Fallback: delete direto
-                if (!confirm('Deseja excluir este medicamento?')) return;
+                if (!confirm('Deseja excluir este medicamento de forma direta?')) return;
                 await doDeleteMedication(id, 'all');
             }
         }
 
         async function confirmDeleteMed(scope) {
+            console.log('🔘 [DIAGNÓSTICO] confirmDeleteMed clicado com escopo:', scope);
             closeModal('modal-delete-medication');
-            if (!pendingDeleteMedId) return;
+            if (!pendingDeleteMedId) {
+                console.warn('⚠️ [DIAGNÓSTICO] pendingDeleteMedId está vazio!');
+                return;
+            }
             await doDeleteMedication(pendingDeleteMedId, scope);
         }
 
         async function doDeleteMedication(id, scope) {
+            console.log(`🚀 [DIAGNÓSTICO] doDeleteMedication iniciado. ID: ${id}, Escopo: ${scope}`);
             try {
                 showToast('⏳ Excluindo...');
-                const response = await fetch(`${API_URL}/api/medications/${id}?scope=${scope}`, { 
+                const url = `${API_URL}/api/medications/${id}?scope=${scope}`;
+                console.log('📡 [DIAGNÓSTICO] Enviando DELETE para:', url);
+                const response = await fetch(url, { 
                     method: 'DELETE' 
                 });
                 
+                console.log('📡 [DIAGNÓSTICO] Resposta de exclusão recebida. Status:', response.status);
                 if (!response.ok) {
                     const err = await response.json().catch(() => ({}));
                     throw new Error(err.detail || 'Erro ao excluir');
                 }
                 
                 const result = await response.json();
+                console.log('✅ [DIAGNÓSTICO] Sucesso na exclusão:', result);
                 showToast('✅ ' + result.mensagem);
                 await reloadAndRefresh();
             } catch (error) {
                 showToast('❌ Erro ao excluir: ' + error.message);
-                console.error(error);
+                console.error('🔥 [DIAGNÓSTICO] Erro ao excluir:', error);
+                alert('🔥 Erro ao excluir medicamento:\n' + error.message);
             }
         }
         
@@ -4818,33 +4893,64 @@
             }
         }
 
-        // Registrar listeners para capturar seleção automática
-        document.getElementById('input-receita-camera').addEventListener('change', (e) => {
-            processarArquivoReceita(e.target.files[0]);
-        });
-        document.getElementById('input-receita-arquivo').addEventListener('change', (e) => {
-            processarArquivoReceita(e.target.files[0]);
+        // Registrar listeners para capturar seleção automática após carregamento do DOM
+        document.addEventListener('DOMContentLoaded', () => {
+            const camInput = document.getElementById('input-receita-camera');
+            const fileInput = document.getElementById('input-receita-arquivo');
+            
+            if (camInput) {
+                camInput.addEventListener('change', (e) => {
+                    console.log('📸 [DIAGNÓSTICO] Foto capturada ou selecionada (input-receita-camera)');
+                    processarArquivoReceita(e.target.files[0]);
+                });
+            } else {
+                console.error('❌ [DIAGNÓSTICO] input-receita-camera não encontrado no DOM para addEventListener!');
+            }
+            
+            if (fileInput) {
+                fileInput.addEventListener('change', (e) => {
+                    console.log('📁 [DIAGNÓSTICO] Arquivo selecionado (input-receita-arquivo)');
+                    processarArquivoReceita(e.target.files[0]);
+                });
+            } else {
+                console.error('❌ [DIAGNÓSTICO] input-receita-arquivo não encontrado no DOM para addEventListener!');
+            }
         });
 
-        // Função que cria os cards automaticamente
-        function preencherMedicamentosDaReceita(medicamentos) {
-            const container = document.getElementById('medications-list') || document.querySelector('.cards-container');
-            if (!container) return console.warn('Container de remédios não encontrado');
+        // Armazena temporariamente os medicamentos da receita escaneada
+        window.scannedMedications = [];
+
+        function renderScannedMedications() {
+            if (!window.scannedMedications || window.scannedMedications.length === 0) return;
             
-            medicamentos.forEach(med => {
-                // Cria card visual
+            const container = document.getElementById('medications-list') || document.querySelector('.cards-container');
+            if (!container) return;
+            
+            // Remove qualquer card temporário já renderizado para evitar duplicatas
+            document.querySelectorAll('.med-card-scanned-temp').forEach(el => el.remove());
+            
+            // Limpa o empty-state se houver, já que temos medicamentos escaneados a mostrar
+            const emptyState = container.querySelector('.empty-state');
+            if (emptyState) {
+                emptyState.style.display = 'none';
+            }
+            
+            window.scannedMedications.forEach(med => {
                 const card = document.createElement('div');
-                card.className = 'med-card';
-                card.style.cssText = 'background:#1e293b; padding:16px; border-radius:12px; margin-bottom:12px; border-left:4px solid #10b981;';
+                card.className = 'med-card med-card-scanned-temp';
+                card.style.cssText = 'background:#1e293b; padding:16px; border-radius:12px; margin-bottom:12px; border-left:4px solid #00D4FF; box-shadow: 0 4px 12px rgba(0,0,0,0.1);';
+                
+                const encodedMed = encodeURIComponent(JSON.stringify(med));
+                
                 card.innerHTML = `
                     <div style="display:flex; justify-content:space-between; align-items:center;">
                         <h3 style="margin:0; color:#fff;">${med.name}</h3>
-                        <span style="background:#334155; padding:4px 8px; border-radius:6px; font-size:0.8rem; color:#94a3b8;">${med.type}</span>
+                        <span style="background:rgba(0, 212, 255, 0.15); padding:4px 8px; border-radius:6px; font-size:0.8rem; color:#00D4FF; font-weight:600; border: 1px solid rgba(0,212,255,0.3);">Receita Escaneada</span>
                     </div>
-                    <p style="color:#cbd5e1; margin:8px 0 4px;"> ${med.dosage} •  ${med.frequency}</p>
-                    <p style="color:#94a3b8; font-size:0.85rem; margin:0;">📝 ${med.instruction}</p>
-                    <div style="margin-top:12px; display:flex; gap:8px;">
-                        <button onclick="salvarRemedioReceita('${med.name}', '${med.dosage}', '${med.times.join(',')}')" 
+                    <p style="color:#cbd5e1; margin:8px 0 4px;"> ${med.dosage} • ${med.frequency}</p>
+                    <p style="color:#94a3b8; font-size:0.85rem; margin:0 0 12px 0;">⏰ Horários: ${med.times ? med.times.join(', ') : 'Não definidos'} | 📅 Duração: ${med.duration_days ? med.duration_days + ' dias' : 'Uso contínuo'}</p>
+                    <div style="display:flex; gap:8px;">
+                        <button onclick="salvarRemedioReceita('${encodedMed}', this, '${med.tempId}')" 
                                 style="flex:1; padding:10px; background:#10b981; color:white; border:none; border-radius:8px; font-weight:600; cursor:pointer;">
                             ✅ Confirmar e Salvar
                         </button>
@@ -4854,12 +4960,223 @@
             });
         }
 
-        // Salvar no backend (chama sua API existente de medicamentos)
-        async function salvarRemedioReceita(nome, dosagem, horarios) {
-            // Aqui você chama seu endpoint POST /api/medications com os dados
-            showToast(`✅ ${nome} salvo com sucesso!`);
-            // location.reload(); // Opcional: recarregar para sync com banco
+        // Função que cria os cards automaticamente
+        function preencherMedicamentosDaReceita(medicamentos) {
+            // Inicializa a lista global com IDs temporários únicos
+            window.scannedMedications = medicamentos.map((med, idx) => ({
+                ...med,
+                tempId: `scanned-${Date.now()}-${idx}`
+            }));
+            
+            // Renderiza na tela
+            renderScannedMedications();
         }
+
+        // Salvar no backend (chama a API existente de medicamentos)
+        async function salvarRemedioReceita(encodedMed, buttonEl, tempId) {
+            const med = JSON.parse(decodeURIComponent(encodedMed));
+            const currentUserId = localStorage.getItem('userId') || userId;
+            if (!currentUserId) {
+                showToast('❌ Usuário não identificado. Faça login novamente.', true);
+                return;
+            }
+            
+            if (buttonEl) {
+                buttonEl.disabled = true;
+                buttonEl.textContent = '⏳ Salvando...';
+            }
+            
+            try {
+                const times = (med.times && med.times.length > 0) ? med.times : ['08:00'];
+                const days = [0, 1, 2, 3, 4, 5, 6]; // Todos os dias da semana por padrão
+                const isContinuous = !med.duration_days;
+                const durationDays = med.duration_days || null;
+                
+                // Mapeia frequência para dias da semana caso contenha termos específicos
+                const freq = (med.frequency || '').toLowerCase();
+                let selectedDays = [...days];
+                if (freq.includes('dia sim') || freq.includes('alternado')) {
+                    selectedDays = [0, 2, 4, 6];
+                }
+                
+                const formatLocalDate = (d) => {
+                    const pad = (n) => String(n).padStart(2, '0');
+                    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+                };
+                const startDateStr = formatLocalDate(new Date());
+
+                // Faz um post para cada horário
+                for (const t of times) {
+                    const payload = {
+                        user_id: currentUserId,
+                        name: med.name,
+                        dosage: med.dosage,
+                        time: t,
+                        days_of_week: selectedDays,
+                        is_continuous: isContinuous,
+                        duration_days: durationDays,
+                        start_date: startDateStr
+                    };
+                    
+                    const response = await fetch(`${API_URL}/api/cliente/${currentUserId}/medications`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+                    
+                    if (!response.ok) {
+                        const errorData = await response.json().catch(() => ({}));
+                        throw new Error(errorData.detail || `Erro ao salvar no horário ${t}`);
+                    }
+                }
+                
+                showToast(`✅ ${med.name} salvo com sucesso!`);
+                
+                // Remove dos escaneados em memória
+                if (window.scannedMedications) {
+                    window.scannedMedications = window.scannedMedications.filter(m => m.tempId !== tempId);
+                }
+                
+                // Recarrega e atualiza os dados da agenda e calendário
+                if (typeof reloadAndRefresh === 'function') {
+                    await reloadAndRefresh();
+                } else {
+                    location.reload();
+                }
+                
+            } catch (error) {
+                showToast('❌ ' + error.message, true);
+                console.error('Erro ao salvar medicamento da receita:', error);
+                if (buttonEl) {
+                    buttonEl.disabled = false;
+                    buttonEl.textContent = '✅ Confirmar e Salvar';
+                }
+            }
+        }
+        // =====================================================
+        // 📅 LÓGICA DO CALENDÁRIO INDIVIDUAL DO MEDICAMENTO
+        // =====================================================
+        let activeCalendarMedId = null;
+        let medCalendarMonth = new Date().getMonth();
+        let medCalendarYear = new Date().getFullYear();
+
+        window.showMedicationCalendar = function(medId) {
+            const med = medicationsData.find(m => m.id === medId);
+            if (!med) return showToast('❌ Medicamento não encontrado', true);
+            
+            activeCalendarMedId = medId;
+            medCalendarMonth = new Date().getMonth();
+            medCalendarYear = new Date().getFullYear();
+            
+            document.getElementById('med-calendar-name').textContent = med.name;
+            document.getElementById('med-calendar-details').textContent = `${med.dosage} • Horário: ${med.time || '--:--'}`;
+            
+            generateMedicationIndividualCalendar(med);
+            openModal('modal-medication-calendar');
+        };
+
+        window.generateMedicationIndividualCalendar = function(med) {
+            const container = document.getElementById('med-individual-calendar');
+            if (!container) return;
+            
+            const monthNames = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+            const dayNames = ['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'];
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            
+            const firstDay = new Date(medCalendarYear, medCalendarMonth, 1).getDay();
+            const daysInMonth = new Date(medCalendarYear, medCalendarMonth + 1, 0).getDate();
+            const daysInPrevMonth = new Date(medCalendarYear, medCalendarMonth, 0).getDate();
+            
+            let html = `
+            <div class="calendar-header" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+                <div class="calendar-title" style="font-weight:700; color:#fff; font-size:1.05rem;">${monthNames[medCalendarMonth]} ${medCalendarYear}</div>
+                <div class="calendar-nav" style="display:flex; gap:8px;">
+                    <div class="calendar-btn" onclick="changeMedCalendarMonth(-1)" style="cursor:pointer; padding:4px 10px; background:#334155; border-radius:6px; color:#fff; user-select:none; font-weight:700;">‹</div>
+                    <div class="calendar-btn" onclick="changeMedCalendarMonth(1)" style="cursor:pointer; padding:4px 10px; background:#334155; border-radius:6px; color:#fff; user-select:none; font-weight:700;">›</div>
+                </div>
+            </div>
+            <div class="calendar-grid" style="display:grid; grid-template-columns:repeat(7, 1fr); gap:6px; text-align:center;">
+            ${dayNames.map(d => `<div class="calendar-day-header" style="color:#8A9BB5; font-size:0.8rem; font-weight:600; padding-bottom:4px;">${d}</div>`).join('')}
+            `;
+            
+            // Dias do mês anterior
+            for (let i = firstDay - 1; i >= 0; i--) {
+                const day = daysInPrevMonth - i;
+                html += `<div class="calendar-day other-month" style="color:#475569; font-size:0.9rem; padding:8px 0; opacity:0.4;">${day}</div>`;
+            }
+            
+            // Dias do mês atual
+            for (let day = 1; day <= daysInMonth; day++) {
+                const currentLoopDateStr = `${medCalendarYear}-${String(medCalendarMonth+1).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
+                
+                // Determina se o remédio é tomado neste dia
+                let takesMed = false;
+                
+                // 1. Verifica data de início
+                let isAfterStart = true;
+                if (med.start_date) {
+                    const medStartDate = med.start_date.split('T')[0].split(' ')[0];
+                    if (currentLoopDateStr < medStartDate) isAfterStart = false;
+                } else if (med.created_at) {
+                    const medCreatedDate = med.created_at.split('T')[0].split(' ')[0];
+                    if (currentLoopDateStr < medCreatedDate) isAfterStart = false;
+                }
+                
+                // 2. Verifica data final
+                let isBeforeEnd = true;
+                if (med.end_date) {
+                    const medEndDate = med.end_date.split('T')[0].split(' ')[0];
+                    if (currentLoopDateStr > medEndDate) isBeforeEnd = false;
+                }
+                
+                // 3. Verifica dias da semana
+                const dayOfWeek = new Date(medCalendarYear, medCalendarMonth, day).getDay();
+                const isDayOfWeek = !med.days_of_week || med.days_of_week.length === 0 || med.days_of_week.includes(dayOfWeek);
+                
+                if (isAfterStart && isBeforeEnd && isDayOfWeek && med.is_active !== false) {
+                    takesMed = true;
+                }
+                
+                const isToday = today.getDate() === day && 
+                                today.getMonth() === medCalendarMonth && 
+                                today.getFullYear() === medCalendarYear;
+                                
+                let dayStyle = "color:#C5D0E0; font-size:0.9rem; padding:8px 0; border-radius:8px; position:relative; display:flex; flex-direction:column; align-items:center; justify-content:center;";
+                let dotHTML = "";
+                
+                if (takesMed) {
+                    dayStyle += " background: rgba(16, 185, 129, 0.15); border: 1px solid rgba(16, 185, 129, 0.4); font-weight:700; color:#10b981;";
+                    dotHTML = `<span style="display:block; width:6px; height:6px; background:#10b981; border-radius:50%; margin-top:2px;"></span>`;
+                } else {
+                    dayStyle += " border: 1px solid transparent;";
+                }
+                
+                if (isToday) {
+                    dayStyle += " outline: 2px solid #00D4FF; outline-offset: -2px;";
+                }
+                
+                html += `<div class="calendar-day" style="${dayStyle}">${day}${dotHTML}</div>`;
+            }
+            
+            html += `</div>`;
+            container.innerHTML = html;
+        };
+
+        window.changeMedCalendarMonth = function(dir) {
+            medCalendarMonth += dir;
+            if (medCalendarMonth < 0) {
+                medCalendarMonth = 11;
+                medCalendarYear -= 1;
+            } else if (medCalendarMonth > 11) {
+                medCalendarMonth = 0;
+                medCalendarYear += 1;
+            }
+            const med = medicationsData.find(m => m.id === activeCalendarMedId);
+            if (med) {
+                generateMedicationIndividualCalendar(med);
+            }
+        };
         </script>
 
         <!-- BOTÃO DE TESTE DE ÁUDIO (Remova após testar) 

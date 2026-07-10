@@ -62,7 +62,7 @@ if IS_VERCEL:
     sys.path.append(os.getcwd())
 
 # Carrega variáveis de ambiente ANTES de usar
-load_dotenv()
+load_dotenv(override=True)
 
 # ===== CRIAÇÃO DO APP (APENAS UMA VEZ) =====
 app = FastAPI(
@@ -1964,10 +1964,6 @@ async def upload_prescription(file: UploadFile = File(...)):
         # Converte para base64
         base64_data = base64.b64encode(contents).decode("utf-8")
         
-        # API REST do Gemini 2.5 Flash
-        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={gemini_key}"
-        headers = {"Content-Type": "application/json"}
-        
         prompt = (
             "Voce e um assistente medico especialista em transcricao de receitas. "
             "Analise o documento enviado (imagem ou PDF) e extraia todos os medicamentos listados. "
@@ -1994,8 +1990,8 @@ async def upload_prescription(file: UploadFile = File(...)):
                         {"text": prompt},
                         {
                             "inlineData": {
-                                "mimeType": mime_type,
-                                "data": base64_data
+                               "mimeType": mime_type,
+                               "data": base64_data
                             }
                         }
                     ]
@@ -2006,21 +2002,42 @@ async def upload_prescription(file: UploadFile = File(...)):
             }
         }
         
-        print(f"📡 Enviando receita para o Gemini 2.5 Flash ({mime_type})...")
+        # Lista de modelos candidatas para fallback
+        candidate_models = ["gemini-3.1-flash-lite", "gemini-3.5-flash", "gemini-2.0-flash"]
+        response = None
+        errors = []
+        chosen_model = ""
         
         async with httpx.AsyncClient(timeout=30.0) as client:
-            response = await client.post(url, headers=headers, json=payload)
-            
-        if response.status_code != 200:
-            error_detail = response.text
-            print(f"❌ Erro da API do Gemini: {error_detail}")
-            raise HTTPException(status_code=502, detail=f"Erro da API do Gemini (Status {response.status_code})")
+            for model in candidate_models:
+                url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={gemini_key}"
+                headers = {"Content-Type": "application/json"}
+                print(f"📡 Tentando enviar receita para o Gemini via modelo {model} ({mime_type})...")
+                try:
+                    r = await client.post(url, headers=headers, json=payload)
+                    if r.status_code == 200:
+                        response = r
+                        chosen_model = model
+                        print(f"✅ Sucesso com o modelo {model}!")
+                        break
+                    else:
+                        err_msg = f"Modelo {model} retornou status {r.status_code}: {r.text[:300]}"
+                        errors.append(err_msg)
+                        print(f"⚠️ {err_msg}")
+                except Exception as ex:
+                    err_msg = f"Erro ao tentar modelo {model}: {str(ex)}"
+                    errors.append(err_msg)
+                    print(f"⚠️ {err_msg}")
+        
+        if not response:
+            all_errors_str = " | ".join(errors)
+            raise HTTPException(status_code=502, detail=f"Erro da API do Gemini (Todos os modelos falharam). Detalhes: {all_errors_str}")
             
         resp_json = response.json()
         
         try:
             generated_text = resp_json["candidates"][0]["content"]["parts"][0]["text"].strip()
-            print(f"🤖 Resposta do Gemini:\n{generated_text}")
+            print(f"🤖 Resposta do Gemini ({chosen_model}):\n{generated_text}")
             
             if generated_text.startswith("```"):
                 generated_text = re.sub(r"^```(?:json)?\n", "", generated_text)
@@ -2035,7 +2052,7 @@ async def upload_prescription(file: UploadFile = File(...)):
         return JSONResponse(content={
             "success": True,
             "medications": medications,
-            "raw_text_preview": "Extraido via Gemini 2.5 Flash",
+            "raw_text_preview": f"Extraido via Gemini ({chosen_model})",
             "message": f"✅ {len(medications)} medicamentos identificados com IA!"
         })
         
