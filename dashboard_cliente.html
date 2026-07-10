@@ -25,6 +25,7 @@
             min-height: 100vh;
             color: #FFFFFF;
             overflow-x: hidden;
+            font-size: 17px; /* Base 17px para idosos */
         }
         
         .grid-bg {
@@ -203,15 +204,17 @@
         }
         
         .card-icon-btn {
-            width: 40px;
-            height: 40px;
-            border-radius: 10px;
+            width: 48px;
+            height: 48px;
+            min-width: 48px;
+            min-height: 48px;
+            border-radius: 12px;
             border: 1px solid rgba(138, 155, 181, 0.2);
             display: flex;
             align-items: center;
             justify-content: center;
             cursor: pointer;
-            font-size: 1.1rem;
+            font-size: 1.2rem;
             transition: all 0.2s;
         }
         
@@ -256,59 +259,57 @@
             background: #fef2f2;
         }
         
-        /* TABS */
-        .tabs {
+        /* SEÇÕES (SCROLL ÚNICO - SEM ABAS) */
+        .section-nav {
             display: flex;
-            gap: 12px;
-            margin-bottom: 24px;
-            overflow-x: auto;
-            padding-bottom: 4px;
+            flex-direction: column;
+            gap: 8px;
+            margin-bottom: 16px;
         }
         
-        .tab {
-            flex: 1;
-            min-width: 120px;
-            padding: 14px 12px;
-            background: rgba(0, 212, 255, 0.05);
-            border: 1px solid rgba(0, 212, 255, 0.15);
-            border-radius: 12px;
-            font-weight: 600;
-            color: #8A9BB5;
-            font-size: 0.9rem;
-            cursor: pointer;
-            transition: all 0.3s;
-            white-space: nowrap;
+        .section-header-btn {
             display: flex;
             align-items: center;
-            justify-content: center;
-            gap: 8px;
-        }
-        
-        .tab:hover {
-            border-color: rgba(0, 212, 255, 0.3);
-        }
-        
-        .tab.active {
-            background: linear-gradient(135deg, #0052FF, #00D4FF);
-            color: white;
-            border-color: transparent;
-        }
-        
-        .tab-count {
-            background: rgba(255, 255, 255, 0.2);
-            padding: 2px 8px;
-            border-radius: 20px;
-            font-size: 0.75rem;
+            gap: 12px;
+            padding: 14px 16px;
+            background: rgba(0, 212, 255, 0.05);
+            border: 1px solid rgba(0, 212, 255, 0.15);
+            border-radius: 14px;
             font-weight: 700;
+            font-size: 1.1rem;
+            color: #FFFFFF;
+            cursor: pointer;
+            transition: all 0.2s;
+            min-height: 52px;
         }
         
-        .tab.active .tab-count {
-            background: rgba(255, 255, 255, 0.3);
+        .section-header-btn:hover {
+            border-color: rgba(0, 212, 255, 0.3);
+            background: rgba(0, 212, 255, 0.1);
         }
         
+        .section-header-btn .section-icon {
+            font-size: 1.5rem;
+            width: 40px;
+            text-align: center;
+        }
+        
+        .section-header-btn .section-badge {
+            margin-left: auto;
+            background: rgba(0, 212, 255, 0.2);
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.9rem;
+            font-weight: 700;
+            color: #00D4FF;
+            min-width: 32px;
+            text-align: center;
+        }
+        
+        /* Todas as seções visíveis - scroll único */
         .screen {
-            display: none;
-            animation: fadeIn 0.3s ease;
+            display: block;
+            margin-bottom: 24px;
         }
         
         .screen.active {
@@ -385,25 +386,27 @@
         
         .btn-taken {
             flex: 1;
-            padding: 12px;
+            padding: 14px;
+            min-height: 52px;
             background: linear-gradient(135deg, #10b981, #059669);
             border: none;
-            border-radius: 12px;
+            border-radius: 14px;
             color: white;
-            font-weight: 700;
-            font-size: 0.9rem;
+            font-weight: 800;
+            font-size: 1.1rem;
             cursor: pointer;
         }
         
         .btn-later {
             flex: 1;
-            padding: 12px;
+            padding: 14px;
+            min-height: 52px;
             background: linear-gradient(135deg, #fbbf24, #f59e0b);
             border: none;
-            border-radius: 12px;
+            border-radius: 14px;
             color: white;
-            font-weight: 700;
-            font-size: 0.9rem;
+            font-weight: 800;
+            font-size: 1.1rem;
             cursor: pointer;
         }
         
@@ -607,20 +610,22 @@
             text-transform: uppercase;
         }
 
-        /* Dias do calendário */
+        /* Dias do calendário - MAIORES para idosos */
         .calendar-day {
             aspect-ratio: 1;
             display: flex;
             align-items: center;
             justify-content: center;
-            border-radius: 10px;
-            font-size: 0.85rem;
+            border-radius: 12px;
+            font-size: 1rem;
             cursor: pointer;
-            font-weight: 600;
+            font-weight: 700;
             position: relative;
             transition: all 0.2s;
             color: #FFFFFF;
             background: rgba(0, 212, 255, 0.05);
+            min-width: 40px;
+            min-height: 40px;
         }
 
         .calendar-day:hover {
@@ -1159,146 +1164,136 @@
             .days-selector { grid-template-columns: repeat(4, 1fr); }
         }
 
-        /* ===== MOBILE OTIMIZADO ===== */
+        /* ===== MOBILE OTIMIZADO (IDOSOS) ===== */
         @media (max-width: 768px) {
-            .header { padding: 10px 12px; flex-direction: column; gap: 8px; }
-            .header-info h2 { font-size: 1.1rem; }
-            .header-stat { padding: 6px 8px; }
-            .header-stat-value { font-size: 1rem; }
-            .header-stat-label { font-size: 0.6rem; }
+            .header { padding: 12px; flex-direction: column; gap: 8px; }
+            .header-info h2 { font-size: 1.2rem; }
+            .header-stat { padding: 10px 12px; }
+            .header-stat-value { font-size: 1.2rem; }
+            .header-stat-label { font-size: 0.75rem; }
             
-            .main-container { padding: 0 8px 8px; }
-            .section { padding: 10px; margin-bottom: 8px; }
+            .main-container { padding: 0 8px 12px; }
+            .section { padding: 12px; margin-bottom: 12px; border-radius: 16px; }
             
-            .tabs { gap: 4px; margin-bottom: 10px; overflow-x: auto; }
-            .tab { padding: 6px 4px; font-size: 0.7rem; min-width: 80px; }
-            .tab-count { padding: 2px 6px; font-size: 0.65rem; }
+            /* Navegação por seções - sempre empilhada */
+            .section-nav { gap: 8px; }
+            .section-header-btn { padding: 14px; font-size: 1rem; min-height: 48px; }
             
-            /* Cards mais compactos */
+            /* Cards */
             .med-card, .appt-card, .resp-card, .contact-card { 
-                padding: 8px; 
-                margin-bottom: 6px; 
+                padding: 14px; 
+                margin-bottom: 10px; 
+                border-radius: 16px;
             }
             
-            /* ✅ HEADER DO CARD - BOTÕES PRÓXIMOS AO HORÁRIO */
             .med-card-header { 
                 display: flex;
                 align-items: center;
-                gap: 6px;
-                flex-wrap: nowrap;
+                gap: 8px;
+                flex-wrap: wrap;
             }
             
             .med-time-badge { 
-                padding: 3px 8px; 
-                font-size: 0.75rem; 
-                flex-shrink: 0;
+                padding: 8px 14px; 
+                font-size: 0.95rem; 
             }
             
-            /* ✅ BOTÕES DE AÇÃO - MOVIDOS PARA ESQUERDA */
             .card-actions-group { 
-                gap: 2px; 
+                gap: 6px; 
                 margin-left: auto;
-                flex-shrink: 0;
             }
             
+            /* Botões mantêm 48px no mobile */
             .card-icon-btn { 
-                width: 24px; 
-                height: 24px; 
-                font-size: 0.7rem; 
-                padding: 0;
-                border-radius: 5px;
+                width: 44px; 
+                height: 44px; 
+                min-width: 44px;
+                min-height: 44px;
+                font-size: 1.1rem; 
             }
             
             .med-name { 
-                font-size: 0.85rem; 
+                font-size: 1.05rem; 
                 margin-top: 4px; 
                 width: 100%;
             }
             
-            .med-dosage { font-size: 0.7rem; }
-            .med-days { font-size: 0.65rem; margin-bottom: 8px; }
+            .med-dosage { font-size: 0.9rem; }
+            .med-days { font-size: 0.85rem; margin-bottom: 10px; }
             
-            /* Botões Tomei/Lembrar MENORES */
+            /* Botões Tomei/Lembrar */
             .med-actions { 
                 flex-direction: column; 
-                gap: 4px; 
-                margin-top: 6px;
+                gap: 8px; 
+                margin-top: 8px;
             }
             
             .btn-taken, .btn-later { 
-                padding: 5px 8px; 
-                font-size: 0.7rem; 
+                padding: 14px; 
+                font-size: 1.05rem; 
+                min-height: 48px;
                 width: 100%;
-                border-radius: 8px;
+                border-radius: 12px;
             }
             
-            /* Ajuste para imagens de medicamentos não vazarem da tela no mobile */
+            /* Imagem da caixa */
             .med-card-body-flex {
                 flex-direction: column !important;
                 align-items: flex-start !important;
-                gap: 8px !important;
+                gap: 10px !important;
             }
             .med-box-image {
                 width: 100% !important;
-                height: 120px !important;
-                margin-top: 4px;
+                height: 140px !important;
+                margin-top: 6px;
             }
             
-            /* Calendário compacto */
-            .calendar-container { padding: 6px; }
-            .calendar-day { font-size: 0.6rem; padding: 2px; }
-            .calendar-day-header { font-size: 0.55rem; }
+            /* Calendário - MAIOR para dedos */
+            .calendar-container { padding: 10px; }
+            .calendar-day { font-size: 0.85rem; min-width: 36px; min-height: 36px; }
+            .calendar-day-header { font-size: 0.7rem; }
+            .calendar-btn { width: 36px; height: 36px; font-size: 1.2rem; }
             
             /* Modal */
-            .modal-content { padding: 12px; max-width: 95%; }
-            .modal-title { font-size: 0.95rem; }
+            .modal-content { padding: 20px; max-width: 95%; }
+            .modal-title { font-size: 1.2rem; }
             
             .form-input, .form-select, .form-textarea { 
-                padding: 8px; 
-                font-size: 0.85rem; 
+                padding: 12px; 
+                font-size: 1rem; 
             }
-            .form-label { font-size: 0.7rem; }
-            .btn-submit { padding: 8px; font-size: 0.8rem; }
+            .form-label { font-size: 0.9rem; }
+            .btn-submit { padding: 14px; font-size: 1rem; min-height: 48px; }
             
-            /* FAB menor */
+            /* FAB maior */
             .fab { 
-                width: 42px; 
-                height: 42px; 
-                font-size: 1.1rem; 
-                bottom: 10px; 
-                right: 10px; 
+                width: 56px; 
+                height: 56px; 
+                font-size: 1.5rem; 
             }
             
             .main-grid { grid-template-columns: 1fr; gap: 8px; }
             
             .toast { 
-                padding: 6px 10px; 
-                font-size: 0.7rem; 
-                bottom: 60px; 
+                padding: 10px 16px; 
+                font-size: 0.85rem; 
+                bottom: 70px; 
             }
         }
 
         /* TELAS MUITO PEQUENAS (< 400px) */
         @media (max-width: 400px) {
             .card-icon-btn { 
-                width: 22px; 
-                height: 22px; 
-                font-size: 0.65rem; 
+                width: 40px; 
+                height: 40px; 
+                font-size: 1rem; 
             }
-            
-            .med-name { font-size: 0.8rem; }
-            .med-dosage { font-size: 0.65rem; }
-            .med-days { font-size: 0.6rem; }
-            
-            .btn-taken, .btn-later { 
-                padding: 4px 6px; 
-                font-size: 0.65rem; 
-            }
+            .calendar-day { font-size: 0.8rem; min-width: 32px; min-height: 32px; }
         }
 
         /* Melhor toque */
         * { -webkit-tap-highlight-color: transparent; touch-action: manipulation; }
-        button, .card-icon-btn, .tab { touch-action: manipulation; -webkit-user-select: none; }
+        button, .card-icon-btn, .section-header-btn { touch-action: manipulation; -webkit-user-select: none; }
         html { scroll-behavior: smooth; -webkit-overflow-scrolling: touch; }
         input, select, textarea { font-size: 16px !important; }        
 
@@ -1492,33 +1487,44 @@
                     📅 Minha agenda para hoje dia: 20/junho/2026
                 </h3>
                 
-                <!-- TABS -->
-                <div class="tabs">
-                    <button class="tab active" onclick="showScreen('medications', this)">
-                        💊 Remédios <span class="tab-count" id="tab-meds">0</span>
-                    </button>
-                    <button class="tab" onclick="showScreen('appointments', this)">
-                        📅 Consultas <span class="tab-count" id="tab-appts">0</span>
-                    </button>
-                    <button class="tab" onclick="showScreen('responsibles', this)">
-                        👨‍ Responsável <span class="tab-count" id="tab-resp">0</span>
-                    </button>
-                    <button class="tab" onclick="showScreen('contacts', this)">
-                        📞 Contatos <span class="tab-count" id="tab-contacts">0</span>
-                    </button>
-                </div>
-                
-                <!-- SCREENS -->
-                <div id="screen-medications" class="screen active">
+                <!-- SEÇÕES - SCROLL ÚNICO (SEM ABAS) -->
+                <!-- 💊 MEDICAMENTOS -->
+                <div id="screen-medications" class="screen">
+                    <div class="section-header-btn" onclick="scrollToSection('medications')">
+                        <span class="section-icon">💊</span>
+                        Remédios para hoje
+                        <span class="section-badge" id="tab-meds">0</span>
+                    </div>
                     <div id="medications-list"><div class="loading">⏳ Carregando...</div></div>
                 </div>
+                
+                <!-- 📅 CONSULTAS -->
                 <div id="screen-appointments" class="screen">
+                    <div class="section-header-btn" onclick="scrollToSection('appointments')">
+                        <span class="section-icon">📅</span>
+                        Consultas agendadas
+                        <span class="section-badge" id="tab-appts">0</span>
+                    </div>
                     <div id="appointments-list"><div class="loading">⏳ Carregando...</div></div>
                 </div>
+                
+                <!-- 👨‍⚕️ RESPONSÁVEIS -->
                 <div id="screen-responsibles" class="screen">
+                    <div class="section-header-btn" onclick="scrollToSection('responsibles')">
+                        <span class="section-icon">👨‍⚕️</span>
+                        Responsáveis
+                        <span class="section-badge" id="tab-resp">0</span>
+                    </div>
                     <div id="responsibles-list"><div class="loading">⏳ Carregando...</div></div>
                 </div>
+                
+                <!-- 📞 CONTATOS DE EMERGÊNCIA -->
                 <div id="screen-contacts" class="screen">
+                    <div class="section-header-btn" onclick="scrollToSection('contacts')">
+                        <span class="section-icon">📞</span>
+                        Contatos de Emergência
+                        <span class="section-badge" id="tab-contacts">0</span>
+                    </div>
                     <div id="contacts-list"><div class="loading">⏳ Carregando...</div></div>
                 </div>
             </div>
@@ -2040,8 +2046,42 @@
         // ✅ NOVA FUNÇÃO: Renderiza tela atual
         // ============================================
         function renderCurrentScreen() {
-            console.log('🎨 Renderizando tela:', currentScreen);
-            refreshCurrentView();
+            console.log('🎨 Renderizando TODAS as seções...');
+            // Carrega todas as seções de uma vez (scroll único)
+            refreshAllSections();
+        }
+
+        function refreshAllSections() {
+            const targetDateStr = viewingSpecificDate || `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}-${String(new Date().getDate()).padStart(2, '0')}`;
+            const parts = targetDateStr.split('-');
+            const targetDateObj = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
+            
+            generateCalendar();
+            updateCountersForDate(targetDateStr);
+            
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            const targetDateOnly = new Date(targetDateObj);
+            targetDateOnly.setHours(0, 0, 0, 0);
+            
+            // Carrega medicamentos (histórico se data passada, senão dia da semana)
+            if (targetDateOnly < today) {
+                loadMedicationsHistory(targetDateStr);
+            } else {
+                loadMedicationsForDay(targetDateObj.getDay());
+            }
+            
+            // Carrega consultas, responsáveis e contatos
+            loadAllFutureAppointments();
+            loadResponsibles();
+            loadContacts();
+        }
+
+        function scrollToSection(section) {
+            const el = document.getElementById('screen-' + section);
+            if (el) {
+                el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }
         }
 
         // ============================================
@@ -2158,14 +2198,13 @@
             // ===== CARREGAR DADOS DA API =====
             await loadAllData();
             
-            // ===== APLICAR FILTROS INICIAIS =====
+            // ===== CARREGAR TODAS AS SEÇÕES após dados prontos =====
             setTimeout(() => {
                 updateCountersForDate(todayStr);
-                if (currentScreen === 'appointments') {
-                    loadAppointmentsForDate(todayStr);
-                } else if (currentScreen === 'medications') {
-                    loadMedicationsForDay(today.getDay());
-                }
+                loadMedicationsForDay(today.getDay());
+                loadAllFutureAppointments();
+                loadResponsibles();
+                loadContacts();
             }, 300);
             
             // ===== SISTEMA DE MONITORAMENTO DE MEDICAMENTOS =====
@@ -2560,7 +2599,7 @@
             const months = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
             document.getElementById('current-month').textContent = `${months[selectedDate.getMonth()]} ${yearStr}`;
             
-            // 5. Carrega os dados (Remédios/Consultas)
+            // 5. Carrega os dados para TODAS as seções
             updateCountersForDate(dateStr);
             
             const today = new Date();
@@ -2568,15 +2607,15 @@
             const selectedDateOnly = new Date(selectedDate);
             selectedDateOnly.setHours(0, 0, 0, 0);
             
-            if (currentScreen === 'appointments') {
-                loadAppointmentsForDate(dateStr);
-            } else if (currentScreen === 'medications') {
-                if (selectedDateOnly < today) {
-                    loadMedicationsHistory(dateStr);
-                } else {
-                    loadMedicationsForDay(selectedDate.getDay());
-                }
+            // Carrega todas as seções
+            if (selectedDateOnly < today) {
+                loadMedicationsHistory(dateStr);
+            } else {
+                loadMedicationsForDay(selectedDate.getDay());
             }
+            loadAllFutureAppointments();
+            loadResponsibles();
+            loadContacts();
             
             showToast(`📅 Dia ${dayStr}/${monthStr}/${yearStr} selecionado`);
         }
@@ -3103,40 +3142,24 @@
         // -- função showScreen corrigida para considerar data específica --
         // -------------------------------------
         function showScreen(screen, btn) {
-            currentScreen = screen;
-            document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
-            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-            document.getElementById(`screen-${screen}`).classList.add('active');
-            if (btn) btn.classList.add('active');
+            // Scrolla para a seção correspondente
+            scrollToSection(screen);
             
             const fab = document.getElementById('fab-btn');
-            
-            const targetDateStr = viewingSpecificDate || `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}-${String(new Date().getDate()).padStart(2, '0')}`;
-            const targetDateObj = new Date(targetDateStr + 'T00:00:00');
+            fab.style.display = 'block';
             
             if (screen === 'medications') {
-                fab.style.display = 'block';
                 fab.style.background = 'linear-gradient(135deg, #10b981, #059669)';
-                loadMedicationsForDay(targetDateObj.getDay());
-            } 
-            else if (screen === 'appointments') {
-                fab.style.display = 'block';
+                fab.onclick = handleInsert;
+            } else if (screen === 'appointments') {
                 fab.style.background = 'linear-gradient(135deg, #f59e0b, #d97706)';
-                // ✅ CORREÇÃO: Carrega TODAS as consultas FUTURAS
-                loadAllFutureAppointments();
-            } 
-            else if (screen === 'responsibles') {
-                fab.style.display = 'block';
+                fab.onclick = handleInsertAppointment;
+            } else if (screen === 'responsibles') {
                 fab.style.background = 'linear-gradient(135deg, #8b5cf6, #6d28d9)';
-                loadResponsibles();
-            } 
-            else if (screen === 'contacts') {
-                fab.style.display = 'block';
+                fab.onclick = handleInsertResponsible;
+            } else if (screen === 'contacts') {
                 fab.style.background = 'linear-gradient(135deg, #ec4899, #be185d)';
-                loadContacts();
-            } 
-            else {
-                fab.style.display = 'none';
+                fab.onclick = handleInsertContact;
             }
         }
         // =====================================================
@@ -3254,17 +3277,14 @@
             if (apptsValEl) apptsValEl.textContent = apptsCount;
             if (apptsLabelEl) apptsLabelEl.textContent = `${apptsCount === 1 ? 'consulta' : 'consultas'} em ${dateFormatted}`;
             
-            // ✅ CORREÇÃO: Se a aba ativa for "Consultas", atualiza para total futuro
-            if (currentScreen === 'appointments') {
-                const futureCount = appointmentsData.filter(appt => {
-                    const apptDate = new Date(appt.appointment_date + 'T00:00:00');
-                    return apptDate >= new Date();
-                }).length;
-                document.getElementById('tab-appts').textContent = futureCount;
-            } else {
-                // Para outras abas, mostra contagem do dia
-                document.getElementById('tab-appts').textContent = apptsCount;
-            }
+            // Atualiza contadores das seções
+            document.getElementById('tab-appts').textContent = appointmentsData.filter(appt => {
+                const apptDate = new Date(appt.appointment_date + 'T00:00:00');
+                return apptDate >= new Date();
+            }).length;
+            document.getElementById('tab-meds').textContent = medicationsData.length;
+            document.getElementById('tab-resp').textContent = responsiblesData.length;
+            document.getElementById('tab-contacts').textContent = contactsData.length;
             
             console.log(`✅ Medicamentos: ${medsCount}, Consultas: ${apptsCount}`);
         }
@@ -3272,26 +3292,24 @@
         //
         // ------------------------------------- 
         function handleFabClick() {
-            handleInsert();
+            // FAB padrão: insere medicamento (seção mais comum)
+            openMedModal();
         }
         
-      
-        // ===== FUNÇÕES DE INSERIR/CREAR =====
         function handleInsert() {
-            const screenNames = {
-                'medications': '💊 Medicamento',
-                'appointments': '📅 Consulta',
-                'responsibles': '👨‍ Responsável',
-                'contacts': '📞 Contato'
-            };
-            const name = screenNames[currentScreen];
-            
-            if (currentScreen === 'medications') openMedModal();
-            else if (currentScreen === 'appointments') openApptModal();
-            else if (currentScreen === 'responsibles') openRespModal();
-            else if (currentScreen === 'contacts') openContactModal();
-            
-            showToast(`➕ Adicionar ${name}`);
+            openMedModal();
+        }
+        
+        function handleInsertAppointment() {
+            openApptModal();
+        }
+        
+        function handleInsertResponsible() {
+            openRespModal();
+        }
+        
+        function handleInsertContact() {
+            openContactModal();
         }
         
         function handleCreate() {
