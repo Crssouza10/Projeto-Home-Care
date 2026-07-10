@@ -343,6 +343,35 @@
             border: 1px solid rgba(138, 155, 181, 0.1);
         }
         
+        /* Alerta de revisão para medicamentos contínuos vencidos */
+        .med-review-alert {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-top: 10px;
+            padding: 10px 14px;
+            background: linear-gradient(135deg, #fff3cd, #ffe69c);
+            border: 1px solid #ffc107;
+            border-radius: 10px;
+            font-size: 0.9rem;
+            font-weight: 600;
+            color: #856404;
+            animation: pulse-review 2s infinite;
+        }
+        
+        @keyframes pulse-review {
+            0%, 100% { box-shadow: 0 0 0 0 rgba(255, 193, 7, 0.4); }
+            50% { box-shadow: 0 0 0 8px rgba(255, 193, 7, 0); }
+        }
+        
+        .med-review-alert .review-icon {
+            font-size: 1.2rem;
+        }
+        
+        .med-review-alert .review-text {
+            flex: 1;
+        }
+        
         .med-card-header {
             display: flex;
             justify-content: space-between;
@@ -1868,7 +1897,7 @@
             // 🌍 CONFIGURAÇÃO DA API (PRIMEIRA COISA!)
             // ============================================
             const API_URL = window.location.hostname === 'localhost'
-                ? 'http://localhost:8000'
+                ? `http://localhost:${window.location.port || '8866'}`
                 : window.location.origin;
 
             console.log('✅ API_URL configurada:', API_URL);
@@ -2524,7 +2553,7 @@
                         <p>Nenhuma consulta agendada</p>
                         <div class="hint">
                             <p>💡 Use o botão <strong style="color: #10b981;">➕ Inserir</strong> para agendar uma nova consulta.</p>
-                            <button onclick="handleInsert()">➕ Agendar Consulta</button>
+                            <button onclick="handleInsertAppointment()">➕ Agendar Consulta</button>
                         </div>
                     </div>
                 `;
@@ -2846,6 +2875,11 @@
                                     <div class="med-name" style="margin-bottom: 4px;">${med.name || 'Sem nome'}</div>
                                     <div class="med-dosage" style="margin-bottom: 8px;"> 💉  ${med.dosage || ''}</div>
                                     <div class="med-days" style="margin-bottom: 0;"> 📆  ${diasText}</div>
+                                    ${med.is_review_needed ? `
+                                    <div class="med-review-alert" style="margin-top: 10px;">
+                                        <span class="review-icon">⚠️</span>
+                                        <span class="review-text">Revisão necessária — consulte seu médico</span>
+                                    </div>` : ''}
                                 </div>
                                 ${med.box_image ? `
                                     <div class="med-box-image" style="width: 140px; height: 80px; overflow: hidden; border-radius: 8px; border: 1px solid rgba(0,0,0,0.1); cursor: pointer;" onclick="viewFullBoxImage('${med.box_image}')">
@@ -3017,7 +3051,7 @@
                         <p>Nenhuma consulta para ${dateBR}</p>
                         <div class="hint">
                             <p>💡 Use o botão <strong style="color: #10b981;">➕ Inserir</strong> nos cards acima para adicionar uma nova consulta para este dia.</p>
-                            <button onclick="handleInsert()">➕ Adicionar Consulta</button>
+                            <button onclick="handleInsertAppointment()">➕ Adicionar Consulta</button>
                         </div>
                     </div>
                 `;
@@ -3202,7 +3236,7 @@
                         <p>Nenhuma consulta agendada</p>
                         <div class="hint">
                             <p>💡 Use o botão <strong style="color: #10b981;">➕ Inserir</strong> para agendar uma nova consulta.</p>
-                            <button onclick="handleInsert()">➕ Agendar Consulta</button>
+                            <button onclick="handleInsertAppointment()">➕ Agendar Consulta</button>
                         </div>
                     </div>
                 `;
@@ -3541,6 +3575,11 @@
                             <div class="med-name">${med.name || 'Sem nome'}</div>
                             <div class="med-dosage">💉 ${med.dosage || ''}</div>
                             <div class="med-days">📆 ${diasText}</div>
+                            ${med.is_review_needed ? `
+                            <div class="med-review-alert">
+                                <span class="review-icon">⚠️</span>
+                                <span class="review-text">Revisão necessária — consulte seu médico</span>
+                            </div>` : ''}
                             <div class="med-actions-container med-card-${med.id}">
                                 ${renderMedicationActions(med)}
                             </div>
@@ -3570,7 +3609,7 @@
                             <p>Nenhuma consulta agendada</p>
                             <div class="hint">
                                 <p>💡 Use o botão <strong style="color: #10b981;">➕ Inserir</strong> para agendar uma nova consulta.</p>
-                                <button onclick="handleInsert()">➕ Agendar Consulta</button>
+                                <button onclick="handleInsertAppointment()">➕ Agendar Consulta</button>
                             </div>
                         </div>
                     `;
@@ -5817,9 +5856,6 @@
         </script>
 
 
-    </body>
-    </html>
-
     <!-- ============================================ -->
     <!-- 🔄 SERVICE WORKER - ATUALIZAÇÕES AUTOMÁTICAS -->
     <!-- ============================================ -->
@@ -5964,5 +6000,10 @@
         }        
 
     </script>
+
+    <!-- 🔖 INDICADOR DE VERSÃO -->
+    <div style="text-align:center; padding:20px; color:rgba(255,255,255,0.3); font-size:0.7rem; margin-top:30px;">
+        🏠 CR$ Home Care AI v2.1.0 — build 2026-07-10 — alerta revisão + OCR + mobile-first
+    </div>
         </body>
         </html>

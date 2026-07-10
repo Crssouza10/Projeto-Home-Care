@@ -44,7 +44,7 @@ from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.sql import func
 import uuid
 # scheduler_engine - motor de recorrência (regras 5a-5d)
-from scheduler_engine import generate_medication_schedules, get_schedule_summary, is_review_needed
+from scheduler_engine import generate_medication_schedules, get_schedule_summary, is_review_needed, get_review_date
 # pytesseract e PIL
 try:
     import pytesseract
@@ -177,6 +177,8 @@ class Medication(Base):
     days_of_week = Column(JSONB, default=[0,1,2,3,4,5,6])
     is_active = Column(Boolean, default=True)
     is_continuous = Column(Boolean, default=False)
+    continuous_months = Column(Integer, default=6)
+    start_date = Column(String(10), nullable=True)  # "YYYY-MM-DD" data de início do tratamento
     created_at = Column(DateTime, default=datetime.utcnow)
     end_date = Column(String(10), nullable=True)  # "YYYY-MM-DD" ou use Date
     
@@ -313,6 +315,7 @@ class MedicationCreate(BaseModel):
     time: str
     days_of_week: List[int] = [0,1,2,3,4,5,6]
     is_continuous: bool = False
+    continuous_months: int = 6
     duration_days: Optional[int] = None
     end_date: Optional[str] = None
     start_date: Optional[str] = None
@@ -370,8 +373,14 @@ class ClienteMedicationResponse(BaseModel):
     days_of_week: list
     taken_status: Optional[str] = "pending"
     is_active: Optional[bool] = True
+    is_continuous: Optional[bool] = False
+    start_date: Optional[str] = None
+    created_at: Optional[str] = None
+    end_date: Optional[str] = None
     last_taken_date: Optional[date] = None
     box_image: Optional[str] = None
+    is_review_needed: Optional[bool] = False
+    review_date: Optional[str] = None
     model_config = ConfigDict(from_attributes=True)
 
 class ClienteAppointmentResponse(BaseModel):
@@ -729,10 +738,21 @@ async def get_client_medications(user_id: str, db: Session = Depends(get_db)):
             "days_of_week": med.days_of_week if med.days_of_week is not None else [],
             "taken_status": status,
             "is_active": med.is_active,
+            "is_continuous": med.is_continuous,
+            "start_date": med.start_date,
             "created_at": med.created_at.strftime("%Y-%m-%d") if med.created_at else None,
-            "end_date": med.end_date,
+            "end_date": med.end_date.isoformat() if hasattr(med.end_date, 'isoformat') else (str(med.end_date) if med.end_date else None),
             "last_taken_date": med.last_taken_date.isoformat() if med.last_taken_date else None,
-            "box_image": med.box_image
+            "box_image": med.box_image,
+            # Revisão para medicamentos contínuos
+            "is_review_needed": is_review_needed(
+                datetime.strptime(med.start_date, "%Y-%m-%d").date(),
+                med.continuous_months
+            ) if med.is_continuous and med.start_date else False,
+            "review_date": get_review_date(
+                datetime.strptime(med.start_date, "%Y-%m-%d").date(),
+                med.continuous_months
+            ).isoformat() if med.is_continuous and med.start_date else None,
         })
     
     return resultado
@@ -781,6 +801,8 @@ async def create_medication(user_id: str, med: MedicationCreate, db: Session = D
         time=med.time,
         days_of_week=med.days_of_week,
         is_continuous=getattr(med, 'is_continuous', False),
+        continuous_months=getattr(med, 'continuous_months', 6),
+        start_date=actual_start.strftime("%Y-%m-%d"),
         end_date=end_date,
         created_at=datetime.combine(actual_start, time(0, 0, 0))
     )
@@ -1465,6 +1487,58 @@ async def update_medication(
     db.refresh(medication)
     
     return {"status": "sucesso", "mensagem": "Medicação atualizada"}
+
+
+# ==================== ROTA: ALERTA DE REVISÃO (REGRA 5c) ====================
+@app.get("/api/medications/review-needed")
+async def get_review_needed_medications(user_id: str = None, db: Session = Depends(get_db)):
+    """
+    Retorna medicamentos contínuos que já passaram do prazo de revisão.
+    
+    Parâmetro opcional:
+        user_id: filtra por usuário específico
+    
+    Retorna:
+        Lista de medicamentos com is_review_needed=true e review_date
+    """
+    query = db.query(Medication).filter(
+        Medication.is_continuous == True,
+        Medication.is_active == True,
+        Medication.start_date != None
+    )
+    
+    if user_id:
+        try:
+            user_uuid = uuid.UUID(user_id)
+            query = query.filter(Medication.user_id == user_uuid)
+        except ValueError:
+            raise HTTPException(status_code=400, detail="ID de usuário inválido")
+    
+    all_continuous = query.all()
+    
+    resultado = []
+    for med in all_continuous:
+        try:
+            start_dt = datetime.strptime(med.start_date, "%Y-%m-%d").date()
+            needs_review = is_review_needed(start_dt, med.continuous_months)
+            review_dt = get_review_date(start_dt, med.continuous_months)
+            
+            if needs_review:
+                resultado.append({
+                    "id": str(med.id),
+                    "user_id": str(med.user_id),
+                    "name": med.name,
+                    "dosage": med.dosage,
+                    "start_date": med.start_date,
+                    "continuous_months": med.continuous_months,
+                    "review_date": review_dt.isoformat(),
+                    "days_overdue": (date.today() - review_dt).days,
+                    "is_review_needed": True,
+                })
+        except (ValueError, TypeError):
+            continue  # Pula registros com data inválida
+    
+    return resultado
 
 
 @app.delete("/api/medications/{med_id}")
