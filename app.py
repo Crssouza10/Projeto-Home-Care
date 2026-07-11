@@ -416,6 +416,11 @@ class ChatRequest(BaseModel):
 class ForgotPasswordRequest(BaseModel):
     contact: str
 
+class PushSubscriptionCreate(BaseModel):
+    user_id: str
+    endpoint: str
+    keys: dict
+
 
 
 # ==================== DEPENDENCIES ====================
@@ -1852,10 +1857,56 @@ def enviar_whatsapp_custom(telefone: str, texto: str) -> bool:
         print(f"❌ Falha de conexão WhatsApp Custom: {e}")
         return False
 
-# Rota fictícia para o Frontend não quebrar caso ainda tente enviar Web Push
+# Função auxiliar para enviar Web Push
+def enviar_web_push(subscription_info: dict, message_text: str) -> bool:
+    private_key = os.getenv("VAPID_PRIVATE_KEY")
+    if not private_key:
+        print("⚠️ VAPID_PRIVATE_KEY ausente no .env!")
+        return False
+        
+    vapid_claims = {
+        "sub": "mailto:suporte@homecare.com.br"
+    }
+    
+    try:
+        webpush(
+            subscription_info=subscription_info,
+            data=message_text,
+            vapid_private_key=private_key,
+            vapid_claims=vapid_claims
+        )
+        return True
+    except WebPushException as ex:
+        print(f"❌ Erro ao enviar Web Push: {ex}")
+        return False
+    except Exception as e:
+        print(f"❌ Falha genérica Web Push: {e}")
+        return False
+
+# Rota ativa para salvar a inscrição de Web Push
 @app.post("/api/push/subscribe")
-async def dummy_subscribe():
-    return {"status": "ok", "msg": "Web Push desativado. Usando WhatsApp."}
+async def subscribe_push(req: PushSubscriptionCreate, db: Session = Depends(get_db)):
+    try:
+        user_uuid = uuid.UUID(req.user_id)
+        # Verifica se já existe
+        sub = db.query(PushSubscription).filter(PushSubscription.endpoint == req.endpoint).first()
+        if not sub:
+            sub = PushSubscription(
+                user_id=user_uuid,
+                endpoint=req.endpoint,
+                keys=req.keys
+            )
+            db.add(sub)
+        else:
+            sub.user_id = user_uuid
+            sub.keys = req.keys
+        db.commit()
+        return {"status": "success", "message": "Inscrição de Web Push registrada com sucesso!"}
+    except Exception as e:
+        db.rollback()
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=str(e))
 
 # 2. Endpoint para TESTE RÁPIDO DO WHATSAPP (Dispara manualmente)
 @app.api_route("/api/teste-push", methods=["GET", "POST"])
@@ -1902,21 +1953,48 @@ async def check_reminders(db: Session = Depends(get_db)):
             print(f"ℹ️ Nenhum medicamento agendado para {current_time}")
             return {"status": "ok", "msg": "Nenhum remédio neste horário", "hora_brasilia": current_time}
             
+        # Para cada medicamento, busca o usuário dono dele, manda WhatsApp e Web Push
         sent_count = 0
         failed_count = 0
+        push_sent_count = 0
         
-        # Para cada medicamento, busca o usuário dono dele e manda WhatsApp
         for med in meds_due:
             user = db.query(User).filter(User.id == med.user_id).first()
-            if user and user.phone:
-                print(f"📤 Enviando WhatsApp para {user.full_name} ({user.phone}) - Remédio: {med.name}")
-                sucesso = enviar_whatsapp(user.phone, med.name, med.dosage)
-                if sucesso:
-                    sent_count += 1
+            if user:
+                # 1. Envia WhatsApp
+                if user.phone:
+                    print(f"📤 Enviando WhatsApp para {user.full_name} ({user.phone}) - Remédio: {med.name}")
+                    sucesso = enviar_whatsapp(user.phone, med.name, med.dosage)
+                    if sucesso:
+                        sent_count += 1
+                    else:
+                        failed_count += 1
                 else:
+                    print(f"⚠️ Usuário {user.full_name} sem telefone para o medicamento {med.name}")
                     failed_count += 1
+                
+                # 2. Envia Web Push
+                subs = db.query(PushSubscription).filter(PushSubscription.user_id == user.id).all()
+                for sub in subs:
+                    sub_info = {
+                        "endpoint": sub.endpoint,
+                        "keys": sub.keys
+                    }
+                    payload = json.dumps({
+                        "title": "💊 Hora do Medicamento!",
+                        "body": f"Olá {user.full_name}, está na hora de tomar: {med.name} ({med.dosage}).",
+                        "icon": "/static/icons/icon-192x192.png",
+                        "badge": "/static/icons/icon-72x72.png",
+                        "data": {
+                            "url": "/dashboard-cliente"
+                        }
+                    })
+                    print(f"📤 Enviando Web Push para {user.full_name}...")
+                    push_sucesso = enviar_web_push(sub_info, payload)
+                    if push_sucesso:
+                        push_sent_count += 1
             else:
-                print(f"⚠️ Usuário não encontrado ou sem telefone para o medicamento {med.name}")
+                print(f"⚠️ Usuário não encontrado para o medicamento {med.name}")
                 failed_count += 1
                 
         resultado = {
@@ -1924,7 +2002,8 @@ async def check_reminders(db: Session = Depends(get_db)):
             "hora_brasilia": current_time,
             "medicamentos_encontrados": len(meds_due),
             "whatsapp_enviados": sent_count,
-            "whatsapp_falhados": failed_count
+            "whatsapp_falhados": failed_count,
+            "web_push_enviados": push_sent_count
         }
         
         print(f"📊 [CRON] RESULTADO FINAL: {resultado}")
