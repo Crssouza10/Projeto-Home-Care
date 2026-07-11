@@ -1557,6 +1557,43 @@
                     </div>
                     <div id="contacts-list"><div class="loading">⏳ Carregando...</div></div>
                 </div>
+
+                <!-- 💬 CHAT IA (ASSISTENTE MAXIMUS) -->
+                <div id="screen-chat" class="screen" style="margin-bottom: 24px;">
+                    <div class="section-header-btn" onclick="scrollToSection('chat')">
+                        <span class="section-icon">💬</span>
+                        Assistente Virtual Maximus (IA)
+                        <span class="section-badge" style="background:#00D4FF; color:#0e1726;">Ativo</span>
+                    </div>
+                    <div id="chat-container" style="background:#1e293b; border-radius:16px; padding:16px; margin-top:12px; border: 1px solid rgba(0, 212, 255, 0.15);">
+                        <!-- Cabeçalho interno do chat com controle de áudio -->
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 8px;">
+                            <span style="font-size: 0.85rem; color: #8a9bb5;">Maximus está pronto para conversar</span>
+                            <button type="button" id="chat-speaker-btn" onclick="toggleSpeechSynthesis()" style="background: transparent; border: none; color: #00D4FF; font-size: 1.2rem; cursor: pointer; display: flex; align-items: center; gap: 6px; padding: 4px 8px; border-radius: 6px; transition: background 0.2s;" title="Ativar/Desativar Leitura por Voz">
+                                <span id="speaker-icon">🔊</span> <span style="font-size: 0.75rem; color: #8a9bb5; font-weight: 500;">Falar respostas</span>
+                            </button>
+                        </div>
+                        <!-- Chat messages log -->
+                        <div id="chat-log" style="height: 320px; overflow-y: auto; display: flex; flex-direction: column; gap: 12px; padding-right: 6px; margin-bottom: 12px;">
+                            <div class="chat-msg assistant" style="align-self: flex-start; max-width: 85%; background: rgba(0, 212, 255, 0.1); border: 1px solid rgba(0, 212, 255, 0.2); padding: 10px 14px; border-radius: 14px 14px 14px 2px; color: #fff; font-size: 0.95rem;">
+                                <strong>🤖 Maximus:</strong> Olá! Sou o seu assistente virtual **Maximus**. Em que posso ajudar você com seus cuidados ou medicamentos hoje?
+                            </div>
+                        </div>
+                        
+                        <!-- Sugestões rápidas -->
+                        <div class="chat-suggestions" style="display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 12px;">
+                            <button onclick="sendQuickChatMessage('Como devo tomar meus remédios hoje?')" style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); color: #cbd5e1; padding: 6px 12px; border-radius: 20px; font-size: 0.8rem; cursor: pointer; transition: all 0.2s;">📋 Como tomar meus remédios hoje?</button>
+                            <button onclick="sendQuickChatMessage('Quais cuidados devo ter com efeitos colaterais?')" style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); color: #cbd5e1; padding: 6px 12px; border-radius: 20px; font-size: 0.8rem; cursor: pointer; transition: all 0.2s;">⚠️ Efeitos colaterais</button>
+                        </div>
+                        
+                        <!-- Input form -->
+                        <form id="chat-form" onsubmit="handleSendChatMessage(event)" style="display:flex; gap:8px; align-items:center;">
+                            <input type="text" id="chat-input" placeholder="Pergunte ao Maximus..." style="flex:1; background: #0f172a; border: 1px solid rgba(255,255,255,0.1); border-radius: 10px; padding: 10px 14px; color: #fff; font-size: 0.95rem; outline: none;" required>
+                            <button type="button" id="chat-mic-btn" onclick="toggleVoiceInput()" style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 10px; padding: 10px 14px; color: #00D4FF; font-size: 1.1rem; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s;">🎤</button>
+                            <button type="submit" style="background: #00D4FF; color: #0e1726; border: none; border-radius: 10px; padding: 10px 18px; font-weight: bold; cursor: pointer;">Enviar</button>
+                        </form>
+                    </div>
+                </div>
             </div>
             
             <!-- RIGHT: CALENDAR -->
@@ -5176,6 +5213,265 @@
             if (med) {
                 generateMedicationIndividualCalendar(med);
             }
+        };
+
+        // =====================================================
+        // 💬 LÓGICA DO ASSISTENTE VIRTUAL MAXIMUS (CHAT IA)
+        // =====================================================
+        window.chatHistory = [];
+        window.speechEnabled = false; // Iniciado como mutado para evitar fala indesejada, usuário ativa se quiser
+
+        window.toggleSpeechSynthesis = function() {
+            window.speechEnabled = !window.speechEnabled;
+            const iconEl = document.getElementById('speaker-icon');
+            if (iconEl) {
+                iconEl.innerText = window.speechEnabled ? '🔊' : '🔇';
+            }
+            if (!window.speechEnabled && window.speechSynthesis) {
+                window.speechSynthesis.cancel();
+            }
+        };
+
+        window.speakText = function(text) {
+            if (!window.speechEnabled || !window.speechSynthesis) return;
+            
+            // Cancela falas anteriores
+            window.speechSynthesis.cancel();
+            
+            // Limpa formatação Markdown e HTML
+            let cleanText = text.replace(/<[^>]*>/g, ''); // remove HTML tags
+            cleanText = cleanText.replace(/\*\*/g, ''); // remove negrito
+            cleanText = cleanText.replace(/###/g, ''); // remove títulos
+            cleanText = cleanText.replace(/[-\*]/g, ''); // remove marcadores
+            cleanText = cleanText.trim();
+            
+            if (!cleanText) return;
+
+            const utterance = new SpeechSynthesisUtterance(cleanText);
+            utterance.lang = 'pt-BR';
+            
+            // Tenta encontrar uma voz pt-BR do sistema
+            const voices = window.speechSynthesis.getVoices();
+            const ptVoice = voices.find(v => v.lang.startsWith('pt'));
+            if (ptVoice) {
+                utterance.voice = ptVoice;
+            }
+            
+            window.speechSynthesis.speak(utterance);
+        };
+
+        let recognition = null;
+        let isListening = false;
+
+        window.toggleVoiceInput = function() {
+            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+            if (!SpeechRecognition) {
+                alert("Desculpe, o reconhecimento de voz não é suportado neste navegador.");
+                return;
+            }
+
+            const micBtn = document.getElementById('chat-mic-btn');
+            const inputEl = document.getElementById('chat-input');
+
+            if (!recognition) {
+                recognition = new SpeechRecognition();
+                recognition.lang = 'pt-BR';
+                recognition.continuous = false;
+                recognition.interimResults = false;
+
+                recognition.onstart = function() {
+                    isListening = true;
+                    if (micBtn) {
+                        micBtn.style.background = 'rgba(239, 68, 68, 0.2)';
+                        micBtn.style.borderColor = 'rgba(239, 68, 68, 0.5)';
+                        micBtn.style.color = '#ef4444';
+                        micBtn.style.boxShadow = '0 0 10px rgba(239, 68, 68, 0.5)';
+                        micBtn.innerHTML = '🛑';
+                    }
+                    if (inputEl) {
+                        inputEl.placeholder = 'Ouvindo... fale agora';
+                    }
+                };
+
+                recognition.onend = function() {
+                    isListening = false;
+                    if (micBtn) {
+                        micBtn.style.background = 'rgba(255,255,255,0.05)';
+                        micBtn.style.borderColor = 'rgba(255,255,255,0.1)';
+                        micBtn.style.color = '#00D4FF';
+                        micBtn.style.boxShadow = 'none';
+                        micBtn.innerHTML = '🎤';
+                    }
+                    if (inputEl) {
+                        inputEl.placeholder = 'Pergunte ao Maximus...';
+                    }
+                };
+
+                recognition.onerror = function(event) {
+                    console.error('Erro no reconhecimento de voz:', event.error);
+                    alert('Erro no reconhecimento de voz: ' + event.error);
+                };
+
+                recognition.onresult = function(event) {
+                    const transcript = event.results[0][0].transcript;
+                    if (inputEl && transcript) {
+                        inputEl.value = transcript;
+                        // Envia a mensagem automaticamente
+                        window.handleSendChatMessage();
+                    }
+                };
+            }
+
+            if (isListening) {
+                recognition.stop();
+            } else {
+                recognition.start();
+            }
+        };
+
+        // Garante carregamento de vozes previamente
+        if (window.speechSynthesis) {
+            window.speechSynthesis.getVoices();
+        }
+
+        window.handleSendChatMessage = async function(event) {
+            if (event) event.preventDefault();
+            
+            const inputEl = document.getElementById('chat-input');
+            const message = inputEl.value.trim();
+            if (!message) return;
+            
+            // Limpa input
+            inputEl.value = '';
+            
+            // Append do usuário na tela
+            appendChatMessage('user', 'Você', message);
+            
+            // Mostra indicador de digitação
+            const typingId = appendChatTypingIndicator();
+            
+            try {
+                const currentUserId = localStorage.getItem('userId') || userId;
+                if (!currentUserId) {
+                    throw new Error('Usuário não autenticado. Faça login novamente.');
+                }
+                
+                const response = await fetch(`${API_URL}/api/chat`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        user_id: currentUserId,
+                        message: message,
+                        history: window.chatHistory
+                    })
+                });
+                
+                // Remove o indicador de digitação
+                const typingEl = document.getElementById(typingId);
+                if (typingEl) typingEl.remove();
+                
+                if (!response.ok) {
+                    const errData = await response.json().catch(() => ({}));
+                    throw new Error(errData.detail || 'Erro ao obter resposta da IA');
+                }
+                
+                const data = await response.json();
+                
+                // Append do Maximus na tela
+                appendChatMessage('assistant', 'Maximus', data.response);
+                
+                // Fala a resposta recebida
+                speakText(data.response);
+                
+                // Atualiza histórico na memória para manter o contexto na próxima mensagem
+                window.chatHistory.push({
+                    role: 'user',
+                    parts: [{ text: message }]
+                });
+                window.chatHistory.push({
+                    role: 'model',
+                    parts: [{ text: data.response }]
+                });
+                
+                // Limita histórico em memória para os últimos 20 turnos (evita payload gigante)
+                if (window.chatHistory.length > 40) {
+                    window.chatHistory = window.chatHistory.slice(-40);
+                }
+                
+            } catch (error) {
+                const typingEl = document.getElementById(typingId);
+                if (typingEl) typingEl.remove();
+                
+                console.error('Erro no chatbot:', error);
+                appendChatMessage('assistant', 'System', `❌ Erro: ${error.message}`);
+            }
+        };
+
+        window.sendQuickChatMessage = function(msg) {
+            const inputEl = document.getElementById('chat-input');
+            if (inputEl) {
+                inputEl.value = msg;
+                window.handleSendChatMessage();
+            }
+        };
+
+        window.appendChatMessage = function(role, sender, text) {
+            const logEl = document.getElementById('chat-log');
+            if (!logEl) return;
+            
+            const msgEl = document.createElement('div');
+            msgEl.className = `chat-msg ${role}`;
+            
+            // Estilização baseada em quem envia
+            let style = 'max-width: 85%; padding: 10px 14px; font-size: 0.95rem; line-height: 1.4;';
+            if (role === 'user') {
+                style += ' align-self: flex-end; background: linear-gradient(135deg, #0052FF, #00D4FF); border-radius: 14px 14px 2px 14px; color: #fff;';
+            } else {
+                style += ' align-self: flex-start; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 14px 14px 14px 2px; color: #fff;';
+            }
+            msgEl.style.cssText = style;
+            
+            const formattedText = renderMarkdownToHtml(text);
+            msgEl.innerHTML = `<strong>🤖 ${sender}:</strong> ${formattedText}`;
+            
+            if (role === 'user') {
+                msgEl.innerHTML = `<strong>👤 ${sender}:</strong> ${formattedText}`;
+            }
+            
+            logEl.appendChild(msgEl);
+            logEl.scrollTop = logEl.scrollHeight;
+        };
+
+        window.appendChatTypingIndicator = function() {
+            const logEl = document.getElementById('chat-log');
+            if (!logEl) return null;
+            
+            const id = `typing-${Date.now()}`;
+            const msgEl = document.createElement('div');
+            msgEl.id = id;
+            msgEl.className = 'chat-msg assistant typing';
+            msgEl.style.cssText = 'align-self: flex-start; max-width: 85%; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); padding: 10px 14px; border-radius: 14px 14px 14px 2px; color: #8A9BB5; font-size: 0.95rem; font-style: italic;';
+            msgEl.innerHTML = `<strong>🤖 Maximus:</strong> ⏳ Escrevendo...`;
+            
+            logEl.appendChild(msgEl);
+            logEl.scrollTop = logEl.scrollHeight;
+            return id;
+        };
+
+        window.renderMarkdownToHtml = function(text) {
+            if (!text) return '';
+            
+            // Converte quebras de linha em <br>
+            let html = text.replace(/\n/g, '<br>');
+            // Converte negrito **text** para <strong>text</strong>
+            html = html.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+            // Converte cabeçalhos ### text
+            html = html.replace(/### (.*?)(?:<br>|$)/g, '<h4 style="margin: 12px 0 6px; color: #00D4FF; font-size: 1.05rem;">$1</h4>');
+            // Converte listas com asterisco * item
+            html = html.replace(/\*\s+(.*?)(?:<br>|$)/g, '• $1<br>');
+            // Converte linhas horizontais ---
+            html = html.replace(/---/g, '<hr style="border:0; border-top:1px solid rgba(255,255,255,0.1); margin:10px 0;">');
+            return html;
         };
         </script>
 

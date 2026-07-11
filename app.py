@@ -16,9 +16,6 @@ from sqlalchemy import create_engine, Column, String, DateTime, Boolean, Time, D
 from sqlalchemy.orm import sessionmaker, declarative_base, Session
 from sqlalchemy.dialects.postgresql import UUID, JSONB
 from fastapi.middleware.cors import CORSMiddleware
-from sqlalchemy import create_engine
-from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import sessionmaker
 from pydantic import BaseModel, EmailStr, ConfigDict
 from typing import Optional, List
 from datetime import datetime, time, date, timedelta, timezone
@@ -410,6 +407,11 @@ class EmergencyContactCreate(BaseModel):
     email: Optional[str] = None
     notes: Optional[str] = None
     model_config = ConfigDict(from_attributes=True)
+
+class ChatRequest(BaseModel):
+    user_id: str
+    message: str
+    history: list = []
 
 
 
@@ -2060,6 +2062,132 @@ async def upload_prescription(file: UploadFile = File(...)):
         raise http_ex
     except Exception as e:
         print(f"🔥 Erro no upload de receita: {e}")
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/chat")
+async def chat_assistant(req: ChatRequest, db: Session = Depends(get_db)):
+    try:
+        user_id = req.user_id
+        message = req.message
+        history = req.history or []
+        
+        try:
+            user_uuid = uuid.UUID(user_id)
+        except ValueError:
+            raise HTTPException(status_code=400, detail="ID de usuário inválido")
+            
+        user = db.query(User).filter(User.id == user_uuid).first()
+        if not user:
+            raise HTTPException(status_code=404, detail="Usuário não encontrado")
+            
+        medications = db.query(Medication).filter(
+            Medication.user_id == user_uuid, 
+            Medication.is_active == True
+        ).all()
+        
+        # 1. Carrega a chave
+        gemini_key = os.getenv("GEMINI_API_KEY")
+        if not gemini_key:
+            raise HTTPException(
+                status_code=500, 
+                detail="GEMINI_API_KEY nao configurada no servidor."
+            )
+            
+        # 2. Monta as instruções do sistema com contexto do paciente
+        sys_instruction = (
+            "Você é o 'Maximus', o assistente médico e de cuidado pessoal inteligente do sistema CR$ HOME CARE AI.\n"
+            "Seu objetivo é ajudar o paciente ou seu cuidador respondendo perguntas sobre medicamentos, orientações de uso, saúde e bem-estar.\n\n"
+            "CONTEXTO DO PACIENTE:\n"
+            f"- Nome: {user.full_name}\n"
+            f"- Idade: {user.age or 'Não informada'} anos\n"
+            f"- Alergias conhecidas: {user.allergies or 'Nenhuma informada'}\n"
+            f"- Condições médicas: {user.conditions or 'Nenhuma informada'}\n"
+            f"- Tipo sanguíneo: {user.blood_type or 'Não informado'}\n"
+            f"- Plano de saúde: {user.health_insurance or 'Não informado'}\n\n"
+            "MEDICAMENTOS ATIVOS CADASTRADOS:\n"
+        )
+        if medications:
+            for med in medications:
+                sys_instruction += f"- {med.name}: Dosagem '{med.dosage}', Horário '{med.time}', Contínuo? {'Sim' if med.is_continuous else 'Não'}, Término? {med.end_date or 'Uso contínuo'}\n"
+        else:
+            sys_instruction += "- Nenhum medicamento ativo cadastrado no momento.\n"
+            
+        sys_instruction += (
+            "\nREGRAS DE COMPORTAMENTO:\n"
+            "1. Seja atencioso, empático, claro e fale sempre em português do Brasil.\n"
+            "2. Dê respostas curtas, práticas e objetivas. Evite textos longos ou excessivamente técnicos.\n"
+            "3. Use formatação em Markdown (negrito, listas, etc.) para facilitar a leitura.\n"
+            "4. IMPORTANTE: Você é um assistente de IA. Sempre recomende que o paciente consulte o médico ou responsável em caso de dúvidas graves, dor intensa ou reações adversas incomuns.\n"
+            "5. Use o histórico de conversas fornecido para manter o contexto."
+        )
+        
+        # 3. Prepara contents para a API (histórico + mensagem atual)
+        contents = []
+        for h in history:
+            # Garante que está no formato correto para a API
+            if "role" in h and "parts" in h:
+                parts = []
+                for p in h["parts"]:
+                    if isinstance(p, dict) and "text" in p:
+                        parts.append(p)
+                    elif isinstance(p, str):
+                        parts.append({"text": p})
+                contents.append({"role": h["role"], "parts": parts})
+                
+        # Adiciona a mensagem atual do usuário
+        contents.append({"role": "user", "parts": [{"text": message}]})
+        
+        payload = {
+            "contents": contents,
+            "systemInstruction": {
+                "parts": [
+                    {"text": sys_instruction}
+                ]
+            }
+        }
+        
+        candidate_models = ["gemini-3.1-flash-lite", "gemini-3.5-flash", "gemini-2.0-flash"]
+        response = None
+        errors = []
+        chosen_model = ""
+        
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            for model in candidate_models:
+                url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={gemini_key}"
+                headers = {"Content-Type": "application/json"}
+                try:
+                    r = await client.post(url, headers=headers, json=payload)
+                    if r.status_code == 200:
+                        response = r
+                        chosen_model = model
+                        break
+                    else:
+                        errors.append(f"{model}: {r.status_code} - {r.text[:200]}")
+                except Exception as ex:
+                    errors.append(f"{model}: {str(ex)}")
+                    
+        if not response:
+            all_errors_str = " | ".join(errors)
+            raise HTTPException(status_code=502, detail=f"Erro da API do Gemini (Todos os modelos falharam). Detalhes: {all_errors_str}")
+            
+        resp_json = response.json()
+        
+        try:
+            generated_text = resp_json["candidates"][0]["content"]["parts"][0]["text"].strip()
+        except Exception as parse_error:
+            raise HTTPException(status_code=500, detail="Erro ao parsear resposta do Gemini.")
+            
+        return JSONResponse(content={
+            "success": True,
+            "response": generated_text,
+            "model": chosen_model
+        })
+        
+    except HTTPException as http_ex:
+        raise http_ex
+    except Exception as e:
         import traceback
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=str(e))
