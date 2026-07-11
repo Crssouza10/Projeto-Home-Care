@@ -745,7 +745,10 @@
                         </div>
 
                         <div class="form-group">
-                            <label class="form-label">Senha</label>
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                                <label class="form-label" style="margin-bottom: 0;">Senha</label>
+                                <a href="javascript:void(0)" onclick="openForgotPassword()" style="color: #00D4FF; font-size: 0.8rem; text-decoration: none; font-weight: 500; opacity: 0.85; transition: opacity 0.2s;" onmouseover="this.style.opacity=1" onmouseout="this.style.opacity=0.85">Esqueci a Senha</a>
+                            </div>
                             <div class="password-wrapper">
                                 <input
                                     type="password"
@@ -1051,6 +1054,67 @@
         }
         // === FIM FUNÇÕES CADASTRO ===
 
+        // === FUNÇÕES RECUPERAÇÃO DE SENHA (ESQUECI A SENHA) ===
+        window.openForgotPassword = function() {
+            document.getElementById('forgot-modal').style.display = 'flex';
+            document.getElementById('forgot-error').style.display = 'none';
+            document.getElementById('forgot-success').style.display = 'none';
+        };
+
+        window.closeForgotPassword = function() {
+            document.getElementById('forgot-modal').style.display = 'none';
+            document.getElementById('forgot-form').reset();
+        };
+
+        window.handleForgotPassword = async function(e) {
+            e.preventDefault();
+            const contact = document.getElementById('forgot-contact').value.trim();
+            const errorBox = document.getElementById('forgot-error');
+            const successBox = document.getElementById('forgot-success');
+            const btn = document.getElementById('forgot-btn');
+
+            errorBox.style.display = 'none';
+            successBox.style.display = 'none';
+            btn.disabled = true;
+            btn.innerHTML = '⏳ Enviando solicitação...';
+
+            try {
+                const response = await fetch('/api/forgot-password', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ contact: contact })
+                });
+
+                const data = await response.json();
+                if (response.ok) {
+                    successBox.textContent = '✅ ' + (data.detail || 'Instruções enviadas! Verifique o e-mail ou telefone.');
+                    successBox.style.display = 'block';
+                    setTimeout(() => {
+                        window.closeForgotPassword();
+                    }, 4000);
+                } else {
+                    throw new Error(data.detail || 'Erro ao processar solicitação.');
+                }
+            } catch (error) {
+                errorBox.textContent = '❌ ' + error.message;
+                errorBox.style.display = 'block';
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = '🚀 Recuperar Senha';
+            }
+        };
+
+        // Fechar ao clicar fora
+        document.addEventListener('DOMContentLoaded', () => {
+            const forgotModal = document.getElementById('forgot-modal');
+            if (forgotModal) {
+                forgotModal.addEventListener('click', function(e) {
+                    if (e.target === this) {
+                        window.closeForgotPassword();
+                    }
+                });
+            }
+        });
     </script>
 
     <!-- === MODAL DE CADASTRO (CONTA BÁSICA) === -->
@@ -1101,7 +1165,39 @@
                 Ao criar conta, você concorda com nossos <a href="#" style="color: #00D4FF; text-decoration: none;">Termos de Uso</a>
             </p>
         </div>
-</div>
+    </div>
+
+    <!-- === MODAL RECUPERAÇÃO DE SENHA (ESQUECI A SENHA) === -->
+    <div id="forgot-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(10, 17, 40, 0.95); z-index: 1000; align-items: center; justify-content: center; padding: 20px;">
+        <div style="background: rgba(11, 26, 58, 0.95); border: 1px solid rgba(0, 212, 255, 0.3); border-radius: 24px; padding: 32px; width: 100%; max-width: 450px; position: relative; animation: slideUp 0.3s ease;">
+            
+            <!-- Botão Fechar -->
+            <button onclick="closeForgotPassword()" style="position: absolute; top: 16px; right: 16px; background: none; border: none; color: #8A9BB5; font-size: 1.5rem; cursor: pointer; transition: color 0.3s;" onmouseover="this.style.color='#00D4FF'" onmouseout="this.style.color='#8A9BB5'">&times;</button>
+            
+            <!-- Cabeçalho -->
+            <div style="text-align: center; margin-bottom: 24px;">
+                <div style="font-size: 2rem; margin-bottom: 8px;">🔑</div>
+                <h3 style="color: #FFFFFF; font-size: 1.4rem; font-weight: 800;">Recuperar Senha</h3>
+                <p style="color: #8A9BB5; font-size: 0.9rem;">Insira seus dados para redefinição</p>
+            </div>
+            
+            <!-- Mensagens de Feedback -->
+            <div id="forgot-error" style="background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.3); color: #EF4444; padding: 12px; border-radius: 8px; margin-bottom: 16px; font-size: 0.85rem; display: none;"></div>
+            <div id="forgot-success" style="background: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.3); color: #10B981; padding: 12px; border-radius: 8px; margin-bottom: 16px; font-size: 0.85rem; display: none;"></div>
+            
+            <!-- Formulário -->
+            <form id="forgot-form" onsubmit="handleForgotPassword(event)">
+                <div class="form-group">
+                    <label class="form-label">E-mail ou Telefone Cadastrado</label>
+                    <input type="text" class="form-input" id="forgot-contact" placeholder="Digite seu e-mail ou telefone" required style="background: rgba(17, 27, 51, 0.9);">
+                </div>
+                
+                <button type="submit" class="btn-login" id="forgot-btn" style="margin-top: 8px;">
+                    🚀 Recuperar Senha
+                </button>
+            </form>
+        </div>
+    </div>
 
 <style>
 @keyframes slideUp {

@@ -5219,7 +5219,7 @@
         // 💬 LÓGICA DO ASSISTENTE VIRTUAL MAXIMUS (CHAT IA)
         // =====================================================
         window.chatHistory = [];
-        window.speechEnabled = false; // Iniciado como mutado para evitar fala indesejada, usuário ativa se quiser
+        window.speechEnabled = true; // Ativado por padrão para que o usuário escute o Maximus imediatamente!
 
         window.toggleSpeechSynthesis = function() {
             window.speechEnabled = !window.speechEnabled;

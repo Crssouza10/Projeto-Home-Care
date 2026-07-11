@@ -413,6 +413,9 @@ class ChatRequest(BaseModel):
     message: str
     history: list = []
 
+class ForgotPasswordRequest(BaseModel):
+    contact: str
+
 
 
 # ==================== DEPENDENCIES ====================
@@ -587,7 +590,8 @@ async def cliente_login(credentials: dict, db: Session = Depends(get_db)):
     user = db.query(User).filter(
         or_(
             User.full_name.ilike(f"%{username}%"),
-            User.phone == username
+            User.phone == username,
+            User.email == username
         ),
         User.is_active == True
     ).first()
@@ -2185,6 +2189,36 @@ async def chat_assistant(req: ChatRequest, db: Session = Depends(get_db)):
             "model": chosen_model
         })
         
+    except HTTPException as http_ex:
+        raise http_ex
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/forgot-password")
+async def forgot_password(req: ForgotPasswordRequest, db: Session = Depends(get_db)):
+    try:
+        contact = req.contact.strip()
+        user = db.query(User).filter(
+            or_(
+                User.email == contact,
+                User.phone == contact,
+                User.full_name.ilike(f"%{contact}%")
+            )
+        ).first()
+        
+        if not user:
+            raise HTTPException(status_code=404, detail="Usuário não encontrado.")
+            
+        temp_pass = "redefinida123"
+        user.password_hash = sha256(temp_pass.encode()).hexdigest()
+        db.commit()
+        
+        return {
+            "status": "sucesso",
+            "detail": f"Senha do usuário {user.full_name} redefinida temporariamente para: {temp_pass}"
+        }
     except HTTPException as http_ex:
         raise http_ex
     except Exception as e:
