@@ -113,6 +113,7 @@ try:
         conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS conditions TEXT;"))
         conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS blood_type VARCHAR(10);"))
         conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS health_insurance VARCHAR(100);"))
+        conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS health_insurance_card TEXT;"))
         conn.commit()
         print("✅ Colunas clínicas adicionadas/verificadas com sucesso na tabela users.")
 except Exception as e:
@@ -162,6 +163,7 @@ class User(Base):
     conditions = Column(Text, nullable=True)
     blood_type = Column(String(10), nullable=True)
     health_insurance = Column(String(100), nullable=True)
+    health_insurance_card = Column(Text, nullable=True)
 
 class Medication(Base):
     __tablename__ = "medications"
@@ -304,6 +306,7 @@ class ClinicalInfoUpdate(BaseModel):
     conditions: Optional[str] = None
     blood_type: Optional[str] = None
     health_insurance: Optional[str] = None
+    health_insurance_card: Optional[str] = None
 
 class MedicationCreate(BaseModel):
     user_id: uuid.UUID
@@ -635,6 +638,7 @@ async def get_clinical_info(user_id: str, db: Session = Depends(get_db)):
         "conditions": user.conditions,
         "blood_type": user.blood_type,
         "health_insurance": user.health_insurance,
+        "health_insurance_card": user.health_insurance_card,
         "full_name": user.full_name,
         "phone": user.phone,
         "email": user.email
@@ -656,6 +660,7 @@ async def update_clinical_info(user_id: str, info: ClinicalInfoUpdate, db: Sessi
     user.conditions = info.conditions
     user.blood_type = info.blood_type
     user.health_insurance = info.health_insurance
+    user.health_insurance_card = info.health_insurance_card
     db.commit()
     
     return {
@@ -2151,6 +2156,185 @@ async def upload_prescription(file: UploadFile = File(...)):
         print(f"🔥 Erro no upload de receita: {e}")
         import traceback
         traceback.print_exc()
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/cliente/{user_id}/ocr-allergies")
+async def ocr_allergies(user_id: str, file: UploadFile = File(...)):
+    try:
+        import base64
+        import os
+        contents = await file.read()
+        filename = file.filename.lower()
+        mime_type = file.content_type or "image/jpeg"
+        
+        if filename.endswith('.pdf'):
+            mime_type = 'application/pdf'
+        elif filename.endswith('.png'):
+            mime_type = 'image/png'
+        elif filename.endswith('.jpg') or filename.endswith('.jpeg'):
+            mime_type = 'image/jpeg'
+            
+        gemini_key = os.getenv("GEMINI_API_KEY")
+        if not gemini_key:
+            raise HTTPException(
+                status_code=500, 
+                detail="GEMINI_API_KEY nao configurada no servidor."
+            )
+            
+        base64_data = base64.b64encode(contents).decode("utf-8")
+        
+        prompt = (
+            "Voce e um assistente medico especialista em analise de laudos e exames. "
+            "Analise a imagem ou documento enviado, que contem informacoes sobre alergias do paciente. "
+            "Extraia todas as alergias listadas (podem ser a medicamentos, alimentos, produtos quimicos ou substancias). "
+            "Retorne a lista de alergias identificadas separadas por virgula em formato de texto simples. "
+            "Exemplo: 'Dipirona, Penicilina, Corantes alimenticios, Lactose'. "
+            "Se nao encontrar nenhuma alergia listada ou o documento nao for sobre isso, retorne 'Nenhuma alergia relatada'."
+            "Retorne APENAS a lista no formato de texto simples, sem markdown ou explicacoes adicionais."
+        )
+        
+        payload = {
+            "contents": [
+                {
+                    "parts": [
+                        {"text": prompt},
+                        {
+                            "inlineData": {
+                               "mimeType": mime_type,
+                               "data": base64_data
+                            }
+                        }
+                    ]
+                }
+            ]
+        }
+        
+        candidate_models = ["gemini-3.1-flash-lite", "gemini-3.5-flash", "gemini-2.0-flash"]
+        response = None
+        
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            for model in candidate_models:
+                url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={gemini_key}"
+                headers = {"Content-Type": "application/json"}
+                try:
+                    r = await client.post(url, headers=headers, json=payload)
+                    if r.status_code == 200:
+                        response = r
+                        break
+                except Exception as ex:
+                    print(f"⚠️ Erro ao tentar modelo {model} para alergias: {str(ex)}")
+        
+        if not response:
+            raise HTTPException(status_code=502, detail="Erro da API do Gemini (falha na leitura de alergias).")
+            
+        resp_json = response.json()
+        generated_text = resp_json["candidates"][0]["content"]["parts"][0]["text"].strip()
+        
+        return JSONResponse(content={
+            "success": True,
+            "allergies": generated_text
+        })
+    except Exception as e:
+        print(f"🔥 Erro no OCR de alergias: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/cliente/{user_id}/upload-insurance-card")
+async def upload_insurance_card(user_id: str, file: UploadFile = File(...), db: Session = Depends(get_db)):
+    try:
+        import base64
+        import os
+        
+        user_uuid = uuid.UUID(user_id)
+        user = db.query(User).filter(User.id == user_uuid).first()
+        if not user:
+            raise HTTPException(status_code=404, detail="Usuario nao encontrado")
+            
+        contents = await file.read()
+        filename = file.filename.lower()
+        ext = os.path.splitext(filename)[1]
+        
+        # Salva o arquivo fisicamente na pasta static/uploads
+        os.makedirs("static/uploads", exist_ok=True)
+        unique_filename = f"card_{user_id}_{uuid.uuid4().hex}{ext}"
+        filepath = os.path.join("static/uploads", unique_filename)
+        
+        with open(filepath, "wb") as f:
+            f.write(contents)
+            
+        # Cria a URL publica
+        card_url = f"/static/uploads/{unique_filename}"
+        
+        # Faz o OCR da carteirinha para tentar ler a operadora/convenio
+        mime_type = file.content_type or "image/jpeg"
+        if filename.endswith('.png'):
+            mime_type = 'image/png'
+        elif filename.endswith('.jpg') or filename.endswith('.jpeg'):
+            mime_type = 'image/jpeg'
+            
+        gemini_key = os.getenv("GEMINI_API_KEY")
+        insurance_name = ""
+        
+        if gemini_key:
+            base64_data = base64.b64encode(contents).decode("utf-8")
+            prompt = (
+                "Voce e um assistente administrativo de home care especialista em ler carteirinhas de planos de saude. "
+                "Analise a imagem enviada. Ela contem a frente ou verso de um cartao de convenio/plano de saude. "
+                "Extraia o nome da operadora/empresa do plano de saude (ex: Unimed, Amil, SulAmerica, Bradesco, Cassi, Golden Cross, etc.). "
+                "Se encontrar o numero da carteirinha ou matricula, extraia-o tambem e monte no seguinte padrao: 'Nome do Plano (Nº Numero)'. "
+                "Retorne apenas essa informacao em formato de texto simples, sem markdown ou justificativas. "
+                "Se nao conseguir ler nada plausivel, retorne apenas 'Convenio'."
+            )
+            
+            payload = {
+                "contents": [
+                    {
+                        "parts": [
+                            {"text": prompt},
+                            {
+                                "inlineData": {
+                                   "mimeType": mime_type,
+                                   "data": base64_data
+                                }
+                            }
+                        ]
+                    }
+                ]
+            }
+            
+            candidate_models = ["gemini-3.1-flash-lite", "gemini-3.5-flash", "gemini-2.0-flash"]
+            response = None
+            
+            async with httpx.AsyncClient(timeout=30.0) as client:
+                for model in candidate_models:
+                    url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={gemini_key}"
+                    headers = {"Content-Type": "application/json"}
+                    try:
+                        r = await client.post(url, headers=headers, json=payload)
+                        if r.status_code == 200:
+                            response = r
+                            break
+                    except Exception as ex:
+                        print(f"⚠️ Erro ao tentar modelo {model} para carteirinha: {str(ex)}")
+            
+            if response:
+                resp_json = response.json()
+                insurance_name = resp_json["candidates"][0]["content"]["parts"][0]["text"].strip()
+                
+        if not insurance_name:
+            insurance_name = "Convenio"
+            
+        # Atualiza no banco
+        user.health_insurance = insurance_name
+        user.health_insurance_card = card_url
+        db.commit()
+        
+        return JSONResponse(content={
+            "success": True,
+            "health_insurance": insurance_name,
+            "health_insurance_card": card_url
+        })
+    except Exception as e:
+        print(f"🔥 Erro no upload da carteirinha do convenio: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/api/chat")

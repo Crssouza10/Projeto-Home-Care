@@ -1849,6 +1849,11 @@
                     <div style="background: rgba(0, 212, 255, 0.05); border: 1px solid rgba(0, 212, 255, 0.1); padding: 12px; border-radius: 10px;">
                         <div style="color: #8A9BB5; font-size: 0.8rem; margin-bottom: 4px;">Plano de Saúde</div>
                         <strong style="color: #FFFFFF;" id="clinical-view-insurance">-</strong>
+                        <div id="clinical-view-insurance-card-container" style="margin-top: 10px; display: none;">
+                            <a id="clinical-view-insurance-card-link" href="#" target="_blank">
+                                <img id="clinical-view-insurance-card-img" src="" style="max-width: 100%; max-height: 120px; border-radius: 8px; border: 1px solid rgba(0, 212, 255, 0.3); object-fit: contain;" />
+                            </a>
+                        </div>
                     </div>
                     
                     <!-- Seção Responsável -->
@@ -1901,7 +1906,13 @@
                     </div>
                 </div>
                 <div class="form-group">
-                    <label class="form-label">Alergias</label>
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+                        <label class="form-label" style="margin-bottom:0;">Alergias</label>
+                        <button type="button" class="btn-action" onclick="triggerAllergiesOCR()" style="padding: 4px 10px; font-size: 0.75rem; background: #00D4FF; color: #0e1726; border: none; border-radius: 4px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 4px;">
+                            📷 Importar Laudo (OCR)
+                        </button>
+                        <input type="file" id="allergies-ocr-file" accept="image/*,application/pdf" style="display:none;" onchange="handleAllergiesOCRUpload(event)" />
+                    </div>
                     <textarea class="form-textarea" id="clinical-edit-allergies" placeholder="Ex: Dipirona, Penicilina, Corante vermelho... (deixe em branco se nenhuma)"></textarea>
                 </div>
                 <div class="form-group">
@@ -1909,8 +1920,17 @@
                     <textarea class="form-textarea" id="clinical-edit-conditions" placeholder="Ex: Hipertensão, Diabetes Tipo 2, Alzheimer..."></textarea>
                 </div>
                 <div class="form-group">
-                    <label class="form-label">Plano de Saúde</label>
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+                        <label class="form-label" style="margin-bottom:0;">Plano de Saúde</label>
+                        <button type="button" class="btn-action" onclick="triggerInsuranceCardUpload()" style="padding: 4px 10px; font-size: 0.75rem; background: #10b981; color: #FFFFFF; border: none; border-radius: 4px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 4px;">
+                            📤 Importar Carteirinha
+                        </button>
+                        <input type="file" id="insurance-card-file" accept="image/*" style="display:none;" onchange="handleInsuranceCardUpload(event)" />
+                    </div>
                     <input type="text" class="form-input" id="clinical-edit-insurance" placeholder="Ex: Unimed, Amil, SUS...">
+                    <div id="clinical-edit-insurance-card-preview-container" style="margin-top: 10px; display: none;">
+                        <img id="clinical-edit-insurance-card-preview-img" src="" style="max-height: 80px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.1);" />
+                    </div>
                 </div>
                 
                 <!-- Campos de Edição de Responsável -->
@@ -2785,7 +2805,20 @@
                 document.getElementById('clinical-view-allergies').textContent = clinicalData.allergies || 'Nenhuma alergia relatada';
                 document.getElementById('clinical-view-allergies').style.color = clinicalData.allergies ? '#ef4444' : '#FFFFFF';
                 document.getElementById('clinical-view-conditions').textContent = clinicalData.conditions || 'Nenhuma doença crônica relatada';
+                // Preenche o Plano de Saúde e Carteirinha
                 document.getElementById('clinical-view-insurance').textContent = clinicalData.health_insurance || 'Não informado';
+                const cardUrl = clinicalData.health_insurance_card;
+                const cardContainer = document.getElementById('clinical-view-insurance-card-container');
+                const cardLink = document.getElementById('clinical-view-insurance-card-link');
+                const cardImg = document.getElementById('clinical-view-insurance-card-img');
+                
+                if (cardUrl) {
+                    cardImg.src = cardUrl.startsWith('http') ? cardUrl : `${API_URL}${cardUrl}`;
+                    cardLink.href = cardImg.src;
+                    cardContainer.style.display = 'block';
+                } else {
+                    cardContainer.style.display = 'none';
+                }
                 
                 // Preenche o modo de visualização para Responsável
                 const respObj = responsiblesData[0] || {};
@@ -2821,6 +2854,16 @@
                 document.getElementById('clinical-edit-conditions').value = clinicalData.conditions || '';
                 document.getElementById('clinical-edit-insurance').value = clinicalData.health_insurance || '';
                 
+                const previewContainer = document.getElementById('clinical-edit-insurance-card-preview-container');
+                const previewImg = document.getElementById('clinical-edit-insurance-card-preview-img');
+                if (clinicalData.health_insurance_card) {
+                    const cardUrl = clinicalData.health_insurance_card;
+                    previewImg.src = cardUrl.startsWith('http') ? cardUrl : `${API_URL}${cardUrl}`;
+                    previewContainer.style.display = 'block';
+                } else {
+                    previewContainer.style.display = 'none';
+                }
+                
                 const respObj = responsiblesData[0] || {};
                 document.getElementById('clinical-edit-resp-name').value = respObj.name || '';
                 document.getElementById('clinical-edit-resp-phone').value = respObj.phone || '';
@@ -2848,7 +2891,8 @@
                 blood_type: document.getElementById('clinical-edit-blood').value,
                 allergies: document.getElementById('clinical-edit-allergies').value,
                 conditions: document.getElementById('clinical-edit-conditions').value,
-                health_insurance: document.getElementById('clinical-edit-insurance').value
+                health_insurance: document.getElementById('clinical-edit-insurance').value,
+                health_insurance_card: clinicalData.health_insurance_card || null
             };
             
             try {
@@ -2963,6 +3007,90 @@
             } catch (error) {
                 console.error("Erro ao salvar ficha médica:", error);
                 showToast("❌ Erro ao salvar ficha médica", true);
+            }
+        }
+
+        // =====================================================
+        // 📷 OCR DE ALERGIAS E CARTEIRINHA DE CONVÊNIO
+        // =====================================================
+        function triggerAllergiesOCR() {
+            document.getElementById('allergies-ocr-file').click();
+        }
+        
+        async function handleAllergiesOCRUpload(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            
+            showToast("⏳ Lendo imagem com Inteligência Artificial...");
+            
+            const formData = new FormData();
+            formData.append('file', file);
+            
+            try {
+                const response = await fetch(`${API_URL}/api/cliente/${userId}/ocr-allergies`, {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const result = await response.json();
+                if (result.success && result.allergies) {
+                    const allergiesTextarea = document.getElementById('clinical-edit-allergies');
+                    const currentValue = allergiesTextarea.value.trim();
+                    
+                    if (currentValue) {
+                        allergiesTextarea.value = currentValue + ", " + result.allergies;
+                    } else {
+                        allergiesTextarea.value = result.allergies;
+                    }
+                    
+                    showToast("✅ Alergias extraídas e adicionadas!");
+                } else {
+                    showToast("❌ Não foi possível ler as alergias", true);
+                }
+            } catch (error) {
+                console.error("Erro no OCR de alergias:", error);
+                showToast("❌ Erro ao processar OCR", true);
+            }
+        }
+        
+        function triggerInsuranceCardUpload() {
+            document.getElementById('insurance-card-file').click();
+        }
+        
+        async function handleInsuranceCardUpload(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            
+            showToast("⏳ Importando carteirinha...");
+            
+            const formData = new FormData();
+            formData.append('file', file);
+            
+            try {
+                const response = await fetch(`${API_URL}/api/cliente/${userId}/upload-insurance-card`, {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const result = await response.json();
+                if (result.success) {
+                    document.getElementById('clinical-edit-insurance').value = result.health_insurance;
+                    clinicalData.health_insurance = result.health_insurance;
+                    clinicalData.health_insurance_card = result.health_insurance_card;
+                    
+                    const previewContainer = document.getElementById('clinical-edit-insurance-card-preview-container');
+                    const previewImg = document.getElementById('clinical-edit-insurance-card-preview-img');
+                    const cardUrl = result.health_insurance_card;
+                    previewImg.src = cardUrl.startsWith('http') ? cardUrl : `${API_URL}${cardUrl}`;
+                    previewContainer.style.display = 'block';
+                    
+                    showToast("✅ Carteirinha enviada e lida com sucesso!");
+                } else {
+                    showToast("❌ Erro ao enviar carteirinha", true);
+                }
+            } catch (error) {
+                console.error("Erro no upload da carteirinha:", error);
+                showToast("❌ Erro ao enviar carteirinha", true);
             }
         }
 
