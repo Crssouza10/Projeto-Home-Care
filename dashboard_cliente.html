@@ -1552,7 +1552,7 @@
                 </div>
                 
                 <!-- 👨‍⚕️ RESPONSÁVEIS -->
-                <div id="screen-responsibles" class="screen">
+                <div id="screen-responsibles" class="screen" style="display: none !important;">
                     <div class="section-header-btn" onclick="scrollToSection('responsibles')">
                         <span class="section-icon">👨‍⚕️</span>
                         Responsáveis
@@ -1562,7 +1562,7 @@
                 </div>
                 
                 <!-- 📞 CONTATOS DE EMERGÊNCIA -->
-                <div id="screen-contacts" class="screen">
+                <div id="screen-contacts" class="screen" style="display: none !important;">
                     <div class="section-header-btn" onclick="scrollToSection('contacts')">
                         <span class="section-icon">📞</span>
                         Contatos de Emergência
@@ -1850,6 +1850,30 @@
                         <div style="color: #8A9BB5; font-size: 0.8rem; margin-bottom: 4px;">Plano de Saúde</div>
                         <strong style="color: #FFFFFF;" id="clinical-view-insurance">-</strong>
                     </div>
+                    
+                    <!-- Seção Responsável -->
+                    <div style="background: rgba(0, 212, 255, 0.05); border: 1px solid rgba(0, 212, 255, 0.1); padding: 12px; border-radius: 10px;">
+                        <div style="color: #8A9BB5; font-size: 0.8rem; margin-bottom: 4px;">Responsável (Alerta missed)</div>
+                        <div style="display:flex; justify-content:space-between; align-items:center;">
+                            <strong style="color: #FFFFFF;" id="clinical-view-resp-name">-</strong>
+                            <strong style="color: #00D4FF;" id="clinical-view-resp-phone">-</strong>
+                        </div>
+                    </div>
+                    
+                    <!-- Seção Contatos de Emergência -->
+                    <div style="background: rgba(0, 212, 255, 0.05); border: 1px solid rgba(0, 212, 255, 0.1); padding: 12px; border-radius: 10px;">
+                        <div style="color: #8A9BB5; font-size: 0.8rem; margin-bottom: 8px;">Contatos de Emergência</div>
+                        <div style="display:flex; flex-direction:column; gap:8px;">
+                            <div style="display:flex; justify-content:space-between; font-size:0.95rem;">
+                                <span id="clinical-view-contact1-name" style="color:#FFF;">-</span>
+                                <strong id="clinical-view-contact1-phone" style="color:#00D4FF;">-</strong>
+                            </div>
+                            <div style="display:flex; justify-content:space-between; font-size:0.95rem; border-top: 1px solid rgba(255,255,255,0.05); padding-top:6px;">
+                                <span id="clinical-view-contact2-name" style="color:#FFF;">-</span>
+                                <strong id="clinical-view-contact2-phone" style="color:#00D4FF;">-</strong>
+                            </div>
+                        </div>
+                    </div>
                 </div>
                 <button type="button" class="btn-submit" onclick="toggleClinicalEdit(true)" style="background: linear-gradient(135deg, #667eea, #764ba2);">✏️ Editar Ficha Médica</button>
             </div>
@@ -1887,6 +1911,50 @@
                 <div class="form-group">
                     <label class="form-label">Plano de Saúde</label>
                     <input type="text" class="form-input" id="clinical-edit-insurance" placeholder="Ex: Unimed, Amil, SUS...">
+                </div>
+                
+                <!-- Campos de Edição de Responsável -->
+                <div style="border-top: 1px solid rgba(0, 212, 255, 0.15); margin: 20px 0; padding-top: 15px;">
+                    <h4 style="color:#00D4FF; margin-bottom:12px; font-size:1.05rem;">👨‍⚕️ Responsável pelos Alertas</h4>
+                    <div class="form-row" style="display:flex; gap:10px;">
+                        <div class="form-group" style="flex:1;">
+                            <label class="form-label">Nome</label>
+                            <input type="text" class="form-input" id="clinical-edit-resp-name" placeholder="Nome do Responsável">
+                        </div>
+                        <div class="form-group" style="flex:1;">
+                            <label class="form-label">Celular (WhatsApp)</label>
+                            <input type="tel" class="form-input" id="clinical-edit-resp-phone" placeholder="Ex: 11999999999">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Campos de Edição de Contatos de Emergência -->
+                <div style="border-top: 1px solid rgba(0, 212, 255, 0.15); margin-bottom: 20px; padding-top: 15px;">
+                    <h4 style="color:#00D4FF; margin-bottom:12px; font-size:1.05rem;">📞 Contatos de Emergência</h4>
+                    
+                    <div style="margin-bottom:15px; background:rgba(255,255,255,0.02); padding:10px; border-radius:8px; border:1px solid rgba(255,255,255,0.05);">
+                        <label class="form-label" style="font-weight:600; color:#FFF; margin-bottom:6px;">Contato 1</label>
+                        <div class="form-row" style="display:flex; gap:10px;">
+                            <div class="form-group" style="flex:1; margin-bottom:0;">
+                                <input type="text" class="form-input" id="clinical-edit-contact1-name" placeholder="Nome">
+                            </div>
+                            <div class="form-group" style="flex:1; margin-bottom:0;">
+                                <input type="tel" class="form-input" id="clinical-edit-contact1-phone" placeholder="Celular">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div style="background:rgba(255,255,255,0.02); padding:10px; border-radius:8px; border:1px solid rgba(255,255,255,0.05);">
+                        <label class="form-label" style="font-weight:600; color:#FFF; margin-bottom:6px;">Contato 2</label>
+                        <div class="form-row" style="display:flex; gap:10px;">
+                            <div class="form-group" style="flex:1; margin-bottom:0;">
+                                <input type="text" class="form-input" id="clinical-edit-contact2-name" placeholder="Nome">
+                            </div>
+                            <div class="form-group" style="flex:1; margin-bottom:0;">
+                                <input type="tel" class="form-input" id="clinical-edit-contact2-phone" placeholder="Celular">
+                            </div>
+                        </div>
+                    </div>
                 </div>
                 <div style="display: flex; gap: 10px; margin-top: 20px;">
                     <button type="button" class="btn-logout" onclick="toggleClinicalEdit(false)" style="flex: 1; margin: 0; padding: 12px;">Cancelar</button>
@@ -2719,6 +2787,19 @@
                 document.getElementById('clinical-view-conditions').textContent = clinicalData.conditions || 'Nenhuma doença crônica relatada';
                 document.getElementById('clinical-view-insurance').textContent = clinicalData.health_insurance || 'Não informado';
                 
+                // Preenche o modo de visualização para Responsável
+                const respObj = responsiblesData[0] || {};
+                document.getElementById('clinical-view-resp-name').textContent = respObj.name || 'Não cadastrado';
+                document.getElementById('clinical-view-resp-phone').textContent = respObj.phone || '-';
+
+                // Preenche o modo de visualização para Contatos de Emergência
+                const contact1 = contactsData[0] || {};
+                const contact2 = contactsData[1] || {};
+                document.getElementById('clinical-view-contact1-name').textContent = contact1.name || 'Não cadastrado';
+                document.getElementById('clinical-view-contact1-phone').textContent = contact1.phone || '-';
+                document.getElementById('clinical-view-contact2-name').textContent = contact2.name || 'Não cadastrado';
+                document.getElementById('clinical-view-contact2-phone').textContent = contact2.phone || '-';
+                
                 // Reseta para o modo de exibição normal
                 toggleClinicalEdit(false);
                 
@@ -2739,6 +2820,17 @@
                 document.getElementById('clinical-edit-allergies').value = clinicalData.allergies || '';
                 document.getElementById('clinical-edit-conditions').value = clinicalData.conditions || '';
                 document.getElementById('clinical-edit-insurance').value = clinicalData.health_insurance || '';
+                
+                const respObj = responsiblesData[0] || {};
+                document.getElementById('clinical-edit-resp-name').value = respObj.name || '';
+                document.getElementById('clinical-edit-resp-phone').value = respObj.phone || '';
+
+                const contact1 = contactsData[0] || {};
+                const contact2 = contactsData[1] || {};
+                document.getElementById('clinical-edit-contact1-name').value = contact1.name || '';
+                document.getElementById('clinical-edit-contact1-phone').value = contact1.phone || '';
+                document.getElementById('clinical-edit-contact2-name').value = contact2.name || '';
+                document.getElementById('clinical-edit-contact2-phone').value = contact2.phone || '';
                 
                 viewDiv.style.display = 'none';
                 editForm.style.display = 'block';
@@ -2761,21 +2853,116 @@
             
             try {
                 showToast("⏳ Salvando...");
-                const response = await fetch(`${API_URL}/api/cliente/${userId}/clinical-info`, {
-                    method: 'PUT',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload)
-                });
                 
-                if (response.ok) {
-                    showToast("✅ Ficha médica atualizada!");
+                const savePromises = [];
+
+                // 1. Salva Ficha Médica
+                savePromises.push(
+                    fetch(`${API_URL}/api/cliente/${userId}/clinical-info`, {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    })
+                );
+
+                // 2. Salva Responsável
+                const respName = document.getElementById('clinical-edit-resp-name').value.trim();
+                const respPhone = document.getElementById('clinical-edit-resp-phone').value.trim();
+                const existingResp = responsiblesData[0];
+
+                if (respName || respPhone) {
+                    const respPayload = {
+                        user_id: userId,
+                        name: respName || 'Responsável',
+                        relationship: 'Familiar',
+                        phone: respPhone,
+                        notify_whatsapp: true,
+                        notify_call: false
+                    };
+                    const url = existingResp ? `${API_URL}/api/cliente/${userId}/responsibles/${existingResp.id}` : `${API_URL}/api/cliente/${userId}/responsibles`;
+                    const method = existingResp ? 'PUT' : 'POST';
+                    savePromises.push(
+                        fetch(url, {
+                            method,
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify(respPayload)
+                        })
+                    );
+                } else if (existingResp) {
+                    savePromises.push(
+                        fetch(`${API_URL}/api/cliente/${userId}/responsibles/${existingResp.id}`, { method: 'DELETE' })
+                    );
+                }
+
+                // 3. Salva Contato de Emergência 1
+                const c1Name = document.getElementById('clinical-edit-contact1-name').value.trim();
+                const c1Phone = document.getElementById('clinical-edit-contact1-phone').value.trim();
+                const existingC1 = contactsData[0];
+
+                if (c1Name || c1Phone) {
+                    const c1Payload = {
+                        name: c1Name || 'Contato de Emergência 1',
+                        type: 'Emergência',
+                        phone: c1Phone,
+                        email: '',
+                        notes: ''
+                    };
+                    const url = existingC1 ? `${API_URL}/api/emergency-contacts/${existingC1.id}` : `${API_URL}/api/cliente/${userId}/emergency-contacts`;
+                    const method = existingC1 ? 'PUT' : 'POST';
+                    savePromises.push(
+                        fetch(url, {
+                            method,
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify(c1Payload)
+                        })
+                    );
+                } else if (existingC1) {
+                    savePromises.push(
+                        fetch(`${API_URL}/api/emergency-contacts/${existingC1.id}`, { method: 'DELETE' })
+                    );
+                }
+
+                // 4. Salva Contato de Emergência 2
+                const c2Name = document.getElementById('clinical-edit-contact2-name').value.trim();
+                const c2Phone = document.getElementById('clinical-edit-contact2-phone').value.trim();
+                const existingC2 = contactsData[1];
+
+                if (c2Name || c2Phone) {
+                    const c2Payload = {
+                        name: c2Name || 'Contato de Emergência 2',
+                        type: 'Emergência',
+                        phone: c2Phone,
+                        email: '',
+                        notes: ''
+                    };
+                    const url = existingC2 ? `${API_URL}/api/emergency-contacts/${existingC2.id}` : `${API_URL}/api/cliente/${userId}/emergency-contacts`;
+                    const method = existingC2 ? 'PUT' : 'POST';
+                    savePromises.push(
+                        fetch(url, {
+                            method,
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify(c2Payload)
+                        })
+                    );
+                } else if (existingC2) {
+                    savePromises.push(
+                        fetch(`${API_URL}/api/emergency-contacts/${existingC2.id}`, { method: 'DELETE' })
+                    );
+                }
+
+                const responses = await Promise.all(savePromises);
+                const allOk = responses.every(r => r.ok);
+
+                if (allOk) {
+                    showToast("✅ Ficha médica e contatos atualizados!");
                     closeModal('modal-clinical-info');
+                    await reloadAndRefresh();
                 } else {
-                    showToast("❌ Erro ao salvar ficha médica");
+                    showToast("❌ Alguns dados não puderam ser salvos", true);
                 }
             } catch (error) {
                 console.error("Erro ao salvar ficha médica:", error);
-                showToast("❌ Erro ao salvar ficha médica");
+                showToast("❌ Erro ao salvar ficha médica", true);
             }
         }
 
