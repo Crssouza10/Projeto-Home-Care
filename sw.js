@@ -101,23 +101,53 @@ self.addEventListener('fetch', event => {
 self.addEventListener('push', event => {
   console.log('[SW] Push recebido:', event);
   
+  let title = '💊 CR$ HOME CARE AI';
+  let body = 'Você tem um novo lembrete!';
+  let icon = '/static/icons/icon-192x192.png';
+  let badge = '/static/icons/icon-72x72.png';
+  let notificationData = { url: '/dashboard-cliente' };
+  let actions = [
+    {action: 'explore', title: '🔍 Abrir Painel'},
+    {action: 'close', title: 'Fechar'}
+  ];
+  
+  if (event.data) {
+    try {
+      const payload = event.data.json();
+      title = payload.title || title;
+      body = payload.body || body;
+      icon = payload.icon || icon;
+      badge = payload.badge || badge;
+      if (payload.data) {
+        notificationData = { ...notificationData, ...payload.data };
+      }
+      
+      // Se houver ID do medicamento, adiciona ação direta de confirmação no push
+      if (payload.data && payload.data.medication_id) {
+        actions = [
+          {action: 'take', title: '✅ Tomei o Remédio'},
+          {action: 'explore', title: '🔍 Abrir'}
+        ];
+      }
+    } catch (e) {
+      console.warn('[SW] Payload não é JSON válido, tratando como texto:', e);
+      body = event.data.text();
+    }
+  }
+  
   const options = {
-    body: event.data ? event.data.text() : 'Você tem um novo lembrete!',
-    icon: '/icon-192x192.png',
-    badge: '/badge-72x72.png',
-    vibrate: [100, 50, 100],
-    data: {
-      dateOfArrival: Date.now(),
-      primaryKey: 1
-    },
-    actions: [
-      {action: 'explore', title: 'Ver Agora'},
-      {action: 'close', title: 'Fechar'}
-    ]
+    body: body,
+    icon: icon,
+    badge: badge,
+    vibrate: [200, 100, 200, 100, 200],
+    data: notificationData,
+    actions: actions,
+    tag: notificationData.medication_id || 'med-alert',
+    requireInteraction: true // Notificação fica fixa até o usuário interagir
   };
   
   event.waitUntil(
-    self.registration.showNotification('CR$ HOME CARE AI', options)
+    self.registration.showNotification(title, options)
   );
 });
 
@@ -127,9 +157,52 @@ self.addEventListener('notificationclick', event => {
   
   event.notification.close();
   
-  if (event.action === 'explore') {
+  const targetUrl = event.notification.data && event.notification.data.url 
+    ? event.notification.data.url 
+    : '/dashboard-cliente';
+  
+  if (event.action === 'take') {
+    const medId = event.notification.data.medication_id;
+    if (medId) {
+      event.waitUntil(
+        fetch(`/api/medications/${medId}/take`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' }
+        })
+        .then(response => {
+          if (response.ok) {
+            console.log('[SW] Confirmado como tomado com sucesso!');
+            // Envia mensagem para abas abertas recarregarem os dados
+            return self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then(clientList => {
+              clientList.forEach(client => {
+                client.postMessage({
+                  type: 'MEDICAMENTO_TOMADO_BACKGROUND',
+                  medicationId: medId
+                });
+              });
+            });
+          }
+        })
+        .catch(err => {
+          console.error('[SW] Erro ao registrar tomada do remédio:', err);
+        })
+      );
+    }
+  } else {
+    // Ação padrão (clicou no card ou no botão explorar)
     event.waitUntil(
-      clients.openWindow('/dashboard-cliente')
+      self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then(clientList => {
+        // Tenta focar em uma aba que já esteja aberta no dashboard
+        for (const client of clientList) {
+          if (client.url.includes(targetUrl) && 'focus' in client) {
+            return client.focus();
+          }
+        }
+        // Se não tiver aba aberta, abre uma nova
+        if (self.clients.openWindow) {
+          return self.clients.openWindow(targetUrl);
+        }
+      })
     );
   }
 });

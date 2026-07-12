@@ -1982,11 +1982,15 @@ async def check_reminders(db: Session = Depends(get_db)):
                     }
                     payload = json.dumps({
                         "title": "💊 Hora do Medicamento!",
-                        "body": f"Olá {user.full_name}, está na hora de tomar: {med.name} ({med.dosage}).",
+                        "body": f"Olá {user.full_name}, está na hora de tomar seu remédio {med.name} ({med.dosage}) agendado para às {med.time}.",
                         "icon": "/static/icons/icon-192x192.png",
                         "badge": "/static/icons/icon-72x72.png",
                         "data": {
-                            "url": "/dashboard-cliente"
+                            "url": "/dashboard-cliente",
+                            "medication_id": str(med.id),
+                            "medication_name": med.name,
+                            "medication_dosage": med.dosage,
+                            "medication_time": med.time
                         }
                     })
                     print(f"📤 Enviando Web Push para {user.full_name}...")

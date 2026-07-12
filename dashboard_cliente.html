@@ -20,11 +20,16 @@
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Inter', sans-serif; }
         
+        html, body {
+            width: 100%;
+            max-width: 100%;
+            overflow-x: hidden;
+            position: relative;
+        }
         body {
             background: linear-gradient(135deg, #0A1128 0%, #1a2f4a 100%);
             min-height: 100vh;
             color: #FFFFFF;
-            overflow-x: hidden;
             font-size: 17px; /* Base 17px para idosos */
         }
         
@@ -1201,7 +1206,11 @@
             .header-stat-value { font-size: 1.2rem; }
             .header-stat-label { font-size: 0.75rem; }
             
-            .main-container { padding: 0 8px 12px; }
+            .main-container { 
+                padding: 0 8px 12px; 
+                max-width: 100%;
+                overflow-x: hidden;
+            }
             .section { padding: 12px; margin-bottom: 12px; border-radius: 16px; }
             
             /* Navegação por seções - sempre empilhada */
@@ -1230,6 +1239,9 @@
             .card-actions-group { 
                 gap: 6px; 
                 margin-left: auto;
+                display: flex;
+                flex-wrap: wrap;
+                justify-content: flex-end;
             }
             
             /* Botões mantêm 48px no mobile */
@@ -1452,7 +1464,7 @@
             <div class="header-info">
                 <h2 id="greeting">Boa noite!</h2>
                 <div class="user-name" id="user-name">Eliane Amorzinho</div>
-                <div style="font-size: 0.7rem; color: #00D4FF; opacity: 0.8; margin-top: 2px; font-weight: 500;">v2.1.0 (build 2026-07-10)</div>
+                <div style="font-size: 0.7rem; color: #00D4FF; opacity: 0.8; margin-top: 2px; font-weight: 500;">v2.1.1 (build 2026-07-12)</div>
             </div>
         </div>
         <div class="header-right">
@@ -2020,60 +2032,7 @@
             
             // Chave VAPID para Push (substitua pela sua chave pública real)
             // const publicVapidKey = 'BEl62iUYjUivxIkv69yViEuiBIa-Ib9-SkvMeAtA3LFgDzkrxZQjSdtFnLjZ3U3Xh7p1q4V8Q1J2Q3Q4Q5Q6Q7'; // ← SUBSTITUA PELA SUA CHAVE
-        // ============================================
-        // 🔊 FUNÇÃO DE ÁUDIO (CORRIGIDA)
-        // ============================================
-        async function tocarAlertaMedicamento(nome, dosagem, tipo = "lembrete") {
-            try {
-                console.log('🔔 Gerando áudio:', tipo, '-', nome);
-                console.log('📡 API_URL:', API_URL);
-                
-                // ✅ VERIFICAÇÃO DE SEGURANÇA
-                if (!API_URL || typeof API_URL === 'undefined') {
-                    console.error('❌ API_URL não definida!');
-                    return false;
-                }
-                
-                const mensagens = {
-                    "lembrete": `Atenção! Hora de tomar ${nome}. ${dosagem}.`,
-                    "pergunta": `${nome}. Você tomou o remédio?`,
-                    "alerta_responsavel": `Alerta! ${nome} não foi tomado no horário.`
-                };
-                
-                const response = await fetch(`${API_URL}/api/generate-audio`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        medication: nome,
-                        dosage: dosagem,
-                        instructions: mensagens[tipo] || mensagens["lembrete"]
-                    })
-                });
-                
-                const data = await response.json();
-                
-                if (data.status === 'success' && data.url) {
-                    const audioUrl = data.url.startsWith('http') 
-                        ? data.url 
-                        : `${API_URL}${data.url}`;
-                    
-                    console.log('🎵 Tocando áudio:', audioUrl);
-                    const audio = new Audio(audioUrl);
-                    audio.volume = 1.0;
-                    await audio.play();
-                    console.log('✅ Áudio tocando!');
-                    return true;
-                }
-                return false;
-            } catch (error) {
-                console.error('❌ Erro ao tocar áudio:', error);
-                if (error.name === 'NotAllowedError') {
-                    window.pendingAudioAlert = { nome, dosagem, tipo };
-                    showToast('🔊 Dica: Toque na tela para liberar o som dos alarmes!', true);
-                }
-                return false;
-            }
-        }
+
         
         // ============================================
         // 🎯 INICIALIZAÇÃO (DOM Ready)
@@ -2359,7 +2318,13 @@
                         });
                         
                         // Tocar áudio
-                        tocarAlertaMedicamento(event.data.nome, event.data.dosagem, "lembrete");
+                        tocarAlertaMedicamento(event.data.nome, event.data.dosagem, "lembrete", event.data.hora || event.data.time || '');
+                    } else if (event.data.type === 'MEDICAMENTO_TOMADO_BACKGROUND') {
+                        console.log('⚡ Medicamento marcado como tomado via background:', event.data.medicationId);
+                        showToast('✅ Confirmado como tomado via notificação!');
+                        if (typeof reloadAndRefresh === 'function') {
+                            reloadAndRefresh();
+                        }
                     }
                 });
             }
@@ -5529,14 +5494,24 @@
         }
 
         // ============================================
-        // 🔊 ÁUDIO TTS - VERSÃO VERCEL-COMPATÍVEL
+        // 🔊 ÁUDIO TTS - VERSÃO VERCEL-COMPATÍVEL (RETORNA PROMISE)
         // ============================================
-        async function tocarAlertaMedicamento(nome, dosagem, tipo = "lembrete") {
+        async function tocarAlertaMedicamento(nome, dosagem, tipo = "lembrete", hora = "") {
             try {
+                // Formata hora se for HH:MM:SS para HH:MM
+                let horaFormatada = hora;
+                if (hora && typeof hora === 'string') {
+                    const parts = hora.split(':');
+                    if (parts.length >= 2) {
+                        horaFormatada = `${parts[0]}:${parts[1]}`;
+                    }
+                }
+
                 const mensagens = {
-                    "lembrete": `Atenção! Hora de tomar ${nome}. ${dosagem}.`,
-                    "pergunta": `${nome}. Você tomou o remédio?`,
-                    "alerta_responsavel": `Alerta! ${nome} não foi tomado no horário.`
+                    "lembrete": `Atenção! Está na hora de tomar o seu remédio ${nome}, ${dosagem}, agendado para às ${horaFormatada || 'este horário'}.`,
+                    "pergunta": `Você já tomou o seu remédio ${nome}, ${dosagem}, agendado para às ${horaFormatada || 'este horário'}?`,
+                    "alerta_responsavel": `Alerta! O remédio ${nome} agendado para às ${horaFormatada || 'este horário'} não foi tomado no horário.`,
+                    "reagendar": `Deseja reagendar o remédio ${nome} agendado para às ${horaFormatada || 'este horário'} para que horas?`
                 };
                 
                 console.log('🔔 Gerando áudio:', tipo, '-', nome);
@@ -5569,15 +5544,29 @@
                     console.log('🎵 Tocando áudio:', audioUrl);
                     const audio = new Audio(audioUrl);
                     audio.volume = 1.0;
-                    await audio.play();
-                    console.log('✅ Áudio tocando!');
-                    return true;
+                    
+                    return await new Promise((resolve) => {
+                        audio.onended = () => {
+                            console.log('✅ Áudio terminou de tocar!');
+                            resolve(true);
+                        };
+                        audio.onerror = (err) => {
+                            console.error('❌ Erro na reprodução do áudio:', err);
+                            resolve(false);
+                        };
+                        audio.play().then(() => {
+                            console.log('✅ Áudio tocando!');
+                        }).catch(err => {
+                            console.error('❌ Não foi possível reproduzir automaticamente:', err);
+                            resolve(false);
+                        });
+                    });
                 }
                 return false;
             } catch (error) {
                 console.error('❌ Erro ao tocar áudio:', error);
                 if (error.name === 'NotAllowedError') {
-                    window.pendingAudioAlert = { nome, dosagem, tipo };
+                    window.pendingAudioAlert = { nome, dosagem, tipo, hora };
                     showToast('🔊 Dica: Toque na tela para liberar o som dos alarmes!', true);
                 }
                 return false;
@@ -5708,7 +5697,7 @@
                     // 🎯 CASO 1: HORA EXATA (diff = 0)
                     if (diffMinutos === 0 && status !== 'taken' && status !== 'not_taken') {
                         console.log(`🔔 HORA EXATA: ${med.name} às ${horaAtual} (status: ${status})`);
-                        tocarAlertaMedicamento(med.name, med.dosage, "lembrete");
+                        tocarAlertaMedicamento(med.name, med.dosage, "lembrete", med.time);
                         
                         const card = document.querySelector(`#card-med-${med.id} .med-actions-container`);
                         if (card) {
@@ -5724,7 +5713,6 @@
                         const medState = monitoringState.notifiedMeds[med.id];
                         if (!medState?.secondAlert) {
                             console.log(`❓ +5 MIN: ${med.name} - Acionando modal`);
-                            tocarAlertaMedicamento(med.name, med.dosage, "pergunta");
                             mostrarModalConfirmacao(med);
                             
                             if (!monitoringState.notifiedMeds[med.id]) {
@@ -5754,9 +5742,62 @@
         }
 
         // ============================================
-        // 📱 MODAL DE CONFIRMAÇÃO
+        // 🎙️ ASSISTENTE DE VOZ DOS MODAIS
         // ============================================
-        function mostrarModalConfirmacao(med) {
+        let activeVoiceRecognition = null;
+
+        function extrairHorarioDoTexto(texto) {
+            texto = texto.toLowerCase();
+            const regexHoraMin = /(\d{1,2})[:h](\d{2})/;
+            const match = texto.match(regexHoraMin);
+            if (match) {
+                let h = parseInt(match[1]);
+                let m = parseInt(match[2]);
+                return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+            }
+
+            const numeros = {
+                "uma": 1, "um": 1, "duas": 2, "dois": 2, "três": 3, "tres": 3, "quatro": 4, "cinco": 5, 
+                "seis": 6, "sete": 7, "oito": 8, "nove": 9, "dez": 10, "onze": 11, "doze": 12, 
+                "treze": 13, "quatorze": 14, "catorze": 14, "quinze": 15, "dezesseis": 16, "dezessete": 17, 
+                "dezoito": 18, "dezenove": 19, "vinte": 20, "trinta": 30, "quarenta": 40, "cinquenta": 50
+            };
+
+            let palavras = texto.split(/\s+/);
+            let numerosEncontrados = [];
+            for (let p of palavras) {
+                p = p.replace(/[,.!?]/g, '');
+                if (!isNaN(p)) {
+                    numerosEncontrados.push(parseInt(p));
+                } else if (numeros[p] !== undefined) {
+                    numerosEncontrados.push(numeros[p]);
+                } else if (p === "meia") {
+                    numerosEncontrados.push(30);
+                }
+            }
+
+            if (numerosEncontrados.length >= 1) {
+                let h = numerosEncontrados[0];
+                let m = 0;
+                if (numerosEncontrados.length >= 2) {
+                    m = numerosEncontrados[1];
+                }
+                if (h >= 0 && h < 24 && m >= 0 && m < 60) {
+                    return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+                }
+            }
+            return null;
+        }
+
+        // ============================================
+        // 📱 MODAL DE CONFIRMAÇÃO COM VOZ
+        // ============================================
+        async function mostrarModalConfirmacao(med) {
+            if (activeVoiceRecognition) {
+                try { activeVoiceRecognition.abort(); } catch(e) {}
+                activeVoiceRecognition = null;
+            }
+
             document.querySelectorAll('.modal-overlay').forEach(el => el.remove());
             
             const modal = document.createElement('div');
@@ -5766,21 +5807,96 @@
                     <div style="background:white;padding:40px;border-radius:20px;max-width:500px;width:90%;text-align:center;box-shadow:0 10px 40px rgba(0,0,0,0.5);color:#333;">
                         <h2 style="color:#ff6b6b;margin:0 0 20px 0;font-size:28px;">⏰ VOCÊ TOMOU O REMÉDIO?</h2>
                         <h3 style="color:#333;margin:0 0 10px 0;font-weight:600;">${med.name}</h3>
-                        <p style="color:#666;font-size:18px;margin:0 0 30px 0;">${med.dosage}</p>
-                        <div style="display:flex;gap:15px;justify-content:center;flex-wrap:wrap;">
+                        <p style="color:#666;font-size:18px;margin:0 0 20px 0;">${med.dosage}</p>
+                        <div style="display:flex;gap:15px;justify-content:center;flex-wrap:wrap;margin-bottom:20px;">
                             <button onclick="confirmarTomada('${med.id}', true)" style="flex:1;min-width:140px;padding:18px;background:#10b981;color:white;border:none;border-radius:12px;font-size:18px;font-weight:600;cursor:pointer;">✅ TOMEI</button>
                             <button onclick="confirmarTomada('${med.id}', false)" style="flex:1;min-width:140px;padding:18px;background:#ef4444;color:white;border:none;border-radius:12px;font-size:18px;font-weight:600;cursor:pointer;">❌ NÃO TOMEI</button>
+                        </div>
+                        <div id="voice-status-${med.id}" style="font-size:16px;color:#666;background:#f3f4f6;padding:12px;border-radius:10px;display:flex;align-items:center;justify-content:center;gap:8px;">
+                            <span>🔊 Reproduzindo áudio...</span>
                         </div>
                     </div>
                 </div>
             `;
             document.body.appendChild(modal);
+
+            const statusEl = document.getElementById(`voice-status-${med.id}`);
+
+            // 1. Toca o áudio de pergunta e aguarda terminar
+            const audioTocando = await tocarAlertaMedicamento(med.name, med.dosage, "pergunta", med.time);
+            if (!audioTocando) {
+                if (statusEl) statusEl.innerHTML = "❌ Não foi possível tocar o áudio do alerta.";
+                return;
+            }
+
+            // 2. Inicia reconhecimento de voz
+            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+            if (!SpeechRecognition) {
+                if (statusEl) statusEl.innerHTML = "⚠️ Reconhecimento de voz não suportado.";
+                return;
+            }
+
+            if (statusEl) {
+                statusEl.innerHTML = "<span style='color:#10b981;font-weight:600;'>🎙️ Ouvindo... responda com 'Sim' ou 'Não'</span>";
+                statusEl.style.background = "rgba(16, 185, 129, 0.1)";
+            }
+
+            const rec = new SpeechRecognition();
+            rec.lang = 'pt-BR';
+            rec.continuous = false;
+            rec.interimResults = false;
+            activeVoiceRecognition = rec;
+
+            rec.onresult = function(event) {
+                const text = event.results[0][0].transcript.toLowerCase();
+                console.log('🎙️ Reconhecido no modal de confirmação:', text);
+                
+                if (statusEl) statusEl.innerHTML = `💬 Entendi: "${text}"`;
+
+                const simKeywords = ["sim", "tomei", "já", "confirmar", "confirmado", "ok", "certo", "toma", "tome"];
+                const naoKeywords = ["não", "nao", "reagendar", "depois", "outro", "atrasar", "reagenda", "reagende", "cancelar"];
+
+                const matchesSim = simKeywords.some(kw => text.includes(kw));
+                const matchesNao = naoKeywords.some(kw => text.includes(kw));
+
+                if (matchesSim) {
+                    setTimeout(() => {
+                        confirmarTomada(med.id, true);
+                    }, 1000);
+                } else if (matchesNao) {
+                    setTimeout(() => {
+                        confirmarTomada(med.id, false);
+                    }, 1000);
+                } else {
+                    if (statusEl) statusEl.innerHTML = `❓ Não entendi. Responda 'Sim' ou 'Não'.`;
+                }
+            };
+
+            rec.onerror = function(event) {
+                console.error('🎙️ Erro de reconhecimento:', event.error);
+                if (statusEl) statusEl.innerHTML = `⚠️ Não consegui ouvir. Escolha tocando nos botões acima.`;
+            };
+
+            rec.onend = function() {
+                activeVoiceRecognition = null;
+            };
+
+            try {
+                rec.start();
+            } catch (err) {
+                console.error('❌ Falha ao iniciar reconhecimento:', err);
+            }
         }
 
         // ============================================
         // ✅/❌ CONFIRMAÇÃO DE TOMADA
         // ============================================
         async function confirmarTomada(medId, tomou) {
+            if (activeVoiceRecognition) {
+                try { activeVoiceRecognition.abort(); } catch(e) {}
+                activeVoiceRecognition = null;
+            }
+
             try {
                 console.log('Confirmando:', { medId, tomou });
                 document.querySelectorAll('.modal-overlay').forEach(el => el.remove());
@@ -5804,15 +5920,17 @@
         }
 
         // ============================================
-        // 🔄 MODAL DE REAGENDAMENTO
+        // 🔄 MODAL DE REAGENDAMENTO COM VOZ
         // ============================================
-        function mostrarOpcaoReagendar(medId) {
+        async function mostrarOpcaoReagendar(medId) {
+            if (activeVoiceRecognition) {
+                try { activeVoiceRecognition.abort(); } catch(e) {}
+                activeVoiceRecognition = null;
+            }
+
             document.querySelectorAll('.modal-overlay').forEach(el => el.remove());
             
             const med = medicationsData.find(m => m.id === medId);
-            if (med) {
-                tocarAlertaMedicamento(med.name, med.dosage, "reagendar");
-            }
             
             const modal = document.createElement('div');
             modal.className = 'modal-overlay';
@@ -5823,15 +5941,81 @@
                         <p style="color:#666;font-size:16px;margin:0 0 20px 0;">O responsável foi notificado.<br><br><strong>Deseja reagendar?</strong></p>
                         <label style="display:block;text-align:left;margin-bottom:8px;color:#666;font-weight:500;">Novo horário:</label>
                         <input type="time" id="novo-horario" style="padding:14px;font-size:18px;border:2px solid #ddd;border-radius:10px;margin:0 0 25px 0;width:100%;box-sizing:border-box;font-weight:600;">
-                        <div style="display:flex;gap:12px;justify-content:center;">
+                        <div style="display:flex;gap:12px;justify-content:center;margin-bottom:20px;">
                             <button onclick="reagendarMedicamento('${medId}')" style="flex:1;padding:16px;background:#3b82f6;color:white;border:none;border-radius:10px;font-size:16px;font-weight:600;cursor:pointer;">🔄 REAGENDAR</button>
                             <button onclick="fecharReagendamento('${medId}')" style="flex:1;padding:16px;background:#9ca3af;color:white;border:none;border-radius:10px;font-size:16px;font-weight:600;cursor:pointer;">FECHAR</button>
+                        </div>
+                        <div id="voice-status-reagenda-${medId}" style="font-size:16px;color:#666;background:#f3f4f6;padding:12px;border-radius:10px;display:flex;align-items:center;justify-content:center;gap:8px;">
+                            <span>🔊 Reproduzindo áudio...</span>
                         </div>
                     </div>
                 </div>
             `;
             document.body.appendChild(modal);
             setTimeout(() => document.getElementById('novo-horario')?.focus(), 100);
+
+            const statusEl = document.getElementById(`voice-status-reagenda-${medId}`);
+
+            if (med) {
+                const audioTocando = await tocarAlertaMedicamento(med.name, med.dosage, "reagendar", med.time);
+                if (!audioTocando) {
+                    if (statusEl) statusEl.innerHTML = "❌ Não foi possível tocar o áudio.";
+                    return;
+                }
+            }
+
+            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+            if (!SpeechRecognition) {
+                if (statusEl) statusEl.innerHTML = "⚠️ Reconhecimento de voz não suportado.";
+                return;
+            }
+
+            if (statusEl) {
+                statusEl.innerHTML = "<span style='color:#3b82f6;font-weight:600;'>🎙️ Ouvindo... diga o horário (ex: 'Dez e meia', 'Quatorze e trinta')</span>";
+                statusEl.style.background = "rgba(59, 130, 246, 0.1)";
+            }
+
+            const rec = new SpeechRecognition();
+            rec.lang = 'pt-BR';
+            rec.continuous = false;
+            rec.interimResults = false;
+            activeVoiceRecognition = rec;
+
+            rec.onresult = function(event) {
+                const text = event.results[0][0].transcript.toLowerCase();
+                console.log('🎙️ Reconhecido no reagendamento:', text);
+                
+                if (statusEl) statusEl.innerHTML = `💬 Entendi: "${text}"`;
+
+                const horarioDetectado = extrairHorarioDoTexto(text);
+                if (horarioDetectado) {
+                    const input = document.getElementById('novo-horario');
+                    if (input) {
+                        input.value = horarioDetectado;
+                        if (statusEl) statusEl.innerHTML = `✅ Horário definido para ${horarioDetectado}. Salvar...`;
+                        setTimeout(() => {
+                            reagendarMedicamento(medId);
+                        }, 1200);
+                    }
+                } else {
+                    if (statusEl) statusEl.innerHTML = `❓ Não consegui entender o horário.`;
+                }
+            };
+
+            rec.onerror = function(event) {
+                console.error('🎙️ Erro de reconhecimento:', event.error);
+                if (statusEl) statusEl.innerHTML = `⚠️ Não entendi o horário falado.`;
+            };
+
+            rec.onend = function() {
+                activeVoiceRecognition = null;
+            };
+
+            try {
+                rec.start();
+            } catch (err) {
+                console.error('❌ Falha ao iniciar reconhecimento:', err);
+            }
         }
 
         // ============================================
@@ -6617,7 +6801,7 @@
 
     <!-- 🔖 INDICADOR DE VERSÃO -->
     <div style="text-align:center; padding:20px; color:#00D4FF; font-size:0.75rem; margin-top:30px; opacity:0.7;">
-        🏠 CR$ Home Care AI v2.1.0 — build 2026-07-10 — alerta revisão + OCR + mobile-first
+        🏠 CR$ Home Care AI v2.1.1 — build 2026-07-12 — alerta revisão + OCR + mobile-first
     </div>
         </body>
         </html>
