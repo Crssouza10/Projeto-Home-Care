@@ -2219,7 +2219,7 @@ async def ocr_allergies(user_id: str, file: UploadFile = File(...)):
             ]
         }
         
-        candidate_models = ["gemini-3.1-flash-lite", "gemini-3.5-flash", "gemini-2.0-flash"]
+        candidate_models = ["gemini-2.0-flash", "gemini-1.5-flash"]
         response = None
         
         async with httpx.AsyncClient(timeout=30.0) as client:
@@ -2237,9 +2237,17 @@ async def ocr_allergies(user_id: str, file: UploadFile = File(...)):
         if not response:
             raise HTTPException(status_code=502, detail="Erro da API do Gemini (falha na leitura de alergias).")
             
-        resp_json = response.json()
-        generated_text = resp_json["candidates"][0]["content"]["parts"][0]["text"].strip()
-        
+        generated_text = "Nenhuma alergia relatada"
+        try:
+            resp_json = response.json()
+            candidates = resp_json.get("candidates", [])
+            if candidates:
+                parts = candidates[0].get("content", {}).get("parts", [])
+                if parts:
+                    generated_text = parts[0].get("text", "").strip()
+        except Exception as parse_ex:
+            print(f"⚠️ Erro ao parsear resposta do Gemini para alergias: {parse_ex}")
+            
         return JSONResponse(content={
             "success": True,
             "allergies": generated_text
@@ -2313,7 +2321,7 @@ async def upload_insurance_card(user_id: str, file: UploadFile = File(...), db: 
                 ]
             }
             
-            candidate_models = ["gemini-3.1-flash-lite", "gemini-3.5-flash", "gemini-2.0-flash"]
+            candidate_models = ["gemini-2.0-flash", "gemini-1.5-flash"]
             response = None
             
             async with httpx.AsyncClient(timeout=30.0) as client:
@@ -2329,8 +2337,15 @@ async def upload_insurance_card(user_id: str, file: UploadFile = File(...), db: 
                         print(f"⚠️ Erro ao tentar modelo {model} para carteirinha: {str(ex)}")
             
             if response:
-                resp_json = response.json()
-                insurance_name = resp_json["candidates"][0]["content"]["parts"][0]["text"].strip()
+                try:
+                    resp_json = response.json()
+                    candidates = resp_json.get("candidates", [])
+                    if candidates:
+                        parts = candidates[0].get("content", {}).get("parts", [])
+                        if parts:
+                            insurance_name = parts[0].get("text", "").strip()
+                except Exception as parse_ex:
+                    print(f"⚠️ Erro ao parsear resposta do Gemini para carteirinha: {parse_ex}")
                 
         if not insurance_name:
             insurance_name = "Convenio"
@@ -2410,7 +2425,7 @@ async def upload_identity_document(user_id: str, file: UploadFile = File(...), d
                 ]
             }
             
-            candidate_models = ["gemini-3.1-flash-lite", "gemini-3.5-flash", "gemini-2.0-flash"]
+            candidate_models = ["gemini-2.0-flash", "gemini-1.5-flash"]
             response = None
             
             async with httpx.AsyncClient(timeout=30.0) as client:
@@ -2426,8 +2441,15 @@ async def upload_identity_document(user_id: str, file: UploadFile = File(...), d
                         print(f"⚠️ Erro ao tentar modelo {model} para documento: {str(ex)}")
             
             if response:
-                resp_json = response.json()
-                doc_info = resp_json["candidates"][0]["content"]["parts"][0]["text"].strip()
+                try:
+                    resp_json = response.json()
+                    candidates = resp_json.get("candidates", [])
+                    if candidates:
+                        parts = candidates[0].get("content", {}).get("parts", [])
+                        if parts:
+                            doc_info = parts[0].get("text", "").strip()
+                except Exception as parse_ex:
+                    print(f"⚠️ Erro ao parsear resposta do Gemini para documento: {parse_ex}")
                 
         if not doc_info:
             doc_info = "Documento"

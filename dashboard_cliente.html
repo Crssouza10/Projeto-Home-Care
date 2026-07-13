@@ -1465,7 +1465,7 @@
             <div class="header-info">
                 <h2 id="greeting">Boa noite!</h2>
                 <div class="user-name" id="user-name">Eliane Amorzinho</div>
-                <div style="font-size: 0.7rem; color: #00D4FF; opacity: 0.8; margin-top: 2px; font-weight: 500;">v2.1.1 (build 2026-07-12)</div>
+                <div style="font-size: 0.7rem; color: #00D4FF; opacity: 0.8; margin-top: 2px; font-weight: 500;">v2.2.0 (build 2026-07-13)</div>
             </div>
         </div>
         <div class="header-right">
@@ -1846,22 +1846,24 @@
                         <div style="color: #8A9BB5; font-size: 0.8rem; margin-bottom: 4px;">Doenças Pré-existentes</div>
                         <div style="color: #FFFFFF; font-weight: 600; min-height: 20px; white-space: pre-wrap;" id="clinical-view-conditions">-</div>
                     </div>
-                    <div style="background: rgba(0, 212, 255, 0.05); border: 1px solid rgba(0, 212, 255, 0.1); padding: 12px; border-radius: 10px;">
-                        <div style="color: #8A9BB5; font-size: 0.8rem; margin-bottom: 4px;">Documento de Identificação</div>
+                    <div id="clinical-view-id-box" style="background: rgba(0, 212, 255, 0.05); border: 1px solid rgba(0, 212, 255, 0.1); padding: 12px; border-radius: 10px; transition: background 0.2s;" onclick="openIdDocumentFile()">
+                        <div style="color: #8A9BB5; font-size: 0.8rem; margin-bottom: 4px; display: flex; justify-content: space-between; align-items: center;">
+                            <span>Documento de Identificação</span>
+                            <span id="clinical-view-id-indicator" style="font-size: 0.75rem; color: #10b981; display: none; font-weight: 600;">👁️ Clique para abrir</span>
+                        </div>
                         <strong style="color: #FFFFFF;" id="clinical-view-identity-document">-</strong>
                         <div id="clinical-view-identity-document-container" style="margin-top: 10px; display: none;">
-                            <a id="clinical-view-identity-document-link" href="#" target="_blank">
-                                <img id="clinical-view-identity-document-img" src="" style="max-width: 100%; max-height: 120px; border-radius: 8px; border: 1px solid rgba(0, 212, 255, 0.3); object-fit: contain;" />
-                            </a>
+                            <img id="clinical-view-identity-document-img" src="" style="max-width: 100%; max-height: 120px; border-radius: 8px; border: 1px solid rgba(0, 212, 255, 0.3); object-fit: contain;" />
                         </div>
                     </div>
-                    <div style="background: rgba(0, 212, 255, 0.05); border: 1px solid rgba(0, 212, 255, 0.1); padding: 12px; border-radius: 10px;">
-                        <div style="color: #8A9BB5; font-size: 0.8rem; margin-bottom: 4px;">Plano de Saúde</div>
+                    <div id="clinical-view-insurance-box" style="background: rgba(0, 212, 255, 0.05); border: 1px solid rgba(0, 212, 255, 0.1); padding: 12px; border-radius: 10px; transition: background 0.2s;" onclick="openInsuranceCardFile()">
+                        <div style="color: #8A9BB5; font-size: 0.8rem; margin-bottom: 4px; display: flex; justify-content: space-between; align-items: center;">
+                            <span>Plano de Saúde</span>
+                            <span id="clinical-view-insurance-indicator" style="font-size: 0.75rem; color: #10b981; display: none; font-weight: 600;">👁️ Clique para abrir</span>
+                        </div>
                         <strong style="color: #FFFFFF;" id="clinical-view-insurance">-</strong>
                         <div id="clinical-view-insurance-card-container" style="margin-top: 10px; display: none;">
-                            <a id="clinical-view-insurance-card-link" href="#" target="_blank">
-                                <img id="clinical-view-insurance-card-img" src="" style="max-width: 100%; max-height: 120px; border-radius: 8px; border: 1px solid rgba(0, 212, 255, 0.3); object-fit: contain;" />
-                            </a>
+                            <img id="clinical-view-insurance-card-img" src="" style="max-width: 100%; max-height: 120px; border-radius: 8px; border: 1px solid rgba(0, 212, 255, 0.3); object-fit: contain;" />
                         </div>
                     </div>
                     
@@ -1931,9 +1933,14 @@
                 <div class="form-group">
                     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
                         <label class="form-label" style="margin-bottom:0;">Documento de Identificação</label>
-                        <button type="button" class="btn-action" onclick="triggerIdentityDocumentUpload()" style="padding: 4px 10px; font-size: 0.75rem; background: #10b981; color: #FFFFFF; border: none; border-radius: 4px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 4px;">
-                            📤 Importar Documento
-                        </button>
+                        <div style="display:flex; gap:6px;">
+                            <button type="button" id="btn-delete-identity-document" class="btn-action" onclick="deleteIdentityDocument()" style="padding: 4px 10px; font-size: 0.75rem; background: #ef4444; color: #FFFFFF; border: none; border-radius: 4px; font-weight: 600; cursor: pointer; display: none; align-items: center; gap: 4px;">
+                                🗑️ Excluir
+                            </button>
+                            <button type="button" class="btn-action" onclick="triggerIdentityDocumentUpload()" style="padding: 4px 10px; font-size: 0.75rem; background: #10b981; color: #FFFFFF; border: none; border-radius: 4px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 4px;">
+                                📤 Importar Documento
+                            </button>
+                        </div>
                         <input type="file" id="identity-document-file" accept="image/*,application/pdf" style="display:none;" onchange="handleIdentityDocumentUpload(event)" />
                     </div>
                     <input type="text" class="form-input" id="clinical-edit-identity-document" placeholder="Ex: CPF: 123.456.789-00 ou RG: 12.345.678-9...">
@@ -1944,9 +1951,14 @@
                 <div class="form-group">
                     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
                         <label class="form-label" style="margin-bottom:0;">Plano de Saúde</label>
-                        <button type="button" class="btn-action" onclick="triggerInsuranceCardUpload()" style="padding: 4px 10px; font-size: 0.75rem; background: #10b981; color: #FFFFFF; border: none; border-radius: 4px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 4px;">
-                            📤 Importar Carteirinha
-                        </button>
+                        <div style="display:flex; gap:6px;">
+                            <button type="button" id="btn-delete-insurance-card" class="btn-action" onclick="deleteInsuranceCard()" style="padding: 4px 10px; font-size: 0.75rem; background: #ef4444; color: #FFFFFF; border: none; border-radius: 4px; font-weight: 600; cursor: pointer; display: none; align-items: center; gap: 4px;">
+                                🗑️ Excluir
+                            </button>
+                            <button type="button" class="btn-action" onclick="triggerInsuranceCardUpload()" style="padding: 4px 10px; font-size: 0.75rem; background: #10b981; color: #FFFFFF; border: none; border-radius: 4px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 4px;">
+                                📤 Importar Carteirinha
+                            </button>
+                        </div>
                         <input type="file" id="insurance-card-file" accept="image/*,application/pdf" style="display:none;" onchange="handleInsuranceCardUpload(event)" />
                     </div>
                     <input type="text" class="form-input" id="clinical-edit-insurance" placeholder="Ex: Unimed, Amil, SUS...">
@@ -2813,6 +2825,42 @@
             full_name: ''
         };
 
+        window.openIdDocumentFile = function() {
+            if (clinicalData && clinicalData.identity_document_file) {
+                const url = clinicalData.identity_document_file.startsWith('http') 
+                    ? clinicalData.identity_document_file 
+                    : `${API_URL}${clinicalData.identity_document_file}`;
+                window.open(url, '_blank');
+            }
+        };
+
+        window.openInsuranceCardFile = function() {
+            if (clinicalData && clinicalData.health_insurance_card) {
+                const url = clinicalData.health_insurance_card.startsWith('http') 
+                    ? clinicalData.health_insurance_card 
+                    : `${API_URL}${clinicalData.health_insurance_card}`;
+                window.open(url, '_blank');
+            }
+        };
+
+        window.deleteIdentityDocument = function() {
+            if (confirm("Deseja realmente remover o documento de identificação anexado?")) {
+                clinicalData.identity_document_file = null;
+                document.getElementById('clinical-edit-identity-document-preview-container').style.display = 'none';
+                document.getElementById('btn-delete-identity-document').style.display = 'none';
+                showToast("🗑️ Documento de identificação removido (clique em Salvar para confirmar).");
+            }
+        };
+
+        window.deleteInsuranceCard = function() {
+            if (confirm("Deseja realmente remover a carteirinha anexada?")) {
+                clinicalData.health_insurance_card = null;
+                document.getElementById('clinical-edit-insurance-card-preview-container').style.display = 'none';
+                document.getElementById('btn-delete-insurance-card').style.display = 'none';
+                showToast("🗑️ Carteirinha removida (clique em Salvar para confirmar).");
+            }
+        };
+
         async function openClinicalInfoModal() {
             try {
                 if (!userId) return;
@@ -2835,12 +2883,13 @@
                 document.getElementById('clinical-view-identity-document').textContent = clinicalData.identity_document || 'Não informado';
                 const docUrl = clinicalData.identity_document_file;
                 const docContainer = document.getElementById('clinical-view-identity-document-container');
-                const docLink = document.getElementById('clinical-view-identity-document-link');
                 const docImg = document.getElementById('clinical-view-identity-document-img');
                 
                 if (docUrl) {
+                    document.getElementById('clinical-view-id-box').style.cursor = 'pointer';
+                    const indicator = document.getElementById('clinical-view-id-indicator');
+                    if (indicator) indicator.style.display = 'inline';
                     const fullDocUrl = docUrl.startsWith('http') ? docUrl : `${API_URL}${docUrl}`;
-                    docLink.href = fullDocUrl;
                     if (docUrl.toLowerCase().endsWith('.pdf')) {
                         docImg.src = "https://cdn-icons-png.flaticon.com/512/337/337946.png";
                         docImg.style.maxHeight = "80px";
@@ -2850,6 +2899,9 @@
                     }
                     docContainer.style.display = 'block';
                 } else {
+                    document.getElementById('clinical-view-id-box').style.cursor = 'default';
+                    const indicator = document.getElementById('clinical-view-id-indicator');
+                    if (indicator) indicator.style.display = 'none';
                     docContainer.style.display = 'none';
                 }
                 
@@ -2857,12 +2909,13 @@
                 document.getElementById('clinical-view-insurance').textContent = clinicalData.health_insurance || 'Não informado';
                 const cardUrl = clinicalData.health_insurance_card;
                 const cardContainer = document.getElementById('clinical-view-insurance-card-container');
-                const cardLink = document.getElementById('clinical-view-insurance-card-link');
                 const cardImg = document.getElementById('clinical-view-insurance-card-img');
                 
                 if (cardUrl) {
+                    document.getElementById('clinical-view-insurance-box').style.cursor = 'pointer';
+                    const indicator = document.getElementById('clinical-view-insurance-indicator');
+                    if (indicator) indicator.style.display = 'inline';
                     const fullCardUrl = cardUrl.startsWith('http') ? cardUrl : `${API_URL}${cardUrl}`;
-                    cardLink.href = fullCardUrl;
                     if (cardUrl.toLowerCase().endsWith('.pdf')) {
                         cardImg.src = "https://cdn-icons-png.flaticon.com/512/337/337946.png";
                         cardImg.style.maxHeight = "80px";
@@ -2872,6 +2925,9 @@
                     }
                     cardContainer.style.display = 'block';
                 } else {
+                    document.getElementById('clinical-view-insurance-box').style.cursor = 'default';
+                    const indicator = document.getElementById('clinical-view-insurance-indicator');
+                    if (indicator) indicator.style.display = 'none';
                     cardContainer.style.display = 'none';
                 }
                 
@@ -2909,6 +2965,22 @@
                 document.getElementById('clinical-edit-conditions').value = clinicalData.conditions || '';
                 document.getElementById('clinical-edit-identity-document').value = clinicalData.identity_document || '';
                 document.getElementById('clinical-edit-insurance').value = clinicalData.health_insurance || '';
+                
+                // Configura o botão de excluir documento
+                const btnDeleteDoc = document.getElementById('btn-delete-identity-document');
+                if (clinicalData.identity_document_file) {
+                    btnDeleteDoc.style.display = 'inline-flex';
+                } else {
+                    btnDeleteDoc.style.display = 'none';
+                }
+                
+                // Configura o botão de excluir carteirinha
+                const btnDeleteIns = document.getElementById('btn-delete-insurance-card');
+                if (clinicalData.health_insurance_card) {
+                    btnDeleteIns.style.display = 'inline-flex';
+                } else {
+                    btnDeleteIns.style.display = 'none';
+                }
                 
                 const docPreviewContainer = document.getElementById('clinical-edit-identity-document-preview-container');
                 const docPreviewImg = document.getElementById('clinical-edit-identity-document-preview-img');
@@ -3166,6 +3238,9 @@
                     }
                     previewContainer.style.display = 'block';
                     
+                    const btnDeleteDoc = document.getElementById('btn-delete-identity-document');
+                    if (btnDeleteDoc) btnDeleteDoc.style.display = 'inline-flex';
+                    
                     showToast("✅ Documento de identificação enviado e lido com sucesso!");
                 } else {
                     showToast("❌ Erro ao enviar documento de identificação", true);
@@ -3210,6 +3285,9 @@
                         previewImg.src = cardUrl.startsWith('http') ? cardUrl : `${API_URL}${cardUrl}`;
                     }
                     previewContainer.style.display = 'block';
+                    
+                    const btnDeleteIns = document.getElementById('btn-delete-insurance-card');
+                    if (btnDeleteIns) btnDeleteIns.style.display = 'inline-flex';
                     
                     showToast("✅ Carteirinha enviada e lida com sucesso!");
                 } else {
