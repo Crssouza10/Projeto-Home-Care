@@ -1,4 +1,4 @@
-# ===== versão 2.22 - 2026-07-13 ================================
+# ===== versão 2.30 - 2026-07-13 ================================
 import sys
 # Garante codificação UTF-8 para evitar erros de unicode no console (especialmente no Windows)
 if sys.platform.startswith('win'):
@@ -796,6 +796,61 @@ def get_actual_start_date(start_date: date, days_of_week: list) -> date:
             return candidate
     return start_date
 
+# ===== DISTRIBUIÇÃO DE HORÁRIOS PARA EVITAR INTOXICAÇÃO =====
+def distribute_time(user_id, preferred_time_str: str, db: Session, current_med_id=None) -> str:
+    """
+    Verifica se já existe medicamento ativo no mesmo horário para o usuário.
+    Se houver conflito, adiciona 15 minutos até encontrar horário livre.
+    
+    Regra de segurança: evita múltiplos medicamentos no mesmo minuto
+    para prevenir intoxicação por ingestão simultânea.
+    """
+    from datetime import timedelta
+    
+    try:
+        base_time = datetime.strptime(preferred_time_str, "%H:%M").time()
+    except ValueError:
+        return preferred_time_str  # Se não conseguir parsear, mantém original
+    
+    # Horário limite: não passar das 23:45
+    max_time = time(23, 45)
+    max_attempts = 8  # Máximo 2 horas de distribuição (8 × 15 min)
+    
+    check_time = base_time
+    for attempt in range(max_attempts):
+        time_str = check_time.strftime("%H:%M")
+        
+        # Consulta medicamentos ativos do usuário neste horário
+        query = db.query(Medication).filter(
+            Medication.user_id == user_id,
+            Medication.time == time_str,
+            # Medicamento ativo: sem end_date OU end_date >= hoje
+            (Medication.end_date == None) | (Medication.end_date >= date.today().strftime("%Y-%m-%d"))
+        )
+        if current_med_id:
+            query = query.filter(Medication.id != current_med_id)
+        
+        existing = query.first()
+        
+        if not existing:
+            # Horário livre!
+            if attempt > 0:
+                print(f"⏰ Horário {preferred_time_str} ocupado → ajustado para {time_str} (tentativa {attempt})")
+            return time_str
+        
+        # Avança 15 minutos
+        dummy_dt = datetime.combine(date.today(), check_time) + timedelta(minutes=15)
+        check_time = dummy_dt.time()
+        
+        # Se passou das 23:45, volta para o início da manhã seguinte
+        if check_time > max_time:
+            break
+    
+    # Se todos os horários estiverem ocupados, retorna o preferido mesmo assim
+    # (melhor que não criar o medicamento)
+    print(f"⚠️ Todos os horários ocupados para {preferred_time_str} — mantendo original")
+    return preferred_time_str
+
 @app.post("/api/cliente/{user_id}/medications", status_code=status.HTTP_201_CREATED)
 async def create_medication(user_id: str, med: MedicationCreate, db: Session = Depends(get_db)):
     try:
@@ -821,12 +876,15 @@ async def create_medication(user_id: str, med: MedicationCreate, db: Session = D
     elif hasattr(med, 'duration_days') and med.duration_days is not None and med.duration_days > 0:
         end_date = (actual_start + timedelta(days=med.duration_days - 1)).strftime("%Y-%m-%d")
     
-    # 4. Criar o medicamento
+    # 4. 🛡️ Distribuir horário para evitar intoxicação (múltiplos medicamentos no mesmo horário)
+    adjusted_time = distribute_time(user_uuid, med.time, db)
+    
+    # 5. Criar o medicamento
     nova_med = Medication(
         user_id=user_uuid,
         name=med.name,
         dosage=med.dosage,
-        time=med.time,
+        time=adjusted_time,
         days_of_week=med.days_of_week,
         is_continuous=getattr(med, 'is_continuous', False),
         continuous_months=getattr(med, 'continuous_months', 6),
@@ -838,8 +896,8 @@ async def create_medication(user_id: str, med: MedicationCreate, db: Session = D
     db.add(nova_med)
     db.flush()  # Garante que nova_med.id esteja disponível
     
-    # 5. ✅ NOVO: Gerar schedules automaticamente usando o scheduler_engine
-    time_obj = datetime.strptime(med.time, "%H:%M").time() if isinstance(med.time, str) else med.time
+    # 6. ✅ NOVO: Gerar schedules automaticamente usando o scheduler_engine
+    time_obj = datetime.strptime(adjusted_time, "%H:%M").time() if isinstance(adjusted_time, str) else adjusted_time
     schedules = generate_medication_schedules(
         user_id=user_uuid,
         medication_id=nova_med.id,
@@ -867,11 +925,18 @@ async def create_medication(user_id: str, med: MedicationCreate, db: Session = D
     summary = get_schedule_summary(schedules, med.days_of_week, actual_start, 
                                    datetime.strptime(end_date, "%Y-%m-%d").date() if end_date else None)
     
+    # Verifica se o horário foi ajustado
+    horario_ajustado = adjusted_time != med.time
+    
     return {
         "status": "sucesso",
         "id": str(nova_med.id),
         "schedules_gerados": len(schedules),
         "resumo": summary,
+        "time": adjusted_time,
+        "time_original": med.time if horario_ajustado else None,
+        "horario_ajustado": horario_ajustado,
+        "aviso": f"⏰ Horário ajustado de {med.time} para {adjusted_time} para evitar intoxicação" if horario_ajustado else None,
     }
 
 
