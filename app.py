@@ -1,4 +1,4 @@
-# ===== versão 2.21 - 2026-07-13 ================================
+# ===== versão 2.22 - 2026-07-13 ================================
 import sys
 # Garante codificação UTF-8 para evitar erros de unicode no console (especialmente no Windows)
 if sys.platform.startswith('win'):
@@ -78,8 +78,10 @@ app.add_middleware(
 )
 
 # ===== ARQUIVOS ESTÁTICOS =====
-os.makedirs("static/audio", exist_ok=True)
-app.mount("/static", StaticFiles(directory="static"), name="static")
+# Na Vercel, filesystem é read-only — estáticos são servidos pelo próprio deploy
+if not IS_VERCEL:
+    os.makedirs("static/audio", exist_ok=True)
+    app.mount("/static", StaticFiles(directory="static"), name="static")
 
 # ===== BANCO DE DADOS =====
 DATABASE_URL = os.getenv("DATABASE_URL")
@@ -2271,16 +2273,20 @@ async def upload_insurance_card(user_id: str, file: UploadFile = File(...), db: 
         filename = file.filename.lower()
         ext = os.path.splitext(filename)[1]
         
-        # Salva o arquivo fisicamente na pasta static/uploads
-        os.makedirs("static/uploads", exist_ok=True)
+        # Salva o arquivo — /tmp/ na Vercel (read-only filesystem), static/uploads/ local
+        if IS_VERCEL:
+            upload_dir = "/tmp/uploads"
+        else:
+            upload_dir = "static/uploads"
+        os.makedirs(upload_dir, exist_ok=True)
         unique_filename = f"card_{user_id}_{uuid.uuid4().hex}{ext}"
-        filepath = os.path.join("static/uploads", unique_filename)
+        filepath = os.path.join(upload_dir, unique_filename)
         
         with open(filepath, "wb") as f:
             f.write(contents)
             
-        # Cria a URL publica
-        card_url = f"/static/uploads/{unique_filename}"
+        # Cria a URL publica — endpoint dedicado para compatibilidade Vercel
+        card_url = f"/api/files/uploads/{unique_filename}"
         
         # Faz o OCR da carteirinha para tentar ler a operadora/convenio
         mime_type = file.content_type or "image/jpeg"
@@ -2364,6 +2370,19 @@ async def upload_insurance_card(user_id: str, file: UploadFile = File(...), db: 
         print(f"🔥 Erro no upload da carteirinha do convenio: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
+# ===== ENDPOINT PARA SERVIR ARQUIVOS DE UPLOAD (compatível com Vercel /tmp) =====
+@app.get("/api/files/uploads/{filename}")
+async def serve_uploaded_file(filename: str):
+    """Serve arquivos de upload — usa /tmp/ na Vercel, static/uploads/ local."""
+    import os
+    if IS_VERCEL:
+        filepath = os.path.join("/tmp/uploads", filename)
+    else:
+        filepath = os.path.join("static/uploads", filename)
+    if not os.path.exists(filepath):
+        raise HTTPException(status_code=404, detail="Arquivo nao encontrado")
+    return FileResponse(filepath)
+
 @app.post("/api/cliente/{user_id}/upload-identity-document")
 async def upload_identity_document(user_id: str, file: UploadFile = File(...), db: Session = Depends(get_db)):
     try:
@@ -2379,14 +2398,19 @@ async def upload_identity_document(user_id: str, file: UploadFile = File(...), d
         filename = file.filename.lower()
         ext = os.path.splitext(filename)[1]
         
-        os.makedirs("static/uploads", exist_ok=True)
+        # Salva o arquivo — /tmp/ na Vercel (read-only filesystem), static/uploads/ local
+        if IS_VERCEL:
+            upload_dir = "/tmp/uploads"
+        else:
+            upload_dir = "static/uploads"
+        os.makedirs(upload_dir, exist_ok=True)
         unique_filename = f"id_{user_id}_{uuid.uuid4().hex}{ext}"
-        filepath = os.path.join("static/uploads", unique_filename)
+        filepath = os.path.join(upload_dir, unique_filename)
         
         with open(filepath, "wb") as f:
             f.write(contents)
             
-        doc_url = f"/static/uploads/{unique_filename}"
+        doc_url = f"/api/files/uploads/{unique_filename}"
         
         mime_type = file.content_type or "image/jpeg"
         if filename.endswith('.png'):
