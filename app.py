@@ -818,12 +818,11 @@ def distribute_time(user_id, preferred_time_str: str, db: Session, current_med_i
     
     check_time = base_time
     for attempt in range(max_attempts):
-        time_str = check_time.strftime("%H:%M")
-        
         # Consulta medicamentos ativos do usuário neste horário
+        # NOTA: Medication.time é tipo Time no banco, comparar com objeto time, não string
         query = db.query(Medication).filter(
             Medication.user_id == user_id,
-            Medication.time == time_str,
+            Medication.time == check_time,
             # Medicamento ativo: sem end_date OU end_date >= hoje
             (Medication.end_date == None) | (Medication.end_date >= date.today().strftime("%Y-%m-%d"))
         )
@@ -834,9 +833,10 @@ def distribute_time(user_id, preferred_time_str: str, db: Session, current_med_i
         
         if not existing:
             # Horário livre!
+            result_str = check_time.strftime("%H:%M")
             if attempt > 0:
-                print(f"⏰ Horário {preferred_time_str} ocupado → ajustado para {time_str} (tentativa {attempt})")
-            return time_str
+                print(f"⏰ Horário {preferred_time_str} ocupado → ajustado para {result_str} (tentativa {attempt})")
+            return result_str
         
         # Avança 30 minutos
         dummy_dt = datetime.combine(date.today(), check_time) + timedelta(minutes=30)
