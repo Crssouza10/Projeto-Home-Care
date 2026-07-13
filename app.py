@@ -2436,15 +2436,6 @@ async def upload_insurance_card(user_id: str, file: UploadFile = File(...), db: 
         raise HTTPException(status_code=500, detail=str(e))
 
 # ===== ENDPOINT PARA SERVIR ARQUIVOS DE UPLOAD (compatível com Vercel /tmp) =====
-@app.get("/api/debug/ping")
-async def debug_ping():
-    """Verifica se o código novo está rodando."""
-    return {
-        "versao": "2.3.1",
-        "distribute_time": "distribute_time" in globals(),
-        "intervalo": "30min"
-    }
-
 @app.get("/api/files/uploads/{filename}")
 async def serve_uploaded_file(filename: str):
     """Serve arquivos de upload — usa /tmp/ na Vercel, static/uploads/ local."""
