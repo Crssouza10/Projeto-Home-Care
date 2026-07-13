@@ -1,4 +1,4 @@
-# ===== versão 1.04 - 2026-06-02 ================================
+# ===== versão 2.20 - 2026-07-13 ================================
 import sys
 # Garante codificação UTF-8 para evitar erros de unicode no console (especialmente no Windows)
 if sys.platform.startswith('win'):
@@ -114,6 +114,8 @@ try:
         conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS blood_type VARCHAR(10);"))
         conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS health_insurance VARCHAR(100);"))
         conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS health_insurance_card TEXT;"))
+        conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS identity_document VARCHAR(100);"))
+        conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS identity_document_file TEXT;"))
         conn.commit()
         print("✅ Colunas clínicas adicionadas/verificadas com sucesso na tabela users.")
 except Exception as e:
@@ -164,6 +166,8 @@ class User(Base):
     blood_type = Column(String(10), nullable=True)
     health_insurance = Column(String(100), nullable=True)
     health_insurance_card = Column(Text, nullable=True)
+    identity_document = Column(String(100), nullable=True)
+    identity_document_file = Column(Text, nullable=True)
 
 class Medication(Base):
     __tablename__ = "medications"
@@ -307,6 +311,8 @@ class ClinicalInfoUpdate(BaseModel):
     blood_type: Optional[str] = None
     health_insurance: Optional[str] = None
     health_insurance_card: Optional[str] = None
+    identity_document: Optional[str] = None
+    identity_document_file: Optional[str] = None
 
 class MedicationCreate(BaseModel):
     user_id: uuid.UUID
@@ -639,6 +645,8 @@ async def get_clinical_info(user_id: str, db: Session = Depends(get_db)):
         "blood_type": user.blood_type,
         "health_insurance": user.health_insurance,
         "health_insurance_card": user.health_insurance_card,
+        "identity_document": user.identity_document,
+        "identity_document_file": user.identity_document_file,
         "full_name": user.full_name,
         "phone": user.phone,
         "email": user.email
@@ -661,6 +669,8 @@ async def update_clinical_info(user_id: str, info: ClinicalInfoUpdate, db: Sessi
     user.blood_type = info.blood_type
     user.health_insurance = info.health_insurance
     user.health_insurance_card = info.health_insurance_card
+    user.identity_document = info.identity_document
+    user.identity_document_file = info.identity_document_file
     db.commit()
     
     return {
@@ -2270,6 +2280,8 @@ async def upload_insurance_card(user_id: str, file: UploadFile = File(...), db: 
             mime_type = 'image/png'
         elif filename.endswith('.jpg') or filename.endswith('.jpeg'):
             mime_type = 'image/jpeg'
+        elif filename.endswith('.pdf'):
+            mime_type = 'application/pdf'
             
         gemini_key = os.getenv("GEMINI_API_KEY")
         insurance_name = ""
@@ -2278,7 +2290,7 @@ async def upload_insurance_card(user_id: str, file: UploadFile = File(...), db: 
             base64_data = base64.b64encode(contents).decode("utf-8")
             prompt = (
                 "Voce e um assistente administrativo de home care especialista em ler carteirinhas de planos de saude. "
-                "Analise a imagem enviada. Ela contem a frente ou verso de um cartao de convenio/plano de saude. "
+                "Analise o arquivo enviado. Ele contem a frente ou verso de um cartao de convenio/plano de saude. "
                 "Extraia o nome da operadora/empresa do plano de saude (ex: Unimed, Amil, SulAmerica, Bradesco, Cassi, Golden Cross, etc.). "
                 "Se encontrar o numero da carteirinha ou matricula, extraia-o tambem e monte no seguinte padrao: 'Nome do Plano (Nº Numero)'. "
                 "Retorne apenas essa informacao em formato de texto simples, sem markdown ou justificativas. "
@@ -2337,6 +2349,102 @@ async def upload_insurance_card(user_id: str, file: UploadFile = File(...), db: 
         print(f"🔥 Erro no upload da carteirinha do convenio: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
+@app.post("/api/cliente/{user_id}/upload-identity-document")
+async def upload_identity_document(user_id: str, file: UploadFile = File(...), db: Session = Depends(get_db)):
+    try:
+        import base64
+        import os
+        
+        user_uuid = uuid.UUID(user_id)
+        user = db.query(User).filter(User.id == user_uuid).first()
+        if not user:
+            raise HTTPException(status_code=404, detail="Usuario nao encontrado")
+            
+        contents = await file.read()
+        filename = file.filename.lower()
+        ext = os.path.splitext(filename)[1]
+        
+        os.makedirs("static/uploads", exist_ok=True)
+        unique_filename = f"id_{user_id}_{uuid.uuid4().hex}{ext}"
+        filepath = os.path.join("static/uploads", unique_filename)
+        
+        with open(filepath, "wb") as f:
+            f.write(contents)
+            
+        doc_url = f"/static/uploads/{unique_filename}"
+        
+        mime_type = file.content_type or "image/jpeg"
+        if filename.endswith('.png'):
+            mime_type = 'image/png'
+        elif filename.endswith('.jpg') or filename.endswith('.jpeg'):
+            mime_type = 'image/jpeg'
+        elif filename.endswith('.pdf'):
+            mime_type = 'application/pdf'
+            
+        gemini_key = os.getenv("GEMINI_API_KEY")
+        doc_info = ""
+        
+        if gemini_key:
+            base64_data = base64.b64encode(contents).decode("utf-8")
+            prompt = (
+                "Voce e um assistente administrativo especialista em ler documentos de identificacao. "
+                "Analise o arquivo enviado (pode ser imagem ou PDF). Ele contem um documento como RG, CPF, CNH ou outro. "
+                "Extraia o tipo de documento e o seu numero principal (por exemplo, se for CPF, extraia 'CPF: 123.456.789-00'. Se for RG, 'RG: 12.345.678-9'). "
+                "Retorne apenas essa informacao em formato de texto simples, bem curto (ex: 'CPF: 123.456.789-00' ou 'RG: 12.345.678-9'). "
+                "Retorne apenas o texto cru, sem explicacoes, sem markdown."
+            )
+            
+            payload = {
+                "contents": [
+                    {
+                        "parts": [
+                            {"text": prompt},
+                            {
+                                "inlineData": {
+                                   "mimeType": mime_type,
+                                   "data": base64_data
+                                }
+                            }
+                        ]
+                    }
+                ]
+            }
+            
+            candidate_models = ["gemini-3.1-flash-lite", "gemini-3.5-flash", "gemini-2.0-flash"]
+            response = None
+            
+            async with httpx.AsyncClient(timeout=30.0) as client:
+                for model in candidate_models:
+                    url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={gemini_key}"
+                    headers = {"Content-Type": "application/json"}
+                    try:
+                        r = await client.post(url, headers=headers, json=payload)
+                        if r.status_code == 200:
+                            response = r
+                            break
+                    except Exception as ex:
+                        print(f"⚠️ Erro ao tentar modelo {model} para documento: {str(ex)}")
+            
+            if response:
+                resp_json = response.json()
+                doc_info = resp_json["candidates"][0]["content"]["parts"][0]["text"].strip()
+                
+        if not doc_info:
+            doc_info = "Documento"
+            
+        user.identity_document = doc_info
+        user.identity_document_file = doc_url
+        db.commit()
+        
+        return JSONResponse(content={
+            "success": True,
+            "identity_document": doc_info,
+            "identity_document_file": doc_url
+        })
+    except Exception as e:
+        print(f"🔥 Erro no upload do documento de identificacao: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
 @app.post("/api/chat")
 async def chat_assistant(req: ChatRequest, db: Session = Depends(get_db)):
     try:
@@ -2358,6 +2466,24 @@ async def chat_assistant(req: ChatRequest, db: Session = Depends(get_db)):
             Medication.is_active == True
         ).all()
         
+        # Busca schedules de hoje para informar ao Maximus
+        from datetime import date
+        today_date = date.today()
+        today_schedules = db.query(MedicationSchedule).filter(
+            MedicationSchedule.user_id == user_uuid,
+            MedicationSchedule.scheduled_date == today_date
+        ).all()
+        
+        schedules_by_med = {}
+        for s in today_schedules:
+            if s.medication_id not in schedules_by_med:
+                schedules_by_med[s.medication_id] = []
+            schedules_by_med[s.medication_id].append({
+                "time": s.scheduled_time.strftime("%H:%M") if s.scheduled_time else "",
+                "status": s.status,
+                "confirmed_at": s.confirmed_at
+            })
+            
         # 1. Carrega a chave
         gemini_key = os.getenv("GEMINI_API_KEY")
         if not gemini_key:
@@ -2369,10 +2495,13 @@ async def chat_assistant(req: ChatRequest, db: Session = Depends(get_db)):
         # 2. Monta as instruções do sistema com contexto do paciente
         sys_instruction = (
             "Você é o 'Maximus', o assistente médico e de cuidado pessoal inteligente do sistema CR$ HOME CARE AI.\n"
-            "Seu objetivo é ajudar o paciente ou seu cuidador respondendo perguntas sobre medicamentos, orientações de uso, saúde e bem-estar.\n\n"
+            "Seu objetivo é ajudar o paciente ou seu cuidador respondendo perguntas sobre medicamentos, orientações de uso, saúde e bem-estar.\n"
+            "Aja como um(a) cuidador(a) real, de forma extremamente humana, empática e carinhosa. "
+            "Quando for consultado sobre o que tomar no dia ou o status dos remédios, e houver medicamentos que já foram tomados hoje (status 'Tomado'), informe isso com carinho e parabenize o paciente por se cuidar tão bem.\n\n"
             "CONTEXTO DO PACIENTE:\n"
             f"- Nome: {user.full_name}\n"
             f"- Idade: {user.age or 'Não informada'} anos\n"
+            f"- Documento de Identificação: {user.identity_document or 'Não informado'}\n"
             f"- Alergias conhecidas: {user.allergies or 'Nenhuma informada'}\n"
             f"- Condições médicas: {user.conditions or 'Nenhuma informada'}\n"
             f"- Tipo sanguíneo: {user.blood_type or 'Não informado'}\n"
@@ -2381,17 +2510,35 @@ async def chat_assistant(req: ChatRequest, db: Session = Depends(get_db)):
         )
         if medications:
             for med in medications:
-                sys_instruction += f"- {med.name}: Dosagem '{med.dosage}', Horário '{med.time}', Contínuo? {'Sim' if med.is_continuous else 'Não'}, Término? {med.end_date or 'Uso contínuo'}\n"
+                time_str = med.time.strftime('%H:%M') if med.time else 'Não informado'
+                sys_instruction += f"- {med.name}: Dosagem '{med.dosage}', Horário '{time_str}', Contínuo? {'Sim' if med.is_continuous else 'Não'}, Término? {med.end_date or 'Uso contínuo'}"
+                
+                # Anexa o status das doses de hoje
+                med_scheds = schedules_by_med.get(med.id, [])
+                if med_scheds:
+                    scheds_desc = []
+                    for ms in med_scheds:
+                        status_pt = "Pendente"
+                        if ms["status"] == "taken":
+                            status_pt = f"Tomado (confirmado às {ms['confirmed_at'].strftime('%H:%M') if ms['confirmed_at'] else ''})"
+                        elif ms["status"] == "skipped":
+                            status_pt = "Pulado"
+                        elif ms["status"] == "cancelled":
+                            status_pt = "Cancelado"
+                        scheds_desc.append(f"{ms['time']} ({status_pt})")
+                    sys_instruction += f" | Status das doses de hoje: {', '.join(scheds_desc)}"
+                sys_instruction += "\n"
         else:
             sys_instruction += "- Nenhum medicamento ativo cadastrado no momento.\n"
             
         sys_instruction += (
             "\nREGRAS DE COMPORTAMENTO:\n"
-            "1. Seja atencioso, empático, claro e fale sempre em português do Brasil.\n"
-            "2. Dê respostas curtas, práticas e objetivas. Evite textos longos ou excessivamente técnicos.\n"
-            "3. Use formatação em Markdown (negrito, listas, etc.) para facilitar a leitura.\n"
-            "4. IMPORTANTE: Você é um assistente de IA. Sempre recomende que o paciente consulte o médico ou responsável em caso de dúvidas graves, dor intensa ou reações adversas incomuns.\n"
-            "5. Use o histórico de conversas fornecido para manter o contexto."
+            "1. Aja de forma muito atenciosa, empática, acolhedora e fale sempre em português do Brasil.\n"
+            "2. Se o paciente perguntar sobre os remédios dele do dia, faça questão de mencionar carinhosamente quais ele já tomou hoje (por exemplo: 'Que maravilha, você já tomou o seu [Nome] das [Horário] hoje! Estão restando apenas os seguintes...').\n"
+            "3. Dê respostas curtas, práticas e objetivas. Evite textos longos ou excessivamente técnicos.\n"
+            "4. Use formatação em Markdown (negrito, listas, etc.) para facilitar a leitura.\n"
+            "5. IMPORTANTE: Você é um assistente de IA. Sempre recomende que o paciente consulte o médico ou responsável em caso de dúvidas graves, dor intensa ou reações adversas incomuns.\n"
+            "6. Use o histórico de conversas fornecido para manter o contexto."
         )
         
         # 3. Prepara contents para a API (histórico + mensagem atual)

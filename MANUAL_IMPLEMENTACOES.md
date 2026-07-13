@@ -1,6 +1,6 @@
 # 📖 Manual de Implementações Inteligentes — CR$ Home Care AI
 
-Este manual detalha as novas funcionalidades de inteligência artificial, acessibilidade por voz, otimização de layout mobile-first e funcionamento em segundo plano integradas na versão **v2.1.1 (build 2026-07-12)**.
+Este manual detalha as novas funcionalidades de inteligência artificial, acessibilidade por voz, otimização de layout mobile-first e funcionamento em segundo plano integradas na versão **v2.2.0 (build 2026-07-13)**.
 
 ---
 
