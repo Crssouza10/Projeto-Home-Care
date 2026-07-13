@@ -796,7 +796,7 @@ def get_actual_start_date(start_date: date, days_of_week: list) -> date:
             return candidate
     return start_date
 
-# ===== DISTRIBUIÇÃO DE HORÁRIOS PARA EVITAR INTOXICAÇÃO =====
+# ===== DISTRIBUIÇÃO DE HORÁRIOS PARA EVITAR INTOXICAÇÃO (v2.3.1 - 30min) =====
 def distribute_time(user_id, preferred_time_str: str, db: Session, current_med_id=None) -> str:
     """
     Verifica se já existe medicamento ativo no mesmo horário para o usuário.
