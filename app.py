@@ -1,4 +1,4 @@
-# ===== versão 2.20 - 2026-07-13 ================================
+# ===== versão 2.21 - 2026-07-13 ================================
 import sys
 # Garante codificação UTF-8 para evitar erros de unicode no console (especialmente no Windows)
 if sys.platform.startswith('win'):
