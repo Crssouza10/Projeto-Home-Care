@@ -812,9 +812,9 @@ def distribute_time(user_id, preferred_time_str: str, db: Session, current_med_i
     except ValueError:
         return preferred_time_str  # Se não conseguir parsear, mantém original
     
-    # Horário limite: não passar das 23:45
-    max_time = time(23, 45)
-    max_attempts = 8  # Máximo 2 horas de distribuição (8 × 15 min)
+    # Horário limite: não passar das 23:30
+    max_time = time(23, 30)
+    max_attempts = 8  # Máximo 4 horas de distribuição (8 × 30 min)
     
     check_time = base_time
     for attempt in range(max_attempts):
@@ -838,8 +838,8 @@ def distribute_time(user_id, preferred_time_str: str, db: Session, current_med_i
                 print(f"⏰ Horário {preferred_time_str} ocupado → ajustado para {time_str} (tentativa {attempt})")
             return time_str
         
-        # Avança 15 minutos
-        dummy_dt = datetime.combine(date.today(), check_time) + timedelta(minutes=15)
+        # Avança 30 minutos
+        dummy_dt = datetime.combine(date.today(), check_time) + timedelta(minutes=30)
         check_time = dummy_dt.time()
         
         # Se passou das 23:45, volta para o início da manhã seguinte
