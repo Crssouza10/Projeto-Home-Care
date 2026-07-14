@@ -1465,7 +1465,7 @@
             <div class="header-info">
                 <h2 id="greeting">Boa noite!</h2>
                 <div class="user-name" id="user-name">Eliane Amorzinho</div>
-                <div style="font-size: 0.7rem; color: #00D4FF; opacity: 0.8; margin-top: 2px; font-weight: 500;">v2.3.1 (build 2026-07-14)</div>
+                <div style="font-size: 0.7rem; color: #00D4FF; opacity: 0.8; margin-top: 2px; font-weight: 500;">v2.3.2 (build 2026-07-14)</div>
             </div>
         </div>
         <div class="header-right">
@@ -3685,6 +3685,16 @@
             console.log(`\n✅ Medicamentos encontrados para hoje: ${medsOnDay.length}`);
             medsOnDay.forEach(m => console.log(`   - ${m.name} (${m.time}) [${m.taken_status}]`));
             console.log(`==========================================\n`);
+            
+            // 🔮 CORREÇÃO: Se visualizando data FUTURA, reseta status para "pending"
+            // (as ações de tomar/não-tomar pertencem ao dia atual, não ao futuro)
+            if (viewingSpecificDate) {
+                const todayStr = new Date().toISOString().split('T')[0];
+                if (viewingSpecificDate > todayStr) {
+                    console.log(`🔮 Data futura (${viewingSpecificDate}) — resetando taken_status para pending`);
+                    medsOnDay.forEach(m => { m.taken_status = 'pending'; });
+                }
+            }
             
             if (medsOnDay.length === 0) {
                 container.innerHTML = `
@@ -7305,7 +7315,7 @@
 
     <!-- 🔖 INDICADOR DE VERSÃO -->
     <div style="text-align:center; padding:20px; color:#00D4FF; font-size:0.75rem; margin-top:30px; opacity:0.7;">
-        🏠 CR$ Home Care AI v2.3.1 — build 2026-07-14 — correção: remove função duplicada + estado não tomou
+        🏠 CR$ Home Care AI v2.3.2 — build 2026-07-14 — correção: datas futuras mostram status pending
     </div>
         </body>
         </html>
