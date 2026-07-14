@@ -1,4 +1,4 @@
-const CACHE_NAME = 'homecare-v1.4';
+const CACHE_NAME = 'homecare-v2.3.1';
 const urlsToCache = [
   '/',
   '/dashboard-cliente',
