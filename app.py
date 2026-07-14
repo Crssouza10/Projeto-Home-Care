@@ -2446,7 +2446,27 @@ async def serve_uploaded_file(filename: str):
         filepath = os.path.join("static/uploads", filename)
     if not os.path.exists(filepath):
         raise HTTPException(status_code=404, detail="Arquivo nao encontrado")
-    return FileResponse(filepath)
+    
+    # Determina o media_type pelo extensão do arquivo
+    media_type = "application/octet-stream"
+    lower_name = filename.lower()
+    if lower_name.endswith('.pdf'):
+        media_type = 'application/pdf'
+    elif lower_name.endswith('.png'):
+        media_type = 'image/png'
+    elif lower_name.endswith('.jpg') or lower_name.endswith('.jpeg'):
+        media_type = 'image/jpeg'
+    elif lower_name.endswith('.gif'):
+        media_type = 'image/gif'
+    elif lower_name.endswith('.webp'):
+        media_type = 'image/webp'
+    
+    # PDF: Content-Disposition inline para abrir no navegador (não forçar download)
+    headers = {}
+    if lower_name.endswith('.pdf'):
+        headers['Content-Disposition'] = 'inline; filename="' + filename + '"'
+    
+    return FileResponse(filepath, media_type=media_type, headers=headers)
 
 @app.post("/api/cliente/{user_id}/upload-identity-document")
 async def upload_identity_document(user_id: str, file: UploadFile = File(...), db: Session = Depends(get_db)):

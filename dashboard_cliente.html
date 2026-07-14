@@ -1465,7 +1465,7 @@
             <div class="header-info">
                 <h2 id="greeting">Boa noite!</h2>
                 <div class="user-name" id="user-name">Eliane Amorzinho</div>
-                <div style="font-size: 0.7rem; color: #00D4FF; opacity: 0.8; margin-top: 2px; font-weight: 500;">v2.3.2 (build 2026-07-14)</div>
+                <div style="font-size: 0.7rem; color: #00D4FF; opacity: 0.8; margin-top: 2px; font-weight: 500;">v2.3.3 (build 2026-07-14)</div>
             </div>
         </div>
         <div class="header-right">
@@ -2830,7 +2830,13 @@
                 const url = clinicalData.identity_document_file.startsWith('http') 
                     ? clinicalData.identity_document_file 
                     : `${API_URL}${clinicalData.identity_document_file}`;
-                window.open(url, '_blank');
+                const a = document.createElement('a');
+                a.href = url;
+                a.target = '_blank';
+                a.rel = 'noopener noreferrer';
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
             }
         };
 
@@ -2839,7 +2845,13 @@
                 const url = clinicalData.health_insurance_card.startsWith('http') 
                     ? clinicalData.health_insurance_card 
                     : `${API_URL}${clinicalData.health_insurance_card}`;
-                window.open(url, '_blank');
+                const a = document.createElement('a');
+                a.href = url;
+                a.target = '_blank';
+                a.rel = 'noopener noreferrer';
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
             }
         };
 
@@ -7315,7 +7327,7 @@
 
     <!-- 🔖 INDICADOR DE VERSÃO -->
     <div style="text-align:center; padding:20px; color:#00D4FF; font-size:0.75rem; margin-top:30px; opacity:0.7;">
-        🏠 CR$ Home Care AI v2.3.2 — build 2026-07-14 — correção: datas futuras mostram status pending
+        🏠 CR$ Home Care AI v2.3.3 — build 2026-07-14 — correção: abertura de PDFs e documentos no celular
     </div>
         </body>
         </html>
