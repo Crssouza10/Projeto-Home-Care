@@ -1639,10 +1639,13 @@ async def update_medication(
     if not medication:
         raise HTTPException(status_code=404, detail="Medicação não encontrada")
     
-    # Atualizar campos
+    # Atualizar campos no template (mantém para futuras gerações, se houver)
+    h, m = map(int, med.time.split(":"))
+    med_time_obj = time(h, m)
+    
     medication.name = med.name
     medication.dosage = med.dosage
-    medication.time = med.time
+    medication.time = med_time_obj
     medication.days_of_week = med.days_of_week
     
     start_dt = medication.created_at.date() if medication.created_at else date.today()
@@ -1671,46 +1674,27 @@ async def update_medication(
     medication.reminder_count = 0
     medication.responsible_notified = False
     
-    # ⚙️ REGENERAÇÃO DE SCHEDULES FUTUROS E HOJE PENDENTES
+    # ⚙️ ATUALIZA APENAS O SCHEDULE DE HOJE (os dias não se relacionam)
     today = date.today()
-    
-    # 1. Deleta schedules pendentes a partir de hoje
-    db.query(MedicationSchedule).filter(
+    sched = db.query(MedicationSchedule).filter(
         MedicationSchedule.medication_id == medication.id,
-        MedicationSchedule.scheduled_date >= today,
-        MedicationSchedule.status == "pending"
-    ).delete()
+        MedicationSchedule.scheduled_date == today
+    ).first()
     
-    # 2. Gera novos schedules de hoje em diante
-    start_date_for_regeneration = max(today, actual_start)
-    
-    # Determina a data limite
-    end_dt = None
-    if medication.end_date:
-        try:
-            end_dt = datetime.strptime(medication.end_date, "%Y-%m-%d").date()
-        except ValueError:
-            pass
-            
-    schedules = generate_medication_schedules(
-        user_id=medication.user_id,
-        medication_id=medication.id,
-        med_time=medication.time,
-        days_of_week=medication.days_of_week or [0, 1, 2, 3, 4, 5, 6],
-        start_date=start_date_for_regeneration,
-        end_date=end_dt,
-        is_continuous=medication.is_continuous
-    )
-    
-    # 3. Insere os novos schedules
-    for s in schedules:
-        db.add(MedicationSchedule(
+    if not sched:
+        # Se não existe schedule para hoje, cria um
+        sched = MedicationSchedule(
             medication_id=medication.id,
             user_id=medication.user_id,
-            scheduled_date=s["scheduled_date"],
-            scheduled_time=s["scheduled_time"],
-            status=s["status"],
-        ))
+            scheduled_date=today,
+            scheduled_time=med_time_obj,
+            status="pending"
+        )
+        db.add(sched)
+    else:
+        # Se já existe, atualiza apenas o horário de hoje e reseta status
+        sched.scheduled_time = med_time_obj
+        sched.status = "pending"
         
     db.commit()
     db.refresh(medication)
