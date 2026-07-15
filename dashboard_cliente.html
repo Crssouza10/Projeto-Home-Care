@@ -4045,16 +4045,9 @@
             // ==========================================
             // 3️⃣ ESTADO: HORA DE TOMAR (Gatilho)
             // ==========================================
-            // Só aparece se o status for pending
+            // Só aparece se o status for pending (cards limpos, aguarda voz)
             if (status === 'pending') {
-                return `<div style="display:flex; gap:12px; margin-top:10px;">
-                    <button onclick="handleMedAction('${med.id}', 'take')" style="flex:1; padding:14px; background:#10b981; color:white; border:none; border-radius:12px; font-weight:800; font-size:1.1rem; cursor:pointer;">
-                        ✅ Tomei
-                    </button>
-                    <button onclick="handleMedAction('${med.id}', 'reschedule')" style="flex:1; padding:14px; background:#f59e0b; color:white; border:none; border-radius:12px; font-weight:800; font-size:1.1rem; cursor:pointer;">
-                        ⏰ Reagendar
-                    </button>
-                </div>`;
+                return '';
             }
             
             return '';
