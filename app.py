@@ -1,9 +1,8 @@
-# ===== versão 2.3.4 - 2026-07-15 ================================
+# ===== versão 2.3.5 - 2026-07-15 ================================
 # Correções:
-# - Independência dos dias: editar horário hoje NÃO afeta dias seguintes
-# - medication.time do template preservado; apenas schedule de hoje alterado
-# - taken_status global não é mais atualizado por ações diárias
-# - PDF: window.open substituído por <a> temporário (compatível mobile)
+# - GET /api/cliente/{user_id}/medications agora aceita ?date=YYYY-MM-DD
+# - Frontend busca horários reais da data visualizada (não só de hoje)
+# - Independência real dos dias: editar horário dia 15 NÃO afeta dia 16
 import sys
 # Garante codificação UTF-8 para evitar erros de unicode no console (especialmente no Windows)
 if sys.platform.startswith('win'):
@@ -734,28 +733,38 @@ async def serve_audio(medication: str = "Seu medicamento", dosage: str = "confor
 # =========================================================
 
 @app.get("/api/cliente/{user_id}/medications", response_model=List[ClienteMedicationResponse])
-async def get_client_medications(user_id: str, db: Session = Depends(get_db)):
+async def get_client_medications(user_id: str, date: str = None, db: Session = Depends(get_db)):
+    """Lista medicamentos com schedules de uma data específica (ou hoje, se não informada)"""
     try:
         user_uuid = uuid.UUID(user_id)
     except ValueError:
         raise HTTPException(status_code=400, detail="ID de usuário inválido")
     
+    # ⚙️ v2.3.4: Aceita ?date=YYYY-MM-DD para consultar schedules de qualquer dia
+    if date:
+        try:
+            target_date = datetime.strptime(date, "%Y-%m-%d").date()
+        except ValueError:
+            raise HTTPException(status_code=400, detail="Formato de data inválido. Use YYYY-MM-DD")
+    else:
+        target_date = datetime.now().date()
+    
     today_str = datetime.now().strftime("%Y-%m-%d")
+    target_str = target_date.strftime("%Y-%m-%d")
+    
     medications = db.query(Medication).filter(
         Medication.user_id == user_uuid,
         Medication.is_active == True,
         or_(
             Medication.end_date == None,
-            Medication.end_date >= today_str
+            Medication.end_date >= target_str
         )
     ).all()
     
-    today_date = datetime.now().date()
-    
-    # Busca schedules de hoje para sincronizar o estado diário individual
+    # Busca schedules da DATA ALVO (não sempre hoje!)
     schedules = db.query(MedicationSchedule).filter(
         MedicationSchedule.user_id == user_uuid,
-        MedicationSchedule.scheduled_date == today_date
+        MedicationSchedule.scheduled_date == target_date
     ).all()
     schedules_by_med = {s.medication_id: s for s in schedules}
     
@@ -767,12 +776,8 @@ async def get_client_medications(user_id: str, db: Session = Depends(get_db)):
             status = sched.status
             med_time = sched.scheduled_time
         else:
-            # Fallback seguro para o caso de não haver schedule criado para hoje
-            status = med.taken_status
-            if status == 'taken' and med.last_taken_date != today_date:
-                status = 'pending'
-            elif status in ('rescheduled', 'not_taken'):
-                status = 'pending'
+            # Fallback: usa medication.time do template (horário padrão)
+            status = "pending"
             med_time = med.time
             
         resultado.append({

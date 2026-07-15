@@ -1465,7 +1465,7 @@
             <div class="header-info">
                 <h2 id="greeting">Boa noite!</h2>
                 <div class="user-name" id="user-name">Eliane Amorzinho</div>
-                <div style="font-size: 0.7rem; color: #00D4FF; opacity: 0.8; margin-top: 2px; font-weight: 500;">v2.3.4 (build 2026-07-15)</div>
+                <div style="font-size: 0.7rem; color: #00D4FF; opacity: 0.8; margin-top: 2px; font-weight: 500;">v2.3.5 (build 2026-07-15)</div>
             </div>
         </div>
         <div class="header-right">
@@ -3687,16 +3687,43 @@
         // -------------------------------------------------------------
         // 📋 FILTRAR MEDICAMENTOS POR DIA DA SEMANA (CORRIGIDO)
         // -------------------------------------------------------------
-        function loadMedicationsForDay(dayOfWeek) {
+        // 🔧 v2.3.4: Aceita data específica para buscar horários REAIS daquele dia
+        // Cada dia é independente — o schedule de hoje não deve afetar o dia 16
+        async function loadMedicationsForDay(dayOfWeek) {
             const container = document.getElementById('medications-list');
             
-            console.log(`\n🔍 ========== FILTRANDO MEDICAMENTOS ==========`);
+            // 🔧 v2.3.4: Se visualizando um dia específico, busca os horários REAIS daquele dia
+            let sourceData = medicationsData;
+            if (viewingSpecificDate) {
+                try {
+                    const url = `${API_URL}/api/cliente/${userId}/medications?date=${viewingSpecificDate}`;
+                    console.log(`📡 Buscando medicamentos para data específica: ${viewingSpecificDate}`);
+                    const response = await fetch(url);
+                    if (response.ok) {
+                        const medsEspecificos = await response.json();
+                        // Mescla com medicationsData original (preserva campos não retornados pela API)
+                        const medsMap = {};
+                        medicationsData.forEach(m => { medsMap[m.id] = m; });
+                        sourceData = medsEspecificos.map(m => ({
+                            ...(medsMap[m.id] || {}),
+                            ...m  // Sobrescreve time e taken_status com os da data específica
+                        }));
+                        console.log(`✅ Horários atualizados para ${viewingSpecificDate}:`, 
+                            sourceData.map(m => `${m.name}=${m.time}`));
+                    }
+                } catch (e) {
+                    console.warn('⚠️ Erro ao buscar horários da data específica:', e);
+                    // Continua com medicationsData em cache se falhar
+                }
+            }
+            
+            console.log(`\\n🔍 ========== FILTRANDO MEDICAMENTOS ==========`);
             console.log(`Dia da semana: ${dayOfWeek}`);
-            console.log(`Total no array medicationsData: ${medicationsData.length}`);
-            console.log(`Medicamentos:`, medicationsData.map(m => `${m.name} (dias: ${JSON.stringify(m.days_of_week)})`));
+            console.log(`Total no array medicationsData: ${sourceData.length}`);
+            console.log(`Medicamentos:`, sourceData.map(m => `${m.name} (dias: ${JSON.stringify(m.days_of_week)})`));
             
             // Filtra apenas medicamentos do dia da semana selecionado
-            const medsOnDay = medicationsData.filter(med => {
+            const medsOnDay = sourceData.filter(med => {
                 console.log(`\n💊 Verificando: ${med.name}`);
                 console.log(`   - days_of_week: ${JSON.stringify(med.days_of_week)}`);
                 console.log(`   - is_active: ${med.is_active}`);
@@ -7365,7 +7392,7 @@
 
     <!-- 🔖 INDICADOR DE VERSÃO -->
     <div style="text-align:center; padding:20px; color:#00D4FF; font-size:0.75rem; margin-top:30px; opacity:0.7;">
-        🏠 CR$ Home Care AI v2.3.4 — build 2026-07-15 — independência de dias + correção PDFs mobile
+        🏠 CR$ Home Care AI v2.3.5 — build 2026-07-15 — independência real dos dias (GET ?date= + frontend)
     </div>
         </body>
         </html>
