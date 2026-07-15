@@ -2825,8 +2825,14 @@
             full_name: ''
         };
 
+        // 🔧 CORREÇÃO v2.3.4: Usa <a> temporário em vez de window.open
+        // window.open é bloqueado por popup blockers em mobile (iOS/Android)
+        // Um clique programático em <a> com target="_blank" funciona em todos os dispositivos
         function openFileUrl(fileUrl) {
             if (!fileUrl) return;
+            
+            let finalUrl;
+            
             if (fileUrl.startsWith('data:')) {
                 try {
                     const parts = fileUrl.split(',');
@@ -2838,16 +2844,23 @@
                         u8arr[n] = bstr.charCodeAt(n);
                     }
                     const blob = new Blob([u8arr], { type: mime });
-                    const blobUrl = URL.createObjectURL(blob);
-                    window.open(blobUrl, '_blank');
+                    finalUrl = URL.createObjectURL(blob);
                 } catch (e) {
                     console.error("Erro ao converter base64 para Blob:", e);
-                    window.open(fileUrl, '_blank');
+                    finalUrl = fileUrl;
                 }
             } else {
-                const url = fileUrl.startsWith('http') ? fileUrl : `${API_URL}${fileUrl}`;
-                window.open(url, '_blank');
+                finalUrl = fileUrl.startsWith('http') ? fileUrl : `${API_URL}${fileUrl}`;
             }
+            
+            // ✅ Usa <a> temporário com click() — funciona em mobile e desktop
+            const link = document.createElement('a');
+            link.href = finalUrl;
+            link.target = '_blank';
+            link.rel = 'noopener noreferrer';
+            document.body.appendChild(link);
+            link.click();
+            setTimeout(() => document.body.removeChild(link), 100);
         }
 
         window.openIdDocumentFile = function() {
@@ -7352,7 +7365,7 @@
 
     <!-- 🔖 INDICADOR DE VERSÃO -->
     <div style="text-align:center; padding:20px; color:#00D4FF; font-size:0.75rem; margin-top:30px; opacity:0.7;">
-        🏠 CR$ Home Care AI v2.3.3 — build 2026-07-14 — correção: abertura de PDFs e documentos no celular
+        🏠 CR$ Home Care AI v2.3.4 — build 2026-07-15 — independência de dias + correção PDFs mobile
     </div>
         </body>
         </html>

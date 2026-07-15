@@ -1,4 +1,9 @@
-# ===== versão 2.30 - 2026-07-13 ================================
+# ===== versão 2.3.4 - 2026-07-15 ================================
+# Correções:
+# - Independência dos dias: editar horário hoje NÃO afeta dias seguintes
+# - medication.time do template preservado; apenas schedule de hoje alterado
+# - taken_status global não é mais atualizado por ações diárias
+# - PDF: window.open substituído por <a> temporário (compatível mobile)
 import sys
 # Garante codificação UTF-8 para evitar erros de unicode no console (especialmente no Windows)
 if sys.platform.startswith('win'):
@@ -1087,10 +1092,10 @@ async def mark_taken(med_id: str):
             sched.status = "taken"
             sched.confirmed_at = datetime.now()
             
-        med.taken_status = "taken"
-        med.last_taken_date = today_date
-        med.reminder_count = 0
-        med.responsible_notified = False
+        # ⚠️ NÃO atualiza med.taken_status — cada dia é independente!
+        # O status fica APENAS no MedicationSchedule (schedule de hoje)
+        # med.taken_status e med.last_taken_date são mantidos para 
+        # compatibilidade com versões antigas, mas NÃO são a fonte de verdade
         
         use_time = sched.scheduled_time if sched else med.time
         if use_time:
@@ -1203,7 +1208,8 @@ async def mark_not_taken(med_id: str):
         else:
             sched.status = "not_taken"
             
-        med.taken_status = "not_taken"
+        # ⚠️ NÃO atualiza med.taken_status — cada dia é independente!
+        # O status fica APENAS no MedicationSchedule (schedule de hoje)
         med.responsible_notified = True
         med.reminder_count += 1
         
@@ -1639,13 +1645,24 @@ async def update_medication(
     if not medication:
         raise HTTPException(status_code=404, detail="Medicação não encontrada")
     
-    # Atualizar campos no template (mantém para futuras gerações, se houver)
+    # ⚙️ CORREÇÃO v2.3.4: Cada dia é independente.
+    # Ao editar um medicamento, NÃO alteramos o medication.time do template —
+    # apenas o schedule de HOJE. Isso garante que mudanças de horário feitas
+    # hoje não afetem os dias seguintes (amanhã mantém o horário original).
+    
     h, m = map(int, med.time.split(":"))
     med_time_obj = time(h, m)
     
+    # ✅ Campos de identidade (nome, dosagem) são permanentes e afetam todos os dias
     medication.name = med.name
     medication.dosage = med.dosage
-    medication.time = med_time_obj
+    
+    # ⚠️ NÃO alterar medication.time — dias futuros mantêm o horário original!
+    # medication.time permanece como estava (o template original)
+    # O novo horário (med_time_obj) será aplicado APENAS no schedule de hoje
+    
+    # days_of_week pode mudar? Sim — se o usuário adicionar/remover dias, 
+    # isso afeta a recorrência futura. Mantemos a atualização.
     medication.days_of_week = med.days_of_week
     
     start_dt = medication.created_at.date() if medication.created_at else date.today()
@@ -1668,7 +1685,7 @@ async def update_medication(
         medication.end_date = None
         medication.is_continuous = False
     
-    # Ao editar, resetar o status para garantir que o alarme toque caso o horário mude
+    # Limpa flags globais de status do dia — NÃO devem poluir dias futuros
     medication.taken_status = "pending"
     medication.last_taken_date = None
     medication.reminder_count = 0
@@ -1682,7 +1699,7 @@ async def update_medication(
     ).first()
     
     if not sched:
-        # Se não existe schedule para hoje, cria um
+        # Se não existe schedule para hoje, cria um com o novo horário
         sched = MedicationSchedule(
             medication_id=medication.id,
             user_id=medication.user_id,
