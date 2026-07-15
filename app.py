@@ -546,38 +546,35 @@ async def get_medication_history(user_id: str, date: str, db: Session = Depends(
         
         print(f"✅ {len(medications)} medicamentos encontrados")
         
-        # ✅ CORREÇÃO: Usa scheduled_datetime e confirmed_at (nomes corretos!)
-        logs_query = text("""
-            SELECT medication_id, status, confirmed_at
-            FROM medication_logs
-            WHERE user_id = :user_id
-            AND CAST(scheduled_datetime AS DATE) = :target_date
-        """)
-        logs_result = db.execute(logs_query, {
-            "user_id": user_uuid,
-            "target_date": target_date
-        })
-        
-        logs_dict = {}
-        for log in logs_result:
-            logs_dict[str(log[0])] = {
-                "status": log[1],
-                "actual_time": log[2].strftime("%H:%M") if log[2] else None
-            }
+        # Busca os schedules do dia na tabela MedicationSchedule
+        schedules = db.query(MedicationSchedule).filter(
+            MedicationSchedule.user_id == user_uuid,
+            MedicationSchedule.scheduled_date == target_date
+        ).all()
+        schedules_by_med = {s.medication_id: s for s in schedules}
         
         resultado = []
         for med in medications:
             med_id = str(med.id)
-            log = logs_dict.get(med_id, {})
+            sched = schedules_by_med.get(med.id)
+            if sched:
+                status = sched.status
+                med_time = sched.scheduled_time
+                confirmed_at = sched.confirmed_at
+            else:
+                # Fallback seguro para o caso de não haver schedule criado para essa data
+                status = "pending"
+                med_time = med.time
+                confirmed_at = None
             
             resultado.append({
                 "id": med_id,
                 "name": med.name,
                 "dosage": med.dosage,
-                "time": med.time.strftime("%H:%M") if med.time else None,
+                "time": med_time.strftime("%H:%M") if med_time else None,
                 "days_of_week": med.days_of_week or [],
-                "taken_status": log.get("status", "pending"),
-                "taken_time": log.get("actual_time"),
+                "taken_status": status,
+                "taken_time": confirmed_at.strftime("%H:%M") if confirmed_at else None,
                 "created_at": med.created_at.strftime("%Y-%m-%d") if med.created_at else None,
                 "end_date": med.end_date,
                 "is_history": True,
@@ -1674,6 +1671,47 @@ async def update_medication(
     medication.reminder_count = 0
     medication.responsible_notified = False
     
+    # ⚙️ REGENERAÇÃO DE SCHEDULES FUTUROS E HOJE PENDENTES
+    today = date.today()
+    
+    # 1. Deleta schedules pendentes a partir de hoje
+    db.query(MedicationSchedule).filter(
+        MedicationSchedule.medication_id == medication.id,
+        MedicationSchedule.scheduled_date >= today,
+        MedicationSchedule.status == "pending"
+    ).delete()
+    
+    # 2. Gera novos schedules de hoje em diante
+    start_date_for_regeneration = max(today, actual_start)
+    
+    # Determina a data limite
+    end_dt = None
+    if medication.end_date:
+        try:
+            end_dt = datetime.strptime(medication.end_date, "%Y-%m-%d").date()
+        except ValueError:
+            pass
+            
+    schedules = generate_medication_schedules(
+        user_id=medication.user_id,
+        medication_id=medication.id,
+        med_time=medication.time,
+        days_of_week=medication.days_of_week or [0, 1, 2, 3, 4, 5, 6],
+        start_date=start_date_for_regeneration,
+        end_date=end_dt,
+        is_continuous=medication.is_continuous
+    )
+    
+    # 3. Insere os novos schedules
+    for s in schedules:
+        db.add(MedicationSchedule(
+            medication_id=medication.id,
+            user_id=medication.user_id,
+            scheduled_date=s["scheduled_date"],
+            scheduled_time=s["scheduled_time"],
+            status=s["status"],
+        ))
+        
     db.commit()
     db.refresh(medication)
     
@@ -2434,24 +2472,6 @@ async def upload_insurance_card(user_id: str, file: UploadFile = File(...), db: 
             
         contents = await file.read()
         filename = file.filename.lower()
-        ext = os.path.splitext(filename)[1]
-        
-        # Salva o arquivo — /tmp/ na Vercel (read-only filesystem), static/uploads/ local
-        if IS_VERCEL:
-            upload_dir = "/tmp/uploads"
-        else:
-            upload_dir = "static/uploads"
-        os.makedirs(upload_dir, exist_ok=True)
-        unique_filename = f"card_{user_id}_{uuid.uuid4().hex}{ext}"
-        filepath = os.path.join(upload_dir, unique_filename)
-        
-        with open(filepath, "wb") as f:
-            f.write(contents)
-            
-        # Cria a URL publica — endpoint dedicado para compatibilidade Vercel
-        card_url = f"/api/files/uploads/{unique_filename}"
-        
-        # Faz o OCR da carteirinha para tentar ler a operadora/convenio
         mime_type = file.content_type or "image/jpeg"
         if filename.endswith('.png'):
             mime_type = 'image/png'
@@ -2459,6 +2479,23 @@ async def upload_insurance_card(user_id: str, file: UploadFile = File(...), db: 
             mime_type = 'image/jpeg'
         elif filename.endswith('.pdf'):
             mime_type = 'application/pdf'
+            
+        # Converte para Data URI (base64) para persistência 100% serverless
+        b64_str = base64.b64encode(contents).decode("utf-8")
+        card_url = f"data:{mime_type};base64,{b64_str}"
+        
+        # Salva o arquivo localmente como backup se não estiver na Vercel
+        if not IS_VERCEL:
+            try:
+                ext = os.path.splitext(filename)[1]
+                upload_dir = "static/uploads"
+                os.makedirs(upload_dir, exist_ok=True)
+                unique_filename = f"card_{user_id}_{uuid.uuid4().hex}{ext}"
+                filepath = os.path.join(upload_dir, unique_filename)
+                with open(filepath, "wb") as f:
+                    f.write(contents)
+            except Exception as backup_ex:
+                print(f"⚠️ Erro ao salvar backup local: {backup_ex}")
             
         gemini_key = os.getenv("GEMINI_API_KEY")
         insurance_name = ""
@@ -2579,21 +2616,6 @@ async def upload_identity_document(user_id: str, file: UploadFile = File(...), d
             
         contents = await file.read()
         filename = file.filename.lower()
-        ext = os.path.splitext(filename)[1]
-        
-        # Salva o arquivo — /tmp/ na Vercel (read-only filesystem), static/uploads/ local
-        if IS_VERCEL:
-            upload_dir = "/tmp/uploads"
-        else:
-            upload_dir = "static/uploads"
-        os.makedirs(upload_dir, exist_ok=True)
-        unique_filename = f"id_{user_id}_{uuid.uuid4().hex}{ext}"
-        filepath = os.path.join(upload_dir, unique_filename)
-        
-        with open(filepath, "wb") as f:
-            f.write(contents)
-            
-        doc_url = f"/api/files/uploads/{unique_filename}"
         
         mime_type = file.content_type or "image/jpeg"
         if filename.endswith('.png'):
@@ -2602,6 +2624,23 @@ async def upload_identity_document(user_id: str, file: UploadFile = File(...), d
             mime_type = 'image/jpeg'
         elif filename.endswith('.pdf'):
             mime_type = 'application/pdf'
+            
+        # Converte para Data URI (base64) para persistência 100% serverless
+        b64_str = base64.b64encode(contents).decode("utf-8")
+        doc_url = f"data:{mime_type};base64,{b64_str}"
+        
+        # Salva o arquivo localmente como backup se não estiver na Vercel
+        if not IS_VERCEL:
+            try:
+                ext = os.path.splitext(filename)[1]
+                upload_dir = "static/uploads"
+                os.makedirs(upload_dir, exist_ok=True)
+                unique_filename = f"id_{user_id}_{uuid.uuid4().hex}{ext}"
+                filepath = os.path.join(upload_dir, unique_filename)
+                with open(filepath, "wb") as f:
+                    f.write(contents)
+            except Exception as backup_ex:
+                print(f"⚠️ Erro ao salvar backup local: {backup_ex}")
             
         gemini_key = os.getenv("GEMINI_API_KEY")
         doc_info = ""

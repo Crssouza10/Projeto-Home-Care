@@ -2825,21 +2825,40 @@
             full_name: ''
         };
 
+        function openFileUrl(fileUrl) {
+            if (!fileUrl) return;
+            if (fileUrl.startsWith('data:')) {
+                try {
+                    const parts = fileUrl.split(',');
+                    const mime = parts[0].match(/:(.*?);/)[1];
+                    const bstr = atob(parts[1]);
+                    let n = bstr.length;
+                    const u8arr = new Uint8Array(n);
+                    while (n--) {
+                        u8arr[n] = bstr.charCodeAt(n);
+                    }
+                    const blob = new Blob([u8arr], { type: mime });
+                    const blobUrl = URL.createObjectURL(blob);
+                    window.open(blobUrl, '_blank');
+                } catch (e) {
+                    console.error("Erro ao converter base64 para Blob:", e);
+                    window.open(fileUrl, '_blank');
+                }
+            } else {
+                const url = fileUrl.startsWith('http') ? fileUrl : `${API_URL}${fileUrl}`;
+                window.open(url, '_blank');
+            }
+        }
+
         window.openIdDocumentFile = function() {
             if (clinicalData && clinicalData.identity_document_file) {
-                const url = clinicalData.identity_document_file.startsWith('http') 
-                    ? clinicalData.identity_document_file 
-                    : `${API_URL}${clinicalData.identity_document_file}`;
-                window.open(url, '_blank');
+                openFileUrl(clinicalData.identity_document_file);
             }
         };
 
         window.openInsuranceCardFile = function() {
             if (clinicalData && clinicalData.health_insurance_card) {
-                const url = clinicalData.health_insurance_card.startsWith('http') 
-                    ? clinicalData.health_insurance_card 
-                    : `${API_URL}${clinicalData.health_insurance_card}`;
-                window.open(url, '_blank');
+                openFileUrl(clinicalData.health_insurance_card);
             }
         };
 
@@ -2889,8 +2908,9 @@
                     document.getElementById('clinical-view-id-box').style.cursor = 'pointer';
                     const indicator = document.getElementById('clinical-view-id-indicator');
                     if (indicator) indicator.style.display = 'inline';
-                    const fullDocUrl = docUrl.startsWith('http') ? docUrl : `${API_URL}${docUrl}`;
-                    if (docUrl.toLowerCase().endsWith('.pdf')) {
+                    const fullDocUrl = (docUrl.startsWith('data:') || docUrl.startsWith('http')) ? docUrl : `${API_URL}${docUrl}`;
+                    const isPdf = docUrl.toLowerCase().endsWith('.pdf') || docUrl.startsWith('data:application/pdf');
+                    if (isPdf) {
                         docImg.src = "https://cdn-icons-png.flaticon.com/512/337/337946.png";
                         docImg.style.maxHeight = "80px";
                     } else {
@@ -2915,8 +2935,9 @@
                     document.getElementById('clinical-view-insurance-box').style.cursor = 'pointer';
                     const indicator = document.getElementById('clinical-view-insurance-indicator');
                     if (indicator) indicator.style.display = 'inline';
-                    const fullCardUrl = cardUrl.startsWith('http') ? cardUrl : `${API_URL}${cardUrl}`;
-                    if (cardUrl.toLowerCase().endsWith('.pdf')) {
+                    const fullCardUrl = (cardUrl.startsWith('data:') || cardUrl.startsWith('http')) ? cardUrl : `${API_URL}${cardUrl}`;
+                    const isPdf = cardUrl.toLowerCase().endsWith('.pdf') || cardUrl.startsWith('data:application/pdf');
+                    if (isPdf) {
                         cardImg.src = "https://cdn-icons-png.flaticon.com/512/337/337946.png";
                         cardImg.style.maxHeight = "80px";
                     } else {
@@ -2986,8 +3007,9 @@
                 const docPreviewImg = document.getElementById('clinical-edit-identity-document-preview-img');
                 if (clinicalData.identity_document_file) {
                     const docUrl = clinicalData.identity_document_file;
-                    const fullDocUrl = docUrl.startsWith('http') ? docUrl : `${API_URL}${docUrl}`;
-                    if (docUrl.toLowerCase().endsWith('.pdf')) {
+                    const fullDocUrl = (docUrl.startsWith('data:') || docUrl.startsWith('http')) ? docUrl : `${API_URL}${docUrl}`;
+                    const isPdf = docUrl.toLowerCase().endsWith('.pdf') || docUrl.startsWith('data:application/pdf');
+                    if (isPdf) {
                         docPreviewImg.src = "https://cdn-icons-png.flaticon.com/512/337/337946.png";
                     } else {
                         docPreviewImg.src = fullDocUrl;
@@ -3001,8 +3023,9 @@
                 const previewImg = document.getElementById('clinical-edit-insurance-card-preview-img');
                 if (clinicalData.health_insurance_card) {
                     const cardUrl = clinicalData.health_insurance_card;
-                    const fullCardUrl = cardUrl.startsWith('http') ? cardUrl : `${API_URL}${cardUrl}`;
-                    if (cardUrl.toLowerCase().endsWith('.pdf')) {
+                    const fullCardUrl = (cardUrl.startsWith('data:') || cardUrl.startsWith('http')) ? cardUrl : `${API_URL}${cardUrl}`;
+                    const isPdf = cardUrl.toLowerCase().endsWith('.pdf') || cardUrl.startsWith('data:application/pdf');
+                    if (isPdf) {
                         previewImg.src = "https://cdn-icons-png.flaticon.com/512/337/337946.png";
                     } else {
                         previewImg.src = fullCardUrl;
@@ -3231,10 +3254,11 @@
                     const previewContainer = document.getElementById('clinical-edit-identity-document-preview-container');
                     const previewImg = document.getElementById('clinical-edit-identity-document-preview-img');
                     const docUrl = result.identity_document_file;
-                    if (docUrl.toLowerCase().endsWith('.pdf')) {
+                    const isPdf = docUrl.toLowerCase().endsWith('.pdf') || docUrl.startsWith('data:application/pdf');
+                    if (isPdf) {
                         previewImg.src = "https://cdn-icons-png.flaticon.com/512/337/337946.png";
                     } else {
-                        previewImg.src = docUrl.startsWith('http') ? docUrl : `${API_URL}${docUrl}`;
+                        previewImg.src = (docUrl.startsWith('data:') || docUrl.startsWith('http')) ? docUrl : `${API_URL}${docUrl}`;
                     }
                     previewContainer.style.display = 'block';
                     
@@ -3279,10 +3303,11 @@
                     const previewContainer = document.getElementById('clinical-edit-insurance-card-preview-container');
                     const previewImg = document.getElementById('clinical-edit-insurance-card-preview-img');
                     const cardUrl = result.health_insurance_card;
-                    if (cardUrl.toLowerCase().endsWith('.pdf')) {
+                    const isPdf = cardUrl.toLowerCase().endsWith('.pdf') || cardUrl.startsWith('data:application/pdf');
+                    if (isPdf) {
                         previewImg.src = "https://cdn-icons-png.flaticon.com/512/337/337946.png";
                     } else {
-                        previewImg.src = cardUrl.startsWith('http') ? cardUrl : `${API_URL}${cardUrl}`;
+                        previewImg.src = (cardUrl.startsWith('data:') || cardUrl.startsWith('http')) ? cardUrl : `${API_URL}${cardUrl}`;
                     }
                     previewContainer.style.display = 'block';
                     
@@ -4020,8 +4045,8 @@
             // ==========================================
             // 3️⃣ ESTADO: HORA DE TOMAR (Gatilho)
             // ==========================================
-            // Só aparece se for a hora exata E o status for pending
-            if (isDue && status === 'pending') {
+            // Só aparece se o status for pending
+            if (status === 'pending') {
                 return `<div style="display:flex; gap:12px; margin-top:10px;">
                     <button onclick="handleMedAction('${med.id}', 'take')" style="flex:1; padding:14px; background:#10b981; color:white; border:none; border-radius:12px; font-weight:800; font-size:1.1rem; cursor:pointer;">
                         ✅ Tomei
@@ -4032,9 +4057,6 @@
                 </div>`;
             }
             
-            // ==========================================
-            // 4️⃣ ESTADO: AGUARDANDO (Card limpo)
-            // ==========================================
             return '';
         }
 
