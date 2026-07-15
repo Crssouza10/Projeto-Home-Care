@@ -4007,9 +4007,15 @@
             // 1️⃣ ESTADO: REAGENDADO (Botão laranja)
             // ==========================================
             if (status === 'rescheduled') {
-                return `<button disabled style="width:100%; margin-top:10px; padding:14px; background:#f59e0b; color:white; border:none; border-radius:12px; font-weight:800; font-size:1.1rem; cursor:default;">
-                    🔄 Reagendado para ${horaMed}
-                </button>`;
+                const minutosMedicamento = parseInt(h) * 60 + parseInt(m);
+                if (minutosAtuais < minutosMedicamento) {
+                    return `<button disabled style="width:100%; margin-top:10px; padding:14px; background:#f59e0b; color:white; border:none; border-radius:12px; font-weight:800; font-size:1.1rem; cursor:default;">
+                        🔄 Reagendado para ${horaMed}
+                    </button>`;
+                } else {
+                    // O horário do reagendamento chegou ou passou! Trata como pendente para permitir ação.
+                    status = 'pending';
+                }
             }
             
             // ==========================================
@@ -6233,7 +6239,11 @@
                     
                     const minutosMedicamento = horaMed * 60 + minutoMed;
                     const diffMinutos = minutosAtuais - minutosMedicamento;
-                    const status = med.taken_status || 'pending';
+                    let status = med.taken_status || 'pending';
+                    
+                    if (status === 'rescheduled' && minutosAtuais >= minutosMedicamento) {
+                        status = 'pending';
+                    }
                     
                     // 🎯 CASO 1: HORA EXATA (diff = 0)
                     if (diffMinutos === 0 && status !== 'taken' && status !== 'not_taken') {
