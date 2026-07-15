@@ -748,21 +748,37 @@ async def get_client_medications(user_id: str, db: Session = Depends(get_db)):
         )
     ).all()
     
-    resultado = []
     today_date = datetime.now().date()
     
+    # Busca schedules de hoje para sincronizar o estado diário individual
+    schedules = db.query(MedicationSchedule).filter(
+        MedicationSchedule.user_id == user_uuid,
+        MedicationSchedule.scheduled_date == today_date
+    ).all()
+    schedules_by_med = {s.medication_id: s for s in schedules}
+    
+    resultado = []
+    
     for med in medications:
-        status = med.taken_status
-        # Se foi tomado em um dia anterior, resetamos para pending na resposta
-        if status == 'taken' and med.last_taken_date != today_date:
-            status = 'pending'
+        sched = schedules_by_med.get(med.id)
+        if sched:
+            status = sched.status
+            med_time = sched.scheduled_time
+        else:
+            # Fallback seguro para o caso de não haver schedule criado para hoje
+            status = med.taken_status
+            if status == 'taken' and med.last_taken_date != today_date:
+                status = 'pending'
+            elif status in ('rescheduled', 'not_taken'):
+                status = 'pending'
+            med_time = med.time
             
         resultado.append({
             "id": str(med.id),
             "name": med.name,
             "dosage": med.dosage,
-            "time": med.time.strftime('%H:%M') if med.time else None,
-            "periodo": _get_periodo(med.time),
+            "time": med_time.strftime('%H:%M') if med_time else None,
+            "periodo": _get_periodo(med_time),
             "days_of_week": med.days_of_week if med.days_of_week is not None else [],
             "taken_status": status,
             "is_active": med.is_active,
@@ -1041,18 +1057,47 @@ async def mark_schedule_taken(schedule_id: str, db: Session = Depends(get_db)):
 @app.post("/api/medications/{med_id}/take")
 async def mark_taken(med_id: str):
     """Estado 3 ou 6: Marca como tomado e encerra monitoramento do dia"""
+    from datetime import timezone, timedelta
+    brasilia_tz = timezone(timedelta(hours=-3))
+    now_br = datetime.now(brasilia_tz)
+    if now_br.hour == 23 and now_br.minute == 59:
+        raise HTTPException(status_code=403, detail="Ações travadas às 23:59.")
+
     db = SessionLocal()
     try:
         med = db.query(Medication).filter(Medication.id == med_id).first()
         if not med: raise HTTPException(404, "Medicamento não encontrado")
         
+        today_date = now_br.date()
+        
+        # Busca ou cria o schedule de hoje
+        sched = db.query(MedicationSchedule).filter(
+            MedicationSchedule.medication_id == med.id,
+            MedicationSchedule.scheduled_date == today_date
+        ).first()
+        
+        if not sched:
+            sched = MedicationSchedule(
+                medication_id=med.id,
+                user_id=med.user_id,
+                scheduled_date=today_date,
+                scheduled_time=med.time or time(0, 0),
+                status="taken",
+                confirmed_at=datetime.now()
+            )
+            db.add(sched)
+        else:
+            sched.status = "taken"
+            sched.confirmed_at = datetime.now()
+            
         med.taken_status = "taken"
-        med.last_taken_date = datetime.now().date()
+        med.last_taken_date = today_date
         med.reminder_count = 0
         med.responsible_notified = False
         
-        if med.time:
-            sched_dt = datetime.combine(datetime.now().date(), med.time)
+        use_time = sched.scheduled_time if sched else med.time
+        if use_time:
+            sched_dt = datetime.combine(today_date, use_time)
         else:
             sched_dt = datetime.now()
             
@@ -1080,6 +1125,12 @@ async def mark_taken(med_id: str):
 @app.put("/api/medications/{med_id}/reschedule")
 async def reschedule_medication(med_id: str, new_time: str):
     """Estado 4: Reagenda e muda status para aguardar novo horário"""
+    from datetime import timezone, timedelta
+    brasilia_tz = timezone(timedelta(hours=-3))
+    now_br = datetime.now(brasilia_tz)
+    if now_br.hour == 23 and now_br.minute == 59:
+        raise HTTPException(status_code=403, detail="Ações travadas às 23:59.")
+
     db = SessionLocal()
     try:
         med = db.query(Medication).filter(Medication.id == med_id).first()
@@ -1089,7 +1140,27 @@ async def reschedule_medication(med_id: str, new_time: str):
         if not (0 <= h <= 23 and 0 <= m <= 59):
             raise ValueError("Horário inválido")
             
-        med.time = time(h, m)
+        today_date = now_br.date()
+        # Busca ou cria o schedule de hoje
+        sched = db.query(MedicationSchedule).filter(
+            MedicationSchedule.medication_id == med.id,
+            MedicationSchedule.scheduled_date == today_date
+        ).first()
+        
+        if not sched:
+            sched = MedicationSchedule(
+                medication_id=med.id,
+                user_id=med.user_id,
+                scheduled_date=today_date,
+                scheduled_time=time(h, m),
+                status="rescheduled"
+            )
+            db.add(sched)
+        else:
+            sched.scheduled_time = time(h, m)
+            sched.status = "rescheduled"
+            
+        # Não altera med.time do template global!
         med.taken_status = "rescheduled"
         med.reminder_count = 0
         db.commit()
@@ -1104,17 +1175,44 @@ async def reschedule_medication(med_id: str, new_time: str):
 @app.post("/api/medications/{med_id}/not-taken")
 async def mark_not_taken(med_id: str):
     """Estado 7: Não tomado no reagendamento -> Aciona responsável"""
+    from datetime import timezone, timedelta
+    brasilia_tz = timezone(timedelta(hours=-3))
+    now_br = datetime.now(brasilia_tz)
+    if now_br.hour == 23 and now_br.minute == 59:
+        raise HTTPException(status_code=403, detail="Ações travadas às 23:59.")
+
     db = SessionLocal()
     try:
         med = db.query(Medication).filter(Medication.id == med_id).first()
         if not med: raise HTTPException(404, "Medicamento não encontrado")
         
+        today_date = now_br.date()
+        
+        # Busca ou cria o schedule de hoje
+        sched = db.query(MedicationSchedule).filter(
+            MedicationSchedule.medication_id == med.id,
+            MedicationSchedule.scheduled_date == today_date
+        ).first()
+        
+        if not sched:
+            sched = MedicationSchedule(
+                medication_id=med.id,
+                user_id=med.user_id,
+                scheduled_date=today_date,
+                scheduled_time=med.time or time(0, 0),
+                status="not_taken"
+            )
+            db.add(sched)
+        else:
+            sched.status = "not_taken"
+            
         med.taken_status = "not_taken"
         med.responsible_notified = True
         med.reminder_count += 1
         
-        if med.time:
-            sched_dt = datetime.combine(datetime.now().date(), med.time)
+        use_time = sched.scheduled_time if sched else med.time
+        if use_time:
+            sched_dt = datetime.combine(today_date, use_time)
         else:
             sched_dt = datetime.now()
             

@@ -1503,7 +1503,7 @@
             </div>            
             
             <div class="header-stat" onclick="showTodayCommitments()">
-                <div class="header-stat-icon">📅</div>
+                <div class="header-stat-icon">🗓️</div>
                 <div>
                     <div class="header-stat-value" id="appts-commitments">0</div>
                     <div class="header-stat-label" id="appts-label-header">consulta(s)</div>
@@ -1527,7 +1527,7 @@
             <div class="section">
                 <!-- Antes estava apenas o texto, agora coloque o ID -->
                 <h3 id="agenda-header" style="font-size: 1.2rem; font-weight: 700; margin-bottom: 15px; color: #fff;">
-                    📅 Minha agenda para hoje dia: 20/junho/2026
+                    🗓️ Minha agenda para hoje dia: 20/junho/2026
                 </h3>
                 
                 <!-- SEÇÕES - SCROLL ÚNICO (SEM ABAS) -->
@@ -1541,10 +1541,10 @@
                     <div id="medications-list"><div class="loading">⏳ Carregando...</div></div>
                 </div>
                 
-                <!-- 📅 CONSULTAS -->
+                <!-- 🗓️ CONSULTAS -->
                 <div id="screen-appointments" class="screen">
                     <div class="section-header-btn" onclick="scrollToSection('appointments')">
-                        <span class="section-icon">📅</span>
+                        <span class="section-icon">🗓️</span>
                         Consultas agendadas
                         <span class="section-badge" id="tab-appts">0</span>
                     </div>
@@ -2830,13 +2830,7 @@
                 const url = clinicalData.identity_document_file.startsWith('http') 
                     ? clinicalData.identity_document_file 
                     : `${API_URL}${clinicalData.identity_document_file}`;
-                const a = document.createElement('a');
-                a.href = url;
-                a.target = '_blank';
-                a.rel = 'noopener noreferrer';
-                document.body.appendChild(a);
-                a.click();
-                document.body.removeChild(a);
+                window.open(url, '_blank');
             }
         };
 
@@ -2845,13 +2839,7 @@
                 const url = clinicalData.health_insurance_card.startsWith('http') 
                     ? clinicalData.health_insurance_card 
                     : `${API_URL}${clinicalData.health_insurance_card}`;
-                const a = document.createElement('a');
-                a.href = url;
-                a.target = '_blank';
-                a.rel = 'noopener noreferrer';
-                document.body.appendChild(a);
-                a.click();
-                document.body.removeChild(a);
+                window.open(url, '_blank');
             }
         };
 
@@ -3426,7 +3414,7 @@
                                     <div class="med-time-badge">${med.time || '--:--'}</div>
                                     <div class="card-actions-group">
                                         <button class="card-icon-btn attach-image" onclick="triggerBoxImageUpload('${med.id}')" title="Anexar Caixa do Remédio" style="background:#FFFFFF; color:#f59e0b; border-color: rgba(245,158,11,0.2);">📷</button>
-                                        <button class="card-icon-btn calendar" onclick="showMedicationCalendar('${med.id}')" title="Ver Dias de Uso" style="background:#FFFFFF; color:#10b981; border-color: rgba(16,185,129,0.2);">📅</button>
+                                        <button class="card-icon-btn calendar" onclick="showMedicationCalendar('${med.id}')" title="Ver Dias de Uso" style="background:#FFFFFF; color:#10b981; border-color: rgba(16,185,129,0.2);">🗓️</button>
                                     </div>
                                 </div>
                                 <div class="med-card-body-flex" style="display: flex; justify-content: space-between; align-items: center; gap: 15px; margin-bottom: 12px;">
@@ -3736,7 +3724,7 @@
                                 <div class="med-time-badge">${med.time || '--:--'}</div>
                                 <div class="card-actions-group">
                                     <button class="card-icon-btn attach-image" onclick="triggerBoxImageUpload('${med.id}')" title="Anexar Caixa do Remédio" style="background:#FFFFFF; color:#f59e0b; border-color: rgba(245,158,11,0.2);">📷</button>
-                                    <button class="card-icon-btn calendar" onclick="showMedicationCalendar('${med.id}')" title="Ver Dias de Uso" style="background:#FFFFFF; color:#10b981; border-color: rgba(16,185,129,0.2);">📅</button>
+                                    <button class="card-icon-btn calendar" onclick="showMedicationCalendar('${med.id}')" title="Ver Dias de Uso" style="background:#FFFFFF; color:#10b981; border-color: rgba(16,185,129,0.2);">🗓️</button>
                                     <button class="card-icon-btn edit" onclick="editMed('${med.id}')" title="Editar">✏️</button>
                                     <button class="card-icon-btn delete" onclick="deleteMedication('${med.id}')" title="Excluir">🗑️</button>
                                 </div>
@@ -3745,7 +3733,7 @@
                                 <div class="med-card-info" style="flex: 1;">
                                     <div class="med-name" style="margin-bottom: 4px;">${med.name || 'Sem nome'}</div>
                                     <div class="med-dosage" style="margin-bottom: 8px;">💉 ${med.dosage || ''}</div>
-                                    <div class="med-days" style="margin-bottom: 0;">📅 ${diasText}</div>
+                                    <div class="med-days" style="margin-bottom: 0;">🗓️ ${diasText}</div>
                                 </div>
                                 ${med.box_image ? `
                                     <div class="med-box-image" style="width: 140px; height: 80px; overflow: hidden; border-radius: 8px; border: 1px solid rgba(0,0,0,0.1); cursor: pointer;" onclick="viewFullBoxImage('${med.box_image}')">
@@ -3963,6 +3951,13 @@
             const today = new Date().toISOString().split('T')[0]; // Data atual: "2026-06-04"
             const currentDayOfWeek = agora.getDay(); // Dia da semana atual (0-6)
             
+            // 🔒 TRAVA DAS 23:59
+            if (agora.getHours() === 23 && agora.getMinutes() === 59) {
+                return `<button disabled style="width:100%; margin-top:10px; padding:14px; background:#9ca3af; color:white; border:none; border-radius:12px; font-weight:800; font-size:1.1rem; cursor:default;">
+                    🔒 Dados travados (23:59)
+                </button>`;
+            }
+            
             const timeStr = med.time || '00:00:00';
             const [h, m] = timeStr.split(':');
             const horaMed = `${h}:${String(m).padStart(2, '0')}`;
@@ -4048,6 +4043,11 @@
         // 🟢 HANDLER DE AÇÕES (Clique nos botões)
         // ===============================================================
         async function handleMedAction(medId, action) {
+            const agora = new Date();
+            if (agora.getHours() === 23 && agora.getMinutes() === 59) {
+                showToast('❌ Ações travadas a partir das 23:59!', true);
+                return;
+            }
             try {
                 // Feedback visual imediato
                 showToast('Processando ação...');
