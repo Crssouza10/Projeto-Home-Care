@@ -1,8 +1,11 @@
-# ===== versão 2.3.5 - 2026-07-15 ================================
+# ===== versão 2.3.6 - 2026-07-16 ================================
 # Correções:
 # - GET /api/cliente/{user_id}/medications agora aceita ?date=YYYY-MM-DD
 # - Frontend busca horários reais da data visualizada (não só de hoje)
 # - Independência real dos dias: editar horário dia 15 NÃO afeta dia 16
+# - Visualização nativa de PDFs (Documentos e Carteirinha) via rotas HTTP inline
+# - Fuso horário estrito de Brasília (UTC-3) para mitigar vazamentos de data do servidor
+# - Correções de erros JavaScript de escopo e constante na renderização do frontend
 import sys
 # Garante codificação UTF-8 para evitar erros de unicode no console (especialmente no Windows)
 if sys.platform.startswith('win'):
@@ -14,7 +17,7 @@ if sys.platform.startswith('win'):
 
 from fastapi import FastAPI, HTTPException, Depends, status, Request, File, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import HTMLResponse, JSONResponse, FileResponse, StreamingResponse
+from fastapi.responses import HTMLResponse, JSONResponse, FileResponse, StreamingResponse, Response
 from fastapi.staticfiles import StaticFiles  # ✅ IMPORTAÇÃO CRÍTICA!
 from sqlalchemy import create_engine, Column, String, DateTime, Boolean, Time, Date, Text, or_, Integer, text
 from sqlalchemy.orm import sessionmaker, declarative_base, Session
@@ -69,7 +72,7 @@ load_dotenv(override=True)
 app = FastAPI(
     title="CR$ HOME CARE AI",
     description="Sistema de Cuidado Domiciliar Inteligente",
-    version="1.0.4"
+    version="1.0.5"
 )
 
 # ===== CORS =====
@@ -681,6 +684,97 @@ async def update_clinical_info(user_id: str, info: ClinicalInfoUpdate, db: Sessi
         "message": "Informações clínicas atualizadas com sucesso"
     }
 
+@app.get("/api/cliente/{user_id}/view-document")
+async def view_document(user_id: str, db: Session = Depends(get_db)):
+    try:
+        user_uuid = uuid.UUID(user_id)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="ID de usuário inválido")
+    
+    user = db.query(User).filter(User.id == user_uuid).first()
+    if not user or not user.identity_document_file:
+        raise HTTPException(status_code=404, detail="Documento não encontrado")
+    
+    file_data = user.identity_document_file
+    if file_data.startswith("data:"):
+        try:
+            header, encoded = file_data.split(",", 1)
+            mime_type = header.split(";")[0].split(":")[1]
+            import base64
+            decoded = base64.b64decode(encoded)
+            headers = {}
+            if mime_type == "application/pdf":
+                headers["Content-Disposition"] = "inline; filename=documento.pdf"
+            return Response(content=decoded, media_type=mime_type, headers=headers)
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=f"Erro ao processar documento: {str(e)}")
+    else:
+        if file_data.startswith("http"):
+            from fastapi.responses import RedirectResponse
+            return RedirectResponse(url=file_data)
+        else:
+            import os
+            filepath = os.path.join("static/uploads", os.path.basename(file_data))
+            if not os.path.exists(filepath):
+                filepath = file_data
+            if os.path.exists(filepath):
+                media_type = "application/octet-stream"
+                if filepath.lower().endswith(".pdf"):
+                    media_type = "application/pdf"
+                elif filepath.lower().endswith((".png", ".jpg", ".jpeg", ".gif", ".webp")):
+                    media_type = f"image/{filepath.split('.')[-1].lower().replace('jpg', 'jpeg')}"
+                headers = {}
+                if media_type == "application/pdf":
+                    headers["Content-Disposition"] = "inline; filename=" + os.path.basename(filepath)
+                return FileResponse(filepath, media_type=media_type, headers=headers)
+            raise HTTPException(status_code=404, detail="Arquivo local não encontrado")
+
+@app.get("/api/cliente/{user_id}/view-insurance")
+async def view_insurance(user_id: str, db: Session = Depends(get_db)):
+    try:
+        user_uuid = uuid.UUID(user_id)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="ID de usuário inválido")
+    
+    user = db.query(User).filter(User.id == user_uuid).first()
+    if not user or not user.health_insurance_card:
+        raise HTTPException(status_code=404, detail="Carteirinha não encontrada")
+    
+    file_data = user.health_insurance_card
+    if file_data.startswith("data:"):
+        try:
+            header, encoded = file_data.split(",", 1)
+            mime_type = header.split(";")[0].split(":")[1]
+            import base64
+            decoded = base64.b64decode(encoded)
+            headers = {}
+            if mime_type == "application/pdf":
+                headers["Content-Disposition"] = "inline; filename=carteirinha.pdf"
+            return Response(content=decoded, media_type=mime_type, headers=headers)
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=f"Erro ao processar carteirinha: {str(e)}")
+    else:
+        if file_data.startswith("http"):
+            from fastapi.responses import RedirectResponse
+            return RedirectResponse(url=file_data)
+        else:
+            import os
+            filepath = os.path.join("static/uploads", os.path.basename(file_data))
+            if not os.path.exists(filepath):
+                filepath = file_data
+            if os.path.exists(filepath):
+                media_type = "application/octet-stream"
+                if filepath.lower().endswith(".pdf"):
+                    media_type = "application/pdf"
+                elif filepath.lower().endswith((".png", ".jpg", ".jpeg", ".gif", ".webp")):
+                    media_type = f"image/{filepath.split('.')[-1].lower().replace('jpg', 'jpeg')}"
+                headers = {}
+                if media_type == "application/pdf":
+                    headers["Content-Disposition"] = "inline; filename=" + os.path.basename(filepath)
+                return FileResponse(filepath, media_type=media_type, headers=headers)
+            raise HTTPException(status_code=404, detail="Arquivo local não encontrado")
+
+
 # ========================================================
 # NOVA ROTA: Gerar Áudio TTS (Sem Google Cloud Key!)
 # ========================================================
@@ -740,6 +834,7 @@ async def get_client_medications(user_id: str, date: str = None, db: Session = D
     except ValueError:
         raise HTTPException(status_code=400, detail="ID de usuário inválido")
     
+    brasilia_tz = timezone(timedelta(hours=-3))
     # ⚙️ v2.3.4: Aceita ?date=YYYY-MM-DD para consultar schedules de qualquer dia
     if date:
         try:
@@ -747,9 +842,9 @@ async def get_client_medications(user_id: str, date: str = None, db: Session = D
         except ValueError:
             raise HTTPException(status_code=400, detail="Formato de data inválido. Use YYYY-MM-DD")
     else:
-        target_date = datetime.now().date()
+        target_date = datetime.now(brasilia_tz).date()
     
-    today_str = datetime.now().strftime("%Y-%m-%d")
+    today_str = datetime.now(brasilia_tz).strftime("%Y-%m-%d")
     target_str = target_date.strftime("%Y-%m-%d")
     
     medications = db.query(Medication).filter(
@@ -1062,7 +1157,7 @@ async def mark_schedule_taken(schedule_id: str, db: Session = Depends(get_db)):
     return {"status": "success", "message": "✅ Registrado como tomado"}
 
 @app.post("/api/medications/{med_id}/take")
-async def mark_taken(med_id: str):
+async def mark_taken(med_id: str, date: Optional[str] = None):
     """Estado 3 ou 6: Marca como tomado e encerra monitoramento do dia"""
     from datetime import timezone, timedelta
     brasilia_tz = timezone(timedelta(hours=-3))
@@ -1075,19 +1170,25 @@ async def mark_taken(med_id: str):
         med = db.query(Medication).filter(Medication.id == med_id).first()
         if not med: raise HTTPException(404, "Medicamento não encontrado")
         
-        today_date = now_br.date()
+        if date:
+            try:
+                target_date = datetime.strptime(date, "%Y-%m-%d").date()
+            except ValueError:
+                raise HTTPException(status_code=400, detail="Formato de data inválido. Use YYYY-MM-DD")
+        else:
+            target_date = now_br.date()
         
-        # Busca ou cria o schedule de hoje
+        # Busca ou cria o schedule do dia especificado
         sched = db.query(MedicationSchedule).filter(
             MedicationSchedule.medication_id == med.id,
-            MedicationSchedule.scheduled_date == today_date
+            MedicationSchedule.scheduled_date == target_date
         ).first()
         
         if not sched:
             sched = MedicationSchedule(
                 medication_id=med.id,
                 user_id=med.user_id,
-                scheduled_date=today_date,
+                scheduled_date=target_date,
                 scheduled_time=med.time or time(0, 0),
                 status="taken",
                 confirmed_at=datetime.now()
@@ -1098,13 +1199,11 @@ async def mark_taken(med_id: str):
             sched.confirmed_at = datetime.now()
             
         # ⚠️ NÃO atualiza med.taken_status — cada dia é independente!
-        # O status fica APENAS no MedicationSchedule (schedule de hoje)
-        # med.taken_status e med.last_taken_date são mantidos para 
-        # compatibilidade com versões antigas, mas NÃO são a fonte de verdade
+        # O status fica APENAS no MedicationSchedule (schedule do dia)
         
         use_time = sched.scheduled_time if sched else med.time
         if use_time:
-            sched_dt = datetime.combine(today_date, use_time)
+            sched_dt = datetime.combine(target_date, use_time)
         else:
             sched_dt = datetime.now()
             
@@ -1130,7 +1229,7 @@ async def mark_taken(med_id: str):
 # =========================================================
 
 @app.put("/api/medications/{med_id}/reschedule")
-async def reschedule_medication(med_id: str, new_time: str):
+async def reschedule_medication(med_id: str, new_time: str, date: Optional[str] = None):
     """Estado 4: Reagenda e muda status para aguardar novo horário"""
     from datetime import timezone, timedelta
     brasilia_tz = timezone(timedelta(hours=-3))
@@ -1147,18 +1246,25 @@ async def reschedule_medication(med_id: str, new_time: str):
         if not (0 <= h <= 23 and 0 <= m <= 59):
             raise ValueError("Horário inválido")
             
-        today_date = now_br.date()
-        # Busca ou cria o schedule de hoje
+        if date:
+            try:
+                target_date = datetime.strptime(date, "%Y-%m-%d").date()
+            except ValueError:
+                raise HTTPException(status_code=400, detail="Formato de data inválido. Use YYYY-MM-DD")
+        else:
+            target_date = now_br.date()
+            
+        # Busca ou cria o schedule do dia especificado
         sched = db.query(MedicationSchedule).filter(
             MedicationSchedule.medication_id == med.id,
-            MedicationSchedule.scheduled_date == today_date
+            MedicationSchedule.scheduled_date == target_date
         ).first()
         
         if not sched:
             sched = MedicationSchedule(
                 medication_id=med.id,
                 user_id=med.user_id,
-                scheduled_date=today_date,
+                scheduled_date=target_date,
                 scheduled_time=time(h, m),
                 status="rescheduled"
             )
@@ -1180,7 +1286,7 @@ async def reschedule_medication(med_id: str, new_time: str):
         db.close()
 
 @app.post("/api/medications/{med_id}/not-taken")
-async def mark_not_taken(med_id: str):
+async def mark_not_taken(med_id: str, date: Optional[str] = None):
     """Estado 7: Não tomado no reagendamento -> Aciona responsável"""
     from datetime import timezone, timedelta
     brasilia_tz = timezone(timedelta(hours=-3))
@@ -1193,19 +1299,25 @@ async def mark_not_taken(med_id: str):
         med = db.query(Medication).filter(Medication.id == med_id).first()
         if not med: raise HTTPException(404, "Medicamento não encontrado")
         
-        today_date = now_br.date()
+        if date:
+            try:
+                target_date = datetime.strptime(date, "%Y-%m-%d").date()
+            except ValueError:
+                raise HTTPException(status_code=400, detail="Formato de data inválido. Use YYYY-MM-DD")
+        else:
+            target_date = now_br.date()
         
-        # Busca ou cria o schedule de hoje
+        # Busca ou cria o schedule do dia especificado
         sched = db.query(MedicationSchedule).filter(
             MedicationSchedule.medication_id == med.id,
-            MedicationSchedule.scheduled_date == today_date
+            MedicationSchedule.scheduled_date == target_date
         ).first()
         
         if not sched:
             sched = MedicationSchedule(
                 medication_id=med.id,
                 user_id=med.user_id,
-                scheduled_date=today_date,
+                scheduled_date=target_date,
                 scheduled_time=med.time or time(0, 0),
                 status="not_taken"
             )
@@ -1214,13 +1326,13 @@ async def mark_not_taken(med_id: str):
             sched.status = "not_taken"
             
         # ⚠️ NÃO atualiza med.taken_status — cada dia é independente!
-        # O status fica APENAS no MedicationSchedule (schedule de hoje)
+        # O status fica APENAS no MedicationSchedule (schedule do dia)
         med.responsible_notified = True
         med.reminder_count += 1
         
         use_time = sched.scheduled_time if sched else med.time
         if use_time:
-            sched_dt = datetime.combine(today_date, use_time)
+            sched_dt = datetime.combine(target_date, use_time)
         else:
             sched_dt = datetime.now()
             
@@ -1235,7 +1347,7 @@ async def mark_not_taken(med_id: str):
         db.add(new_log)
         db.commit()
         
-        #  Dispara notificação (assíncrono para não travar UI)
+        # Dispara notificação (assíncrono para não travar UI)
         asyncio.create_task(notify_responsible_async(med.id))
         
         return {"status": "success", "message": "❌ Não tomado. Responsável acionado."}
