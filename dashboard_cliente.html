@@ -1465,7 +1465,7 @@
             <div class="header-info">
                 <h2 id="greeting">Boa noite!</h2>
                 <div class="user-name" id="user-name">Eliane Amorzinho</div>
-                <div style="font-size: 0.7rem; color: #00D4FF; opacity: 0.8; margin-top: 2px; font-weight: 500;">v2.3.6 (build 2026-07-16)</div>
+                <div style="font-size: 0.7rem; color: #00D4FF; opacity: 0.8; margin-top: 2px; font-weight: 500;">v2.4.2 (build 2026-07-18)</div>
             </div>
         </div>
         <div class="header-right">
@@ -1530,23 +1530,32 @@
                     🗓️ Minha agenda para hoje dia: 20/junho/2026
                 </h3>
                 
-                <!-- SEÇÕES - SCROLL ÚNICO (SEM ABAS) -->
                 <!-- 💊 MEDICAMENTOS -->
                 <div id="screen-medications" class="screen">
-                    <div class="section-header-btn" onclick="scrollToSection('medications')">
-                        <span class="section-icon">💊</span>
-                        Remédios para hoje
-                        <span class="section-badge" id="tab-meds">0</span>
+                    <div class="section-header-btn" style="display:flex; justify-content:space-between; align-items:center;" onclick="scrollToSection('medications')">
+                        <div style="display:flex; align-items:center; gap:12px;">
+                            <span class="section-icon">💊</span>
+                            Remédios para hoje
+                        </div>
+                        <div style="display:flex; align-items:center; gap:8px;">
+                            <button onclick="event.stopPropagation(); handleInsert();" style="background:#10b981; color:white; border:none; border-radius:8px; padding:6px 12px; font-weight:700; font-size:0.9rem; cursor:pointer;">➕ Novo</button>
+                            <span class="section-badge" id="tab-meds">0</span>
+                        </div>
                     </div>
                     <div id="medications-list"><div class="loading">⏳ Carregando...</div></div>
                 </div>
                 
                 <!-- 🗓️ CONSULTAS -->
                 <div id="screen-appointments" class="screen">
-                    <div class="section-header-btn" onclick="scrollToSection('appointments')">
-                        <span class="section-icon">🗓️</span>
-                        Consultas agendadas
-                        <span class="section-badge" id="tab-appts">0</span>
+                    <div class="section-header-btn" style="display:flex; justify-content:space-between; align-items:center;" onclick="scrollToSection('appointments')">
+                        <div style="display:flex; align-items:center; gap:12px;">
+                            <span class="section-icon">🗓️</span>
+                            Consultas agendadas
+                        </div>
+                        <div style="display:flex; align-items:center; gap:8px;">
+                            <button onclick="event.stopPropagation(); handleInsertAppointment();" style="background:#10b981; color:white; border:none; border-radius:8px; padding:6px 12px; font-weight:700; font-size:0.9rem; cursor:pointer;">➕ Novo</button>
+                            <span class="section-badge" id="tab-appts">0</span>
+                        </div>
                     </div>
                     <div id="appointments-list"><div class="loading">⏳ Carregando...</div></div>
                 </div>
@@ -2744,7 +2753,11 @@
                         <div class="med-days">🗓️ ${dateStr} ⏰ ${appt.appointment_time || ''}</div>
                         ${appt.notes ? `<div class="med-dosage">📝 ${appt.notes}</div>` : ''}
                         <div class="med-actions">
-                            ${appt.status !== 'cancelled' && appt.status !== 'completed' ? `
+                            ${appt.status === 'confirmed' ? `
+                                <button class="btn-taken" disabled style="flex:1; cursor:default; background:linear-gradient(135deg, #10b981, #059669);">✅ Confirmado</button>
+                            ` : appt.status === 'cancelled' ? `
+                                <button class="btn-later" disabled style="flex:1; cursor:default; background:linear-gradient(135deg, #ef4444, #dc2626);">❌ Cancelada</button>
+                            ` : (appt.status !== 'completed') ? `
                                 <button class="btn-taken" onclick="confirmAppt('${appt.id}')">✅ Confirmar</button>
                                 <button class="btn-later" onclick="cancelAppt('${appt.id}')">❌ Cancelar</button>
                             ` : ''}
@@ -3677,7 +3690,11 @@
                         <div class="med-days">🗓️ ${dateStrBR} ⏰ ${appt.appointment_time || ''}</div>
                         ${appt.notes ? `<div class="med-dosage">📝 ${appt.notes}</div>` : ''}
                         <div class="med-actions">
-                            ${appt.status !== 'cancelled' && appt.status !== 'completed' ? `
+                            ${appt.status === 'confirmed' ? `
+                                <button class="btn-taken" disabled style="flex:1; cursor:default; background:linear-gradient(135deg, #10b981, #059669);">✅ Confirmado</button>
+                            ` : appt.status === 'cancelled' ? `
+                                <button class="btn-later" disabled style="flex:1; cursor:default; background:linear-gradient(135deg, #ef4444, #dc2626);">❌ Cancelada</button>
+                            ` : (appt.status !== 'completed') ? `
                                 <button class="btn-taken" onclick="confirmAppt('${appt.id}')">✅ Confirmar</button>
                                 <button class="btn-later" onclick="cancelAppt('${appt.id}')">❌ Cancelar</button>
                             ` : ''}
@@ -3911,7 +3928,11 @@
                         <div class="med-days">🗓️ ${dateStr} ⏰ ${appt.appointment_time || ''}</div>
                         ${appt.notes ? `<div class="med-dosage">📝 ${appt.notes}</div>` : ''}
                         <div class="med-actions">
-                            ${appt.status !== 'cancelled' && appt.status !== 'completed' ? `
+                            ${appt.status === 'confirmed' ? `
+                                <button class="btn-taken" disabled style="flex:1; cursor:default; background:linear-gradient(135deg, #10b981, #059669);">✅ Confirmado</button>
+                            ` : appt.status === 'cancelled' ? `
+                                <button class="btn-later" disabled style="flex:1; cursor:default; background:linear-gradient(135deg, #ef4444, #dc2626);">❌ Cancelada</button>
+                            ` : (appt.status !== 'completed') ? `
                                 <button class="btn-taken" onclick="confirmAppt('${appt.id}')">✅ Confirmar</button>
                                 <button class="btn-later" onclick="cancelAppt('${appt.id}')">❌ Cancelar</button>
                             ` : ''}
@@ -4086,24 +4107,8 @@
                 </button>`;
             }
             
-            // ==========================================
-            // 3️⃣ ESTADO: PENDENTE (Mostra botões se for hoje/passado)
-            // ==========================================
             if (status === 'pending') {
-                const isFuture = viewingSpecificDate && viewingSpecificDate > today;
-                if (isFuture) {
-                    return `<button disabled style="width:100%; margin-top:10px; padding:14px; background:#9ca3af; color:white; border:none; border-radius:12px; font-weight:800; font-size:1.1rem; cursor:default;">
-                        ⏰ Agendado
-                    </button>`;
-                }
-                return `<div style="display:flex; gap:12px; margin-top:10px;">
-                    <button onclick="handleMedAction('${med.id}', 'take')" style="flex:1; padding:14px; background:#10b981; color:white; border:none; border-radius:12px; font-weight:800; font-size:1.1rem; cursor:pointer;">
-                        ✅ Tomei
-                    </button>
-                    <button onclick="handleMedAction('${med.id}', 'reschedule')" style="flex:1; padding:14px; background:#f59e0b; color:white; border:none; border-radius:12px; font-weight:800; font-size:1.1rem; cursor:pointer;">
-                        ⏰ Reagendar
-                    </button>
-                </div>`;
+                return '';
             }
             
             return '';
@@ -4300,7 +4305,11 @@
                             <div class="med-days">🗓️ ${dateStr} ⏰ ${appt.appointment_time || ''}</div>
                             ${appt.notes ? `<div class="med-dosage">📝 ${appt.notes}</div>` : ''}
                             <div class="med-actions">
-                                ${appt.status !== 'cancelled' && appt.status !== 'completed' ? `
+                                ${appt.status === 'confirmed' ? `
+                                    <button class="btn-taken" disabled style="flex:1; cursor:default; background:linear-gradient(135deg, #10b981, #059669);">✅ Confirmado</button>
+                                ` : appt.status === 'cancelled' ? `
+                                    <button class="btn-later" disabled style="flex:1; cursor:default; background:linear-gradient(135deg, #ef4444, #dc2626);">❌ Cancelada</button>
+                                ` : (appt.status !== 'completed') ? `
                                     <button class="btn-taken" onclick="confirmAppt('${appt.id}')">✅ Confirmar</button>
                                     <button class="btn-later" onclick="cancelAppt('${appt.id}')">❌ Cancelar</button>
                                 ` : ''}
@@ -5977,12 +5986,43 @@
                 }
                 
                 const data = await response.json();
+                let replyText = data.response || '';
+                
+                // ✅ Detectar e extrair JSON de agendamento de consulta enviado pelo Maximus (robusto contra quebras de linha)
+                const jsonMatch = replyText.match(/\|\|JSON_APPOINTMENT:([\s\S]*?)\|\|/);
+                if (jsonMatch) {
+                    // Remove a tag do texto a ser exibido e falado
+                    replyText = replyText.replace(/\|\|JSON_APPOINTMENT:[\s\S]*?\|\|/, '').trim();
+                    try {
+                        let jsonStr = jsonMatch[1].trim();
+                        // Remove possíveis blocos de código markdown colocados pela IA (ex: ```json ... ```)
+                        if (jsonStr.startsWith('```')) {
+                            jsonStr = jsonStr.replace(/^```(json)?/, '').replace(/```$/, '').trim();
+                        }
+                        const apptData = JSON.parse(jsonStr);
+                        console.log('📋 Maximus solicitou preenchimento de consulta:', apptData);
+                        
+                        // Abre o modal de consulta
+                        openApptModal();
+                        
+                        // Preenche os campos do modal
+                        if (apptData.doctor_name) document.getElementById('appt-doctor').value = apptData.doctor_name;
+                        if (apptData.specialty) document.getElementById('appt-specialty').value = apptData.specialty;
+                        if (apptData.appointment_date) document.getElementById('appt-date').value = apptData.appointment_date;
+                        if (apptData.appointment_time) document.getElementById('appt-time').value = apptData.appointment_time;
+                        if (apptData.notes) document.getElementById('appt-notes').value = apptData.notes;
+                        
+                        showToast('📋 Campos da consulta preenchidos por Maximus!');
+                    } catch (e) {
+                        console.error('Erro ao processar JSON de consulta do Maximus:', e);
+                    }
+                }
                 
                 // Append do Maximus na tela
-                appendChatMessage('assistant', 'Maximus', data.response);
+                appendChatMessage('assistant', 'Maximus', replyText);
                 
                 // Fala a resposta recebida
-                speakText(data.response);
+                speakText(replyText);
                 
                 // Atualiza histórico na memória para manter o contexto na próxima mensagem
                 window.chatHistory.push({
@@ -6591,10 +6631,19 @@
             activeVoiceRecognition = rec;
 
             rec.onresult = function(event) {
-                const text = event.results[0][0].transcript.toLowerCase();
+                const text = event.results[0][0].transcript.toLowerCase().trim();
                 console.log('🎙️ Reconhecido no reagendamento:', text);
                 
                 if (statusEl) statusEl.innerHTML = `💬 Entendi: "${text}"`;
+
+                // ✅ Aceitar também os áudios "fechar" e "não"
+                if (text.includes('fechar') || text === 'não' || text === 'nao' || text === 'no' || text.includes('não reagendar') || text.includes('nao reagendar')) {
+                    if (statusEl) statusEl.innerHTML = `❌ Cancelando e marcando como não tomado...`;
+                    setTimeout(() => {
+                        fecharReagendamento(medId);
+                    }, 1200);
+                    return;
+                }
 
                 const horarioDetectado = extrairHorarioDoTexto(text);
                 if (horarioDetectado) {
@@ -7414,7 +7463,7 @@
 
     <!-- 🔖 INDICADOR DE VERSÃO -->
     <div style="text-align:center; padding:20px; color:#00D4FF; font-size:0.75rem; margin-top:30px; opacity:0.7;">
-        🏠 CR$ Home Care AI v2.3.6 — build 2026-07-16 — visualização nativa de PDFs + fuso horário de Brasília
+        🏠 CR$ Home Care AI v2.4.2 — build 2026-07-18 — indicador visual de cancelamento de consulta
     </div>
         </body>
         </html>

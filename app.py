@@ -2924,7 +2924,8 @@ async def chat_assistant(req: ChatRequest, db: Session = Depends(get_db)):
             "3. Dê respostas curtas, práticas e objetivas. Evite textos longos ou excessivamente técnicos.\n"
             "4. Use formatação em Markdown (negrito, listas, etc.) para facilitar a leitura.\n"
             "5. IMPORTANTE: Você é um assistente de IA. Sempre recomende que o paciente consulte o médico ou responsável em caso de dúvidas graves, dor intensa ou reações adversas incomuns.\n"
-            "6. Use o histórico de conversas fornecido para manter o contexto."
+            "6. Use o histórico de conversas fornecido para manter o contexto.\n"
+            "7. IMPORTANTE: Ao agendar uma consulta, conduza a conversa passo a passo. Solicite primeiro o nome do Médico(a), aguarde a resposta; depois solicite a Especialidade, aguarde; depois solicite a data, aguarde; depois o horário, aguarde; e finalmente solicite as observações. APENAS quando todas essas informações tiverem sido passadas pelo usuário, você deve apresentar o resumo e anexar obrigatoriamente na última linha a tag: ||JSON_APPOINTMENT:{\"doctor_name\":\"...\", \"specialty\":\"...\", \"appointment_date\":\"YYYY-MM-DD\", \"appointment_time\":\"HH:MM\", \"notes\":\"...\"}||. Não envie esta tag nas perguntas intermediárias da conversa."
         )
         
         # 3. Prepara contents para a API (histórico + mensagem atual)
