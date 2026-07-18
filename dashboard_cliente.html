@@ -1465,7 +1465,7 @@
             <div class="header-info">
                 <h2 id="greeting">Boa noite!</h2>
                 <div class="user-name" id="user-name">Eliane Amorzinho</div>
-                <div style="font-size: 0.7rem; color: #00D4FF; opacity: 0.8; margin-top: 2px; font-weight: 500;">v2.5.0 (build 2026-07-18)</div>
+                <div style="font-size: 0.7rem; color: #00D4FF; opacity: 0.8; margin-top: 2px; font-weight: 500;">v2.6.0 (build 2026-07-18)</div>
             </div>
         </div>
         <div class="header-right">
@@ -1906,6 +1906,15 @@
                         <div style="display:flex; justify-content:space-between; align-items:center;">
                             <strong style="color: #FFFFFF;">Horário Agendado:</strong>
                             <strong style="color: #00D4FF;" id="clinical-view-report-time">-</strong>
+                        </div>
+                    </div>
+
+                    <!-- Seção Envio de Documentos por E-mail -->
+                    <div style="background: rgba(0, 212, 255, 0.05); border: 1px solid rgba(0, 212, 255, 0.1); padding: 12px; border-radius: 10px;">
+                        <div style="color: #8A9BB5; font-size: 0.8rem; margin-bottom: 8px;">Enviar Documentos via E-mail</div>
+                        <div style="display:flex; gap:10px; align-items:center;">
+                            <input type="email" id="clinical-send-email-dest" placeholder="e-mail da clínica" style="flex:2; padding:8px 12px; border-radius:8px; border:1px solid rgba(255,255,255,0.1); background:rgba(0,0,0,0.2); color:white; font-size:0.9rem;">
+                            <button type="button" onclick="sendDocumentsByEmail()" style="flex:1; background:#00d4ff; color:#111b33; border:none; padding:8px 12px; border-radius:8px; font-weight:700; cursor:pointer; font-size:0.9rem;">Enviar</button>
                         </div>
                     </div>
                 </div>
@@ -3239,6 +3248,46 @@
             } catch (error) {
                 console.error("Erro ao salvar ficha médica:", error);
                 showToast("❌ Erro ao salvar ficha médica", true);
+            }
+        }
+
+        async function sendDocumentsByEmail() {
+            const emailInput = document.getElementById('clinical-send-email-dest');
+            const emailDest = emailInput.value.trim();
+            if (!emailDest) {
+                showToast("⚠️ Digite o e-mail destinatário", true);
+                return;
+            }
+            
+            // Validação simples de e-mail
+            if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailDest)) {
+                showToast("⚠️ Digite um e-mail válido", true);
+                return;
+            }
+            
+            try {
+                showToast("⏳ Enviando documentos...");
+                const response = await fetch(`${API_URL}/api/cliente/${userId}/send-documents-email`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email: emailDest })
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data.status === "mock") {
+                        showToast("ℹ️ Simulado: E-mail impresso no log do servidor (SMTP ausente)");
+                    } else {
+                        showToast("✅ Documentos enviados com sucesso!");
+                    }
+                    emailInput.value = '';
+                } else {
+                    const err = await response.json();
+                    showToast(`❌ Erro: ${err.detail || 'Falha ao enviar e-mail'}`, true);
+                }
+            } catch (error) {
+                console.error("Erro ao enviar documentos por e-mail:", error);
+                showToast("❌ Erro de conexão com o servidor", true);
             }
         }
 
@@ -7488,7 +7537,7 @@
 
     <!-- 🔖 INDICADOR DE VERSÃO -->
     <div style="text-align:center; padding:20px; color:#00D4FF; font-size:0.75rem; margin-top:30px; opacity:0.7;">
-        🏠 CR$ Home Care AI v2.5.0 — build 2026-07-18 — relatórios diários de medicamentos enviados via WhatsApp
+        🏠 CR$ Home Care AI v2.6.0 — build 2026-07-18 — envio de documentos médicos por e-mail
     </div>
         </body>
         </html>

@@ -688,6 +688,129 @@ async def update_clinical_info(user_id: str, info: ClinicalInfoUpdate, db: Sessi
         "message": "Informações clínicas atualizadas com sucesso"
     }
 
+@app.post("/api/cliente/{user_id}/send-documents-email")
+async def send_documents_email(user_id: str, payload: dict, db: Session = Depends(get_db)):
+    """Envia os documentos do usuário (Identidade e Carteirinha) por e-mail"""
+    try:
+        user_uuid = uuid.UUID(user_id)
+        user = db.query(User).filter(User.id == user_uuid).first()
+        if not user:
+            raise HTTPException(status_code=404, detail="Usuário não encontrado")
+            
+        destinatario = payload.get("email", "").strip()
+        if not destinatario:
+            raise HTTPException(status_code=400, detail="E-mail destinatário é obrigatório")
+            
+        # SMTP Config
+        smtp_server = os.getenv("SMTP_SERVER", "smtp.gmail.com")
+        smtp_port_str = os.getenv("SMTP_PORT", "465")
+        smtp_username = os.getenv("SMTP_USERNAME")
+        smtp_password = os.getenv("SMTP_PASSWORD")
+        
+        is_mock = not smtp_username or not smtp_password
+        
+        # Cria a mensagem
+        from email.mime.multipart import MIMEMultipart
+        from email.mime.text import MIMEText
+        from email.mime.base import MIMEBase
+        from email import encoders
+        import base64
+        
+        msg = MIMEMultipart()
+        msg['From'] = smtp_username if smtp_username else "sistema@homecare.com.br"
+        msg['To'] = destinatario
+        msg['Subject'] = f"📋 Documentos Médicos/Identificação - Paciente: {user.full_name}"
+        
+        corpo = (
+            f"Olá,\n\n"
+            f"Seguem em anexo os documentos de identificação e carteirinha do plano de saúde referentes ao paciente {user.full_name}.\n\n"
+            f"Este e-mail foi gerado automaticamente pelo aplicativo CR$ Home Care AI.\n"
+        )
+        msg.attach(MIMEText(corpo, 'plain'))
+        
+        attachments_info = []
+        
+        # Função auxiliar para anexar arquivos base64
+        def anexar_base64(data_uri, default_filename):
+            if not data_uri or not data_uri.startswith("data:"):
+                return False
+            try:
+                header, base64_data = data_uri.split(",", 1)
+                mime_type = header.split(";")[0].split(":")[1]
+                file_bytes = base64.b64decode(base64_data)
+                
+                # Identifica extensão
+                ext = ".jpg"
+                if "pdf" in mime_type:
+                    ext = ".pdf"
+                elif "png" in mime_type:
+                    ext = ".png"
+                elif "gif" in mime_type:
+                    ext = ".gif"
+                    
+                filename = default_filename + ext
+                
+                part = MIMEBase('application', 'octet-stream')
+                part.set_payload(file_bytes)
+                encoders.encode_base64(part)
+                part.add_header('Content-Disposition', f'attachment; filename="{filename}"')
+                msg.attach(part)
+                attachments_info.append(filename)
+                return True
+            except Exception as e:
+                print(f"⚠️ Erro ao anexar {default_filename}: {e}")
+                return False
+                
+        # Anexa os arquivos
+        anexou_id = anexar_base64(user.identity_document_file, "documento_identidade")
+        anexou_card = anexar_base64(user.health_insurance_card, "carteirinha_plano")
+        
+        if not anexou_id and not anexou_card:
+            raise HTTPException(status_code=400, detail="O usuário não possui nenhum documento cadastrado para envio.")
+            
+        if is_mock:
+            # Em modo de desenvolvimento/mock
+            print(f"📨 [SMTP MOCK] Envio de e-mail simulado com sucesso!")
+            print(f"   Destinatário: {destinatario}")
+            print(f"   Assunto: {msg['Subject']}")
+            print(f"   Anexos: {', '.join(attachments_info)}")
+            return {
+                "status": "mock",
+                "message": "Simulação de envio concluída com sucesso! (SMTP não configurado no .env)"
+            }
+            
+        # Envio SMTP real
+        import smtplib
+        try:
+            port = int(smtp_port_str)
+            if port == 465:
+                # SSL
+                server = smtplib.SMTP_SSL(smtp_server, port)
+            else:
+                # STARTTLS
+                server = smtplib.SMTP(smtp_server, port)
+                server.starttls()
+                
+            server.login(smtp_username, smtp_password)
+            server.sendmail(msg['From'], destinatario, msg.as_string())
+            server.quit()
+            
+            print(f"✅ E-mail de documentos enviado com sucesso para {destinatario}")
+            return {
+                "status": "success",
+                "message": "E-mail enviado com sucesso!"
+            }
+        except Exception as smtp_err:
+            print(f"❌ Erro na conexao SMTP: {smtp_err}")
+            raise HTTPException(status_code=502, detail=f"Erro ao conectar com servidor de e-mail SMTP: {str(smtp_err)}")
+            
+    except HTTPException as http_ex:
+        raise http_ex
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=str(e))
+
 @app.get("/api/cliente/{user_id}/view-document")
 async def view_document(user_id: str, db: Session = Depends(get_db)):
     try:
