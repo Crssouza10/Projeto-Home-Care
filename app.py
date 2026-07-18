@@ -177,6 +177,7 @@ class User(Base):
     health_insurance_card = Column(Text, nullable=True)
     identity_document = Column(String(100), nullable=True)
     identity_document_file = Column(Text, nullable=True)
+    report_time = Column(String(5), nullable=True)
 
 class Medication(Base):
     __tablename__ = "medications"
@@ -322,6 +323,7 @@ class ClinicalInfoUpdate(BaseModel):
     health_insurance_card: Optional[str] = None
     identity_document: Optional[str] = None
     identity_document_file: Optional[str] = None
+    report_time: Optional[str] = None
 
 class MedicationCreate(BaseModel):
     user_id: uuid.UUID
@@ -653,6 +655,7 @@ async def get_clinical_info(user_id: str, db: Session = Depends(get_db)):
         "health_insurance_card": user.health_insurance_card,
         "identity_document": user.identity_document,
         "identity_document_file": user.identity_document_file,
+        "report_time": user.report_time,
         "full_name": user.full_name,
         "phone": user.phone,
         "email": user.email
@@ -677,6 +680,7 @@ async def update_clinical_info(user_id: str, info: ClinicalInfoUpdate, db: Sessi
     user.health_insurance_card = info.health_insurance_card
     user.identity_document = info.identity_document
     user.identity_document_file = info.identity_document_file
+    user.report_time = info.report_time
     db.commit()
     
     return {
@@ -2259,6 +2263,160 @@ async def test_whatsapp(db: Session = Depends(get_db)):
     else:
         return {"msg": "Falha ao enviar WhatsApp. Verifique os logs do Vercel e as variáveis de ambiente."}
 
+def verificar_e_enviar_relatorios(db: Session):
+    """
+    Verifica se existem relatorios diarios de medicamentos para enviar
+    neste minuto (horario de Brasilia) para o responsavel do paciente.
+    """
+    try:
+        from datetime import timezone, timedelta
+        brasilia_tz = timezone(timedelta(hours=-3))
+        now = datetime.now(brasilia_tz)
+        current_time = now.strftime("%H:%M")
+        hoje = now.date()
+        
+        # Busca usuarios que tem relatorio agendado para o minuto atual
+        users_to_report = db.query(User).filter(User.report_time == current_time).all()
+        if not users_to_report:
+            return
+            
+        print(f"📊 [RELATORIO] Processando relatorios diarios para o horario: {current_time}. Total de usuarios: {len(users_to_report)}")
+        
+        for user in users_to_report:
+            # Busca os responsaveis configurados que querem WhatsApp
+            responsibles = db.query(Responsible).filter(
+                Responsible.user_id == user.id,
+                Responsible.notify_whatsapp == True
+            ).all()
+            
+            if not responsibles:
+                print(f"⚠️ [RELATORIO] Usuario {user.full_name} tem relatorio agendado, mas nenhum responsavel com WhatsApp configurado.")
+                continue
+                
+            # Busca todos os medicamentos agendados de hoje para este usuario
+            schedules = db.query(MedicationSchedule).filter(
+                MedicationSchedule.user_id == user.id,
+                MedicationSchedule.scheduled_date == hoje
+            ).all()
+            
+            if not schedules:
+                print(f"ℹ️ [RELATORIO] Usuario {user.full_name} nao possui agendamentos de medicamentos cadastrados para hoje.")
+                continue
+                
+            # Ordena schedules por horario
+            schedules.sort(key=lambda s: s.scheduled_time)
+            
+            linhas_relatorio = []
+            for sched in schedules:
+                # Busca detalhes do remedio
+                med = db.query(Medication).filter(Medication.id == sched.medication_id).first()
+                med_name = med.name if med else "Medicamento"
+                med_dosage = med.dosage if med else ""
+                
+                time_str = sched.scheduled_time.strftime("%H:%M")
+                
+                # Formata status
+                if sched.status == "taken":
+                    conf_time = sched.confirmed_at.replace(tzinfo=timezone.utc).astimezone(brasilia_tz).strftime("%H:%M") if sched.confirmed_at else "--:--"
+                    status_text = f"Tomou (Confirmado as {conf_time})"
+                elif sched.status == "skipped" or sched.status == "cancelled":
+                    status_text = "Nao tomou (Nao tomado)"
+                else:
+                    status_text = "Nao tomou (Atrasado/Pendente)"
+                    
+                linhas_relatorio.append(f"💊 *{med_name}* ({med_dosage}) - {time_str} - {status_text}")
+                
+            # Montar a mensagem do relatorio
+            dia_str = hoje.strftime("%d/%m/%Y")
+            mensagem = (
+                f"📋 *CR$ HOME CARE AI - RELATORIO DIARIO*\n\n"
+                f"Ola! Segue o relatorio diario de medicamentos de *{user.full_name}* referente ao dia *{dia_str}*:\n\n"
+                + "\n".join(linhas_relatorio) +
+                f"\n\nTenha uma excelente noite!"
+            )
+            
+            for resp in responsibles:
+                print(f"📱 [RELATORIO] Enviando Relatorio Diario para {resp.name} ({resp.phone})")
+                enviar_whatsapp_custom(resp.phone, mensagem)
+                
+    except Exception as e:
+        print(f"❌ Erro ao enviar relatorios diarios: {e}")
+        import traceback
+        traceback.print_exc()
+
+@app.get("/api/teste-relatorio/{user_id}")
+async def test_report(user_id: str, db: Session = Depends(get_db)):
+    """Rota de teste para enviar o relatorio diario manualmente e ver como fica"""
+    try:
+        user_uuid = uuid.UUID(user_id)
+        user = db.query(User).filter(User.id == user_uuid).first()
+        if not user:
+            raise HTTPException(status_code=404, detail="Usuario nao encontrado")
+            
+        responsibles = db.query(Responsible).filter(
+            Responsible.user_id == user.id,
+            Responsible.notify_whatsapp == True
+        ).all()
+        
+        if not responsibles:
+            return {"status": "error", "mensagem": "Nenhum responsavel com WhatsApp configurado para este usuario"}
+            
+        from datetime import timezone, timedelta
+        brasilia_tz = timezone(timedelta(hours=-3))
+        now = datetime.now(brasilia_tz)
+        hoje = now.date()
+        
+        schedules = db.query(MedicationSchedule).filter(
+            MedicationSchedule.user_id == user.id,
+            MedicationSchedule.scheduled_date == hoje
+        ).all()
+        
+        if not schedules:
+            return {"status": "error", "mensagem": "Nenhum agendamento de medicamento encontrado para hoje"}
+            
+        schedules.sort(key=lambda s: s.scheduled_time)
+        
+        linhas_relatorio = []
+        for sched in schedules:
+            med = db.query(Medication).filter(Medication.id == sched.medication_id).first()
+            med_name = med.name if med else "Medicamento"
+            med_dosage = med.dosage if med else ""
+            time_str = sched.scheduled_time.strftime("%H:%M")
+            
+            if sched.status == "taken":
+                conf_time = sched.confirmed_at.replace(tzinfo=timezone.utc).astimezone(brasilia_tz).strftime("%H:%M") if sched.confirmed_at else "--:--"
+                status_text = f"Tomou (Confirmado as {conf_time})"
+            elif sched.status == "skipped" or sched.status == "cancelled":
+                status_text = "Nao tomou (Nao tomado)"
+            else:
+                status_text = "Nao tomou (Atrasado/Pendente)"
+                
+            linhas_relatorio.append(f"💊 *{med_name}* ({med_dosage}) - {time_str} - {status_text}")
+            
+        dia_str = hoje.strftime("%d/%m/%Y")
+        mensagem = (
+            f"📋 *CR$ HOME CARE AI - RELATORIO DIARIO (TESTE MOCK)*\n\n"
+            f"Ola! Segue o relatorio diario de medicamentos de *{user.full_name}* referente ao dia *{dia_str}*:\n\n"
+            + "\n".join(linhas_relatorio) +
+            f"\n\nTenha uma excelente noite!"
+        )
+        
+        enviados = []
+        for resp in responsibles:
+            enviado = enviar_whatsapp_custom(resp.phone, mensagem)
+            enviados.append({"nome": resp.name, "telefone": resp.phone, "sucesso": enviado})
+            
+        return {
+            "status": "success",
+            "mensagem": "Relatorio de teste enviado",
+            "detalhes_envio": enviados,
+            "conteudo": mensagem
+        }
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=str(e))
+
 # =========================================================
 # 3. AGENDADOR AUTOMÁTICO (O "Cérebro" que roda a cada minuto)
 # =========================================================
@@ -2271,6 +2429,9 @@ async def check_reminders(db: Session = Depends(get_db)):
     from datetime import timezone, timedelta
     
     print("🔔 [CRON] INICIANDO VERIFICAÇÃO DE MEDICAMENTOS (WHATSAPP)...")
+    
+    # Executa também a verificação de relatórios diários
+    verificar_e_enviar_relatorios(db)
     
     try:
         brasilia_tz = timezone(timedelta(hours=-3))
@@ -3151,6 +3312,9 @@ def verificar_medicamentos_sincrono():
     
     db = SessionLocal()
     try:
+        # Executa também a verificação de relatórios diários
+        verificar_e_enviar_relatorios(db)
+        
         agora = datetime.now()
         hora_atual = agora.strftime("%H:%M")
         

@@ -1465,7 +1465,7 @@
             <div class="header-info">
                 <h2 id="greeting">Boa noite!</h2>
                 <div class="user-name" id="user-name">Eliane Amorzinho</div>
-                <div style="font-size: 0.7rem; color: #00D4FF; opacity: 0.8; margin-top: 2px; font-weight: 500;">v2.4.2 (build 2026-07-18)</div>
+                <div style="font-size: 0.7rem; color: #00D4FF; opacity: 0.8; margin-top: 2px; font-weight: 500;">v2.5.0 (build 2026-07-18)</div>
             </div>
         </div>
         <div class="header-right">
@@ -1899,6 +1899,15 @@
                             </div>
                         </div>
                     </div>
+
+                    <!-- Seção Horário de Relatório -->
+                    <div style="background: rgba(0, 212, 255, 0.05); border: 1px solid rgba(0, 212, 255, 0.1); padding: 12px; border-radius: 10px;">
+                        <div style="color: #8A9BB5; font-size: 0.8rem; margin-bottom: 4px;">Envio do Relatório Diário</div>
+                        <div style="display:flex; justify-content:space-between; align-items:center;">
+                            <strong style="color: #FFFFFF;">Horário Agendado:</strong>
+                            <strong style="color: #00D4FF;" id="clinical-view-report-time">-</strong>
+                        </div>
+                    </div>
                 </div>
                 <button type="button" class="btn-submit" onclick="toggleClinicalEdit(true)" style="background: linear-gradient(135deg, #667eea, #764ba2);">✏️ Editar Ficha Médica</button>
             </div>
@@ -2017,6 +2026,15 @@
                                 <input type="tel" class="form-input" id="clinical-edit-contact2-phone" placeholder="Celular">
                             </div>
                         </div>
+                    </div>
+                </div>
+                
+                <!-- Configuração de Relatório Diário -->
+                <div style="margin-top: 15px; background: rgba(0, 212, 255, 0.05); border: 1px solid rgba(0, 212, 255, 0.1); padding: 12px; border-radius: 10px;">
+                    <h4 style="color:#00D4FF; margin-bottom:12px; font-size:1.05rem;">📅 Relatório Diário de Medicamentos</h4>
+                    <div class="form-group" style="margin-bottom:0;">
+                        <label class="form-label" style="font-weight:600; color:#FFF; margin-bottom:6px;">Horário de Envio para o Responsável</label>
+                        <input type="time" class="form-input" id="clinical-edit-report-time">
                     </div>
                 </div>
                 <div style="display: flex; gap: 10px; margin-top: 20px;">
@@ -2999,6 +3017,9 @@
                 document.getElementById('clinical-view-contact2-name').textContent = contact2.name || 'Não cadastrado';
                 document.getElementById('clinical-view-contact2-phone').textContent = contact2.phone || '-';
                 
+                // Preenche o modo de visualização para o Relatório Diário
+                document.getElementById('clinical-view-report-time').textContent = clinicalData.report_time || 'Não configurado';
+                
                 // Reseta para o modo de exibição normal
                 toggleClinicalEdit(false);
                 
@@ -3080,6 +3101,9 @@
                 document.getElementById('clinical-edit-contact2-name').value = contact2.name || '';
                 document.getElementById('clinical-edit-contact2-phone').value = contact2.phone || '';
                 
+                // Preenche o campo de input de horário do relatório
+                document.getElementById('clinical-edit-report-time').value = clinicalData.report_time || '';
+                
                 viewDiv.style.display = 'none';
                 editForm.style.display = 'block';
             } else {
@@ -3099,7 +3123,8 @@
                 health_insurance: document.getElementById('clinical-edit-insurance').value,
                 health_insurance_card: clinicalData.health_insurance_card || null,
                 identity_document: document.getElementById('clinical-edit-identity-document').value,
-                identity_document_file: clinicalData.identity_document_file || null
+                identity_document_file: clinicalData.identity_document_file || null,
+                report_time: document.getElementById('clinical-edit-report-time').value || null
             };
             
             try {
@@ -7463,7 +7488,7 @@
 
     <!-- 🔖 INDICADOR DE VERSÃO -->
     <div style="text-align:center; padding:20px; color:#00D4FF; font-size:0.75rem; margin-top:30px; opacity:0.7;">
-        🏠 CR$ Home Care AI v2.4.2 — build 2026-07-18 — indicador visual de cancelamento de consulta
+        🏠 CR$ Home Care AI v2.5.0 — build 2026-07-18 — relatórios diários de medicamentos enviados via WhatsApp
     </div>
         </body>
         </html>
