@@ -1106,6 +1106,14 @@
             font-weight: bold;
         }
 
+        /* Weekday Buttons inside medication form */
+        .weekday-btn.active {
+            background: var(--electric-blue) !important;
+            color: #070B19 !important;
+            border-color: var(--electric-blue) !important;
+            box-shadow: 0 0 10px var(--electric-glow) !important;
+        }
+
         /* Version Tag */
         .version-indicator {
             position: fixed;
@@ -1214,7 +1222,7 @@
             <div class="hero-left">
                 <span class="section-tag">CUIDADO INTELIGENTE COM IA</span>
                 <h1>O Futuro da Saúde Domiciliar, <span>Guiado por IA</span></h1>
-                <p>A plataforma definitiva de Home Care que une inteligência artificial de ponta e humanização. Cuidamos de quem você ama e otimizamos a rotina de clínicas e cuidadores com alertas e monitoramento active.</p>
+                <p>A plataforma definitiva de Home Care que une inteligência artificial de ponta e humanização. Cuidamos de quem você ama e otimizamos a rotina de clínicas e cuidadores com alertas e monitoramento ativo.</p>
                 <div class="hero-ctas">
                     <a href="https://cuidaidoso.ia.br/cadastro" class="btn-primary">Começar Agora</a>
                     <a href="https://cuidaidoso.ia.br/#login" class="btn-secondary">Acessar Plataforma</a>
@@ -1270,7 +1278,8 @@
                 <div class="feature-card">
                     <span class="feature-icon">📄</span>
                     <h3 class="feature-name">OCR de Receitas</h3>
-                    <p class="feature-description">Envie uma foto de qualquer receita médica manuscrita. Nossa inteligência artificial processa a caligrafia médica, extraindo dosagens e horários exatos para a agenda do paciente de forma imediata.</p>
+                    <p class="feature-description">Envie/Tire uma foto de qualquer receita médica. Nossa inteligência artificial processa a receita médica, extraindo dosagens e horários exatos para a agenda do paciente de forma imediata. Com os dias e horários definidos pelo receituário.</p>
+                    <button class="nav-btn" style="width: 100%; margin-top: 16px; border-color: var(--electric-blue); color: var(--electric-blue); font-weight: 700;" onclick="openAttachRecipeModal()">Simular Envio de Receita</button>
                 </div>
                 
                 <div class="feature-card">
@@ -1700,8 +1709,113 @@
         </div>
     </div>
 
-    <!-- === MODAL DE CADASTRO === -->
-    <!-- ... Modais de autenticação inalterados ... -->
+    <!-- === MODAL ANEXAR RECEITA MÉDICA (IMAGEM 1) === -->
+    <div id="attach-recipe-modal" class="modal-overlay">
+        <div class="modal-card" style="max-width: 450px; text-align: center; padding: 36px 30px;">
+            <button onclick="closeAttachRecipeModal()" class="modal-close">&times;</button>
+            <div class="modal-header">
+                <span class="modal-icon" style="font-size: 2.2rem; display: block; margin-bottom: 12px;">📎</span>
+                <h3 class="modal-title" style="font-size: 1.6rem; font-weight: 800; color: #FFFFFF;">Anexar Receita Médica</h3>
+                <p class="modal-subtitle" style="font-size: 0.95rem; line-height: 1.6; margin-top: 8px;">Envie uma foto ou arquivo PDF. O sistema lerá e preencherá tudo automaticamente com IA.</p>
+            </div>
+            
+            <div style="display: flex; flex-direction: column; gap: 16px; margin: 28px 0 16px;">
+                <button onclick="triggerCameraCaptureRecipe()" class="btn-submit" style="background: var(--success); display:flex; align-items:center; justify-content:center; gap:8px; margin:0; font-size:1.05rem; padding: 16px; font-weight: 700;">
+                    📷 Tirar Foto com o Celular
+                </button>
+                <button onclick="triggerCameraCaptureRecipe()" class="btn-submit" style="background: rgba(17, 27, 51, 0.8); border: 1.5px solid rgba(255,255,255,0.1); color:#C5D0E0; display:flex; align-items:center; justify-content:center; gap:8px; margin:0; font-size:1.05rem; padding: 16px; font-weight: 600;">
+                    📁 Escolher da Galeria ou PDF
+                </button>
+            </div>
+            
+            <button onclick="closeAttachRecipeModal()" class="btn-secondary" style="width: 100%; padding: 12px; margin-top: 8px;">Cancelar</button>
+        </div>
+    </div>
+
+    <!-- === MODAL EDITAR MEDICAMENTO (IMAGEM 2 & 3 - SIMULAÇÃO OCR) === -->
+    <div id="edit-medication-modal" class="modal-overlay">
+        <div class="modal-card" style="max-width: 500px; text-align: left; padding: 36px 30px; max-height: 90vh; overflow-y: auto;">
+            <button onclick="closeEditMedicationModal()" class="modal-close">&times;</button>
+            
+            <!-- Header with Purple Recipe Button -->
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; border-bottom: 1px solid rgba(255,255,255,0.06); padding-bottom: 16px;">
+                <h3 class="modal-title" style="font-size: 1.5rem; font-weight: 800; display: flex; align-items: center; gap: 8px; color: #FFFFFF;">
+                     Editar Medicamento
+                </h3>
+                <button id="recipe-purple-btn" onclick="triggerOcrSimulation()" style="background: #8B5CF6; color: #FFF; border: none; border-radius: 20px; padding: 10px 20px; font-weight: 700; font-size: 0.95rem; cursor: pointer; display: flex; align-items: center; gap: 8px; box-shadow: 0 4px 15px rgba(139, 92, 246, 0.4); transition: transform 0.2s;">
+                    📄 Receita
+                </button>
+            </div>
+            
+            <!-- Scanner Box Simulator -->
+            <div id="ocr-scanner-box" onclick="triggerOcrSimulation()" style="border: 2.2px dashed rgba(0, 212, 255, 0.25); border-radius: 16px; padding: 24px; text-align: center; cursor: pointer; background: rgba(7, 11, 25, 0.4); margin-bottom: 20px; transition: border-color 0.3s;">
+                <span style="font-size: 2.2rem; display: block; margin-bottom: 8px;">📷</span>
+                <strong style="color: var(--electric-blue); font-size: 0.95rem; display: block; font-weight: 700;">Fotografar Receita Médica</strong>
+                <span style="color: var(--text-muted); font-size: 0.8rem; display: block; margin-top: 4px;">A IA preenche os campos automaticamente</span>
+            </div>
+            
+            <!-- Scanning Loader -->
+            <div id="med-ocr-loading" style="display:none; margin: 0 auto 20px; color: var(--electric-blue); font-size:0.85rem; font-weight:600; align-items:center; justify-content:center; gap:8px;">
+                <span class="pulse-dot"></span> IA Lendo Receita Médica...
+            </div>
+            
+            <!-- Medication Form Fields -->
+            <form onsubmit="saveSimulatedMedication(event)">
+                <div class="form-group">
+                    <label class="form-label">Nome do Medicamento *</label>
+                    <input type="text" id="med-name" class="form-input" placeholder="Nome do Medicamento" required>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label">Dosagem *</label>
+                    <input type="text" id="med-dosage" class="form-input" placeholder="Dosagem" required>
+                </div>
+                
+                <!-- Time Selector -->
+                <div class="form-group">
+                    <label class="form-label">Horário *</label>
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <select id="med-hour" class="form-input" style="width: 85px; text-align: center; background: rgba(7, 11, 25, 0.8); border: 1.5px solid rgba(138, 155, 181, 0.15); border-radius: 12px; color: #FFF;">
+                            <!-- Populated by JS -->
+                        </select>
+                        <span style="color:#FFF; font-weight:700;">:</span>
+                        <select id="med-minute" class="form-input" style="width: 85px; text-align: center; background: rgba(7, 11, 25, 0.8); border: 1.5px solid rgba(138, 155, 181, 0.15); border-radius: 12px; color: #FFF;">
+                            <!-- Populated by JS -->
+                        </select>
+                    </div>
+                </div>
+                
+                <!-- Duration Section -->
+                <div class="form-group">
+                    <label class="form-label">Por quantos dias você deve tomar a medicação?</label>
+                    <div style="display: flex; align-items: center; gap: 16px;">
+                        <input type="text" id="med-days" class="form-input" placeholder="Ex: 7" style="width: 100px;">
+                        <label style="color:#FFF; font-size:0.9rem; font-weight:600; display:flex; align-items:center; gap:6px; cursor:pointer;">
+                            <input type="checkbox" id="med-continuous" style="width:16px; height:16px; accent-color:var(--electric-blue);"> Uso Contínuo
+                        </label>
+                    </div>
+                </div>
+                
+                <!-- Weekdays Section -->
+                <div class="form-group">
+                    <label class="form-label">Dias da Semana *</label>
+                    <div style="display: flex; gap: 6px; flex-wrap: wrap;">
+                        <button type="button" class="weekday-btn" data-day="Dom" style="flex:1; padding: 10px 4px; background: rgba(7, 11, 25, 0.6); border: 1.5px solid rgba(255,255,255,0.08); border-radius: 8px; color: #8A9BB5; font-size:0.8rem; font-weight:700; cursor:pointer; transition: all 0.2s;">Dom</button>
+                        <button type="button" class="weekday-btn" data-day="Seg" style="flex:1; padding: 10px 4px; background: rgba(7, 11, 25, 0.6); border: 1.5px solid rgba(255,255,255,0.08); border-radius: 8px; color: #8A9BB5; font-size:0.8rem; font-weight:700; cursor:pointer; transition: all 0.2s;">Seg</button>
+                        <button type="button" class="weekday-btn" data-day="Ter" style="flex:1; padding: 10px 4px; background: rgba(7, 11, 25, 0.6); border: 1.5px solid rgba(255,255,255,0.08); border-radius: 8px; color: #8A9BB5; font-size:0.8rem; font-weight:700; cursor:pointer; transition: all 0.2s;">Ter</button>
+                        <button type="button" class="weekday-btn" data-day="Qua" style="flex:1; padding: 10px 4px; background: rgba(7, 11, 25, 0.6); border: 1.5px solid rgba(255,255,255,0.08); border-radius: 8px; color: #8A9BB5; font-size:0.8rem; font-weight:700; cursor:pointer; transition: all 0.2s;">Qua</button>
+                        <button type="button" class="weekday-btn" data-day="Qui" style="flex:1; padding: 10px 4px; background: rgba(7, 11, 25, 0.6); border: 1.5px solid rgba(255,255,255,0.08); border-radius: 8px; color: #8A9BB5; font-size:0.8rem; font-weight:700; cursor:pointer; transition: all 0.2s;">Qui</button>
+                        <button type="button" class="weekday-btn" data-day="Sex" style="flex:1; padding: 10px 4px; background: rgba(7, 11, 25, 0.6); border: 1.5px solid rgba(255,255,255,0.08); border-radius: 8px; color: #8A9BB5; font-size:0.8rem; font-weight:700; cursor:pointer; transition: all 0.2s;">Sex</button>
+                        <button type="button" class="weekday-btn" data-day="Sáb" style="flex:1; padding: 10px 4px; background: rgba(7, 11, 25, 0.6); border: 1.5px solid rgba(255,255,255,0.08); border-radius: 8px; color: #8A9BB5; font-size:0.8rem; font-weight:700; cursor:pointer; transition: all 0.2s;">Sáb</button>
+                    </div>
+                </div>
+                
+                <button type="submit" class="btn-submit" style="margin-top: 12px; background: var(--success); display: flex; align-items: center; justify-content: center; gap: 8px;">
+                    💾 Salvar Medicamento
+                </button>
+            </form>
+        </div>
+    </div>
 
     <script>
         // Generate Floating Particles
@@ -1718,6 +1832,25 @@
             }
         }
         createParticles();
+
+        // Populate Hour & Minute Selects
+        function populateTimeSelects() {
+            const hourSelect = document.getElementById('med-hour');
+            const minuteSelect = document.getElementById('med-minute');
+            
+            hourSelect.innerHTML = '<option value="">00h</option>';
+            for (let i = 0; i < 24; i++) {
+                const val = i < 10 ? '0' + i : i;
+                hourSelect.innerHTML += `<option value="${val}">${val}h</option>`;
+            }
+            
+            minuteSelect.innerHTML = '<option value="">00</option>';
+            for (let i = 0; i < 60; i += 5) {
+                const val = i < 10 ? '0' + i : i;
+                minuteSelect.innerHTML += `<option value="${val}">${val}</option>`;
+            }
+        }
+        populateTimeSelects();
 
         // Toast Notification System
         function showToast(message, type = 'success') {
@@ -1756,7 +1889,6 @@
 
         // Reset medical file to completely empty state
         function resetMedicalFile() {
-            // Header
             document.getElementById('patient-avatar').textContent = '?';
             document.getElementById('patient-avatar').style.background = 'rgba(255,255,255,0.06)';
             document.getElementById('patient-avatar').style.color = 'var(--text-muted)';
@@ -1767,7 +1899,6 @@
             document.getElementById('patient-plan').style.cssText = 'background: rgba(255,255,255,0.04); color: var(--text-muted); padding: 4px 10px; border-radius: 6px; font-size: 0.75rem; font-weight: 700; border: 1px solid rgba(255,255,255,0.06);';
             document.getElementById('patient-plan').textContent = 'Nenhum plano ativo';
 
-            // Tab 1
             document.getElementById('clinical-diagnoses').textContent = 'Nenhum diagnóstico registrado.';
             document.getElementById('clinical-diagnoses').style.fontStyle = 'italic';
             document.getElementById('clinical-diagnoses').style.color = 'rgba(138, 155, 181, 0.7)';
@@ -1780,10 +1911,8 @@
             document.getElementById('caregiver-duty').style.color = 'rgba(138, 155, 181, 0.7)';
             document.getElementById('caregiver-sub').textContent = '--';
 
-            // Tab 2
             document.getElementById('documents-list').innerHTML = '<p id="empty-docs-msg" style="font-size: 0.9rem; color: rgba(138, 155, 181, 0.7); font-style: italic; text-align: center; padding: 20px 0;">Nenhum documento digitalizado.</p>';
 
-            // Tab 3
             document.getElementById('report-receiver').textContent = 'Nenhum responsável cadastrado';
             document.getElementById('report-status').textContent = 'Nenhum relatório enviado ainda';
             document.getElementById('report-status').className = '';
@@ -1799,25 +1928,21 @@
             const flash = document.getElementById('camera-flash');
             const loading = document.getElementById('ocr-loading');
             
-            // Trigger Flash Animation
             flash.classList.add('flash');
             setTimeout(() => {
                 flash.classList.remove('flash');
             }, 500);
             
-            // Show Loading Indicator
             loading.style.display = 'flex';
             
             setTimeout(() => {
                 loading.style.display = 'none';
                 
-                // Remove empty msg if present
                 const emptyMsg = document.getElementById('empty-docs-msg');
                 if (emptyMsg) {
                     emptyMsg.remove();
                 }
                 
-                // Add new document card to list
                 const list = document.getElementById('documents-list');
                 const docCard = document.createElement('div');
                 docCard.style.cssText = 'background: rgba(0, 212, 255, 0.05); border: 1.5px solid var(--electric-blue); border-radius: 10px; padding: 12px; display: flex; justify-content: space-between; align-items: center; animation: fadeIn 0.4s ease; margin-bottom: 10px;';
@@ -1830,7 +1955,6 @@
                 `;
                 list.insertBefore(docCard, list.firstChild);
 
-                // Populate patient profile dynamic details (OCR successfully registers the patient)
                 document.getElementById('patient-avatar').textContent = 'MS';
                 document.getElementById('patient-avatar').style.background = 'linear-gradient(135deg, var(--primary) 0%, var(--electric-blue) 100%)';
                 document.getElementById('patient-avatar').style.color = '#FFFFFF';
@@ -1842,7 +1966,6 @@
                 document.getElementById('patient-plan').style.cssText = 'background: rgba(16, 185, 129, 0.15); color: var(--success); padding: 4px 10px; border-radius: 6px; font-size: 0.75rem; font-weight: 700; border: 1px solid rgba(16, 185, 129, 0.2);';
                 document.getElementById('patient-plan').textContent = 'Plano Pro Ativo';
 
-                // Populate Tab 1
                 document.getElementById('clinical-diagnoses').textContent = 'Hipertensão Arterial Sistêmica (HAS), Diabetes Mellitus Tipo 2 (DM2), Osteoartrite de Quadril.';
                 document.getElementById('clinical-diagnoses').style.fontStyle = 'normal';
                 document.getElementById('clinical-diagnoses').style.color = 'var(--text-light)';
@@ -1860,7 +1983,6 @@
                 document.getElementById('caregiver-duty').style.color = '#FFFFFF';
                 document.getElementById('caregiver-sub').textContent = 'Téc. de Enfermagem';
 
-                // Enable Tab 3 Relatórios button and receiver
                 document.getElementById('report-receiver').textContent = 'Eliane Amorzinho (WhatsApp e E-mail)';
                 document.getElementById('report-send-btn').disabled = false;
                 document.getElementById('report-send-btn').style.cssText = 'margin-top: 0; background: linear-gradient(135deg, var(--primary) 0%, var(--success) 100%); color: #FFFFFF; font-weight: 700; cursor: pointer;';
@@ -1897,6 +2019,103 @@
                 document.getElementById('appt-time').value = '';
             }, 2200);
         }
+
+        // --- OCR Simulation Logic ---
+        function openAttachRecipeModal() {
+            document.getElementById('attach-recipe-modal').style.display = 'flex';
+        }
+
+        function closeAttachRecipeModal() {
+            document.getElementById('attach-recipe-modal').style.display = 'none';
+        }
+
+        function triggerCameraCaptureRecipe() {
+            const flash = document.getElementById('camera-flash');
+            
+            // Trigger Flash
+            flash.classList.add('flash');
+            setTimeout(() => {
+                flash.classList.remove('flash');
+            }, 500);
+            
+            closeAttachRecipeModal();
+            openEditMedicationModal();
+        }
+
+        function openEditMedicationModal() {
+            document.getElementById('edit-medication-modal').style.display = 'flex';
+            
+            // Reset medication form to completely empty state
+            document.getElementById('med-name').value = '';
+            document.getElementById('med-name').placeholder = 'Nome do Medicamento';
+            document.getElementById('med-dosage').value = '';
+            document.getElementById('med-dosage').placeholder = 'Dosagem';
+            document.getElementById('med-hour').value = '';
+            document.getElementById('med-minute').value = '';
+            document.getElementById('med-days').value = '';
+            document.getElementById('med-continuous').checked = false;
+            
+            document.querySelectorAll('.weekday-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            
+            document.getElementById('ocr-scanner-box').style.display = 'block';
+            document.getElementById('med-ocr-loading').style.display = 'none';
+        }
+
+        function closeEditMedicationModal() {
+            document.getElementById('edit-medication-modal').style.display = 'none';
+        }
+
+        // Simulate IA OCR scan inside Edit Medication Form
+        function triggerOcrSimulation() {
+            const flash = document.getElementById('camera-flash');
+            const loading = document.getElementById('med-ocr-loading');
+            const scanner = document.getElementById('ocr-scanner-box');
+            
+            // Trigger Camera Flash
+            flash.classList.add('flash');
+            setTimeout(() => {
+                flash.classList.remove('flash');
+            }, 500);
+            
+            // Show Scanner Loading
+            scanner.style.display = 'none';
+            loading.style.display = 'flex';
+            
+            setTimeout(() => {
+                loading.style.display = 'none';
+                
+                // Populate Medication Ficha automatically with IA OCR details
+                document.getElementById('med-name').value = 'Lisador 1g';
+                document.getElementById('med-dosage').value = '1 comprimido';
+                document.getElementById('med-hour').value = '00';
+                document.getElementById('med-minute').value = '00';
+                document.getElementById('med-days').value = '';
+                document.getElementById('med-continuous').checked = true;
+                
+                // Select all weekdays (active/blue style)
+                document.querySelectorAll('.weekday-btn').forEach(btn => {
+                    btn.classList.add('active');
+                });
+                
+                showToast("Receita lida com sucesso! IA preencheu a ficha do medicamento automaticamente com Lisador 1g.");
+            }, 2000);
+        }
+
+        function saveSimulatedMedication(e) {
+            e.preventDefault();
+            const name = document.getElementById('med-name').value;
+            closeEditMedicationModal();
+            showToast(`Medicamento ${name} salvo com sucesso na agenda do paciente!`);
+        }
+
+        // Weekday click toggle logic
+        document.querySelectorAll('.weekday-btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                this.classList.toggle('active');
+            });
+        });
 
         // Modal triggers
         function openLogin() {
