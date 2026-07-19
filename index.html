@@ -1002,6 +1002,110 @@
             font-weight: 700;
         }
 
+        /* Tabs Specific Styling */
+        .tab-headers {
+            display: flex;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+            margin-bottom: 20px;
+            gap: 8px;
+            overflow-x: auto;
+        }
+
+        .tab-btn {
+            background: none;
+            border: none;
+            color: var(--text-muted);
+            padding: 10px 16px;
+            font-size: 0.88rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            border-bottom: 2px solid transparent;
+            white-space: nowrap;
+        }
+
+        .tab-btn:hover {
+            color: var(--electric-blue);
+        }
+
+        .tab-btn.active {
+            color: var(--electric-blue);
+            border-bottom-color: var(--electric-blue);
+        }
+
+        .tab-panel {
+            display: none;
+            animation: fadeIn 0.3s ease;
+        }
+
+        .tab-panel.active {
+            display: block;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(5px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Camera Flash Effect */
+        .camera-flash {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: #FFFFFF;
+            opacity: 0;
+            pointer-events: none;
+            z-index: 9999;
+        }
+
+        .camera-flash.flash {
+            animation: flashAnimation 0.5s ease-out forwards;
+        }
+
+        @keyframes flashAnimation {
+            0% { opacity: 1; }
+            100% { opacity: 0; }
+        }
+
+        /* Toast Container */
+        .toast-container {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            z-index: 10000;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            pointer-events: none;
+        }
+
+        .toast-card {
+            background: rgba(15, 23, 42, 0.95);
+            border: 1.5px solid var(--electric-blue);
+            border-radius: 12px;
+            padding: 16px 20px;
+            color: #FFFFFF;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.5), 0 0 15px rgba(0, 212, 255, 0.1);
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-size: 0.9rem;
+            min-width: 300px;
+            max-width: 400px;
+            pointer-events: auto;
+            animation: slideInRight 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+
+        @keyframes slideInRight {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+
+        .toast-success-icon {
+            color: var(--success);
+            font-size: 1.2rem;
+            font-weight: bold;
+        }
+
         /* Version Tag */
         .version-indicator {
             position: fixed;
@@ -1066,6 +1170,12 @@
     </style>
 </head>
 <body>
+
+    <!-- Camera flash element -->
+    <div id="camera-flash" class="camera-flash"></div>
+
+    <!-- Toast notification container -->
+    <div id="toast-container" class="toast-container"></div>
 
     <!-- Background Grid & Glowing circles -->
     <div class="grid-bg"></div>
@@ -1175,11 +1285,11 @@
                     <p class="feature-description">Geração automatizada de resumos de saúde, cronograma consolidado e alarmes dinâmicos integrados para evitar qualquer esquecimento de medicação essencial.</p>
                 </div>
 
-                <div class="feature-card" style="border-color: rgba(16, 185, 129, 0.2);">
+                <div class="feature-card" style="border-color: rgba(16, 185, 129, 0.25);">
                     <span class="feature-icon">🏥</span>
                     <h3 class="feature-name">Ficha Médica Digital</h3>
-                    <p class="feature-description" style="margin-bottom: 24px;">Acesso instantâneo a históricos clínicos, alergias, contatos e plano de cuidado ativo do paciente.</p>
-                    <button class="nav-btn" style="width: 100%; border-color: var(--success); color: var(--success);" onclick="openMedicalFile()">Visualizar Ficha de Exemplo</button>
+                    <p class="feature-description" style="margin-bottom: 24px;">Controle prontuários, digitalize documentos pessoais/clínicos, envie relatórios aos responsáveis e envie prontuários por e-mail automaticamente no agendamento de consultas.</p>
+                    <button class="nav-btn" style="width: 100%; border-color: var(--success); color: var(--success); font-weight: 700;" onclick="openMedicalFile()">Abrir Ficha de Demonstração</button>
                 </div>
             </div>
         </section>
@@ -1457,52 +1567,152 @@
         </div>
     </div>
 
-    <!-- === MODAL FICHA MÉDICA === -->
+    <!-- === MODAL FICHA MÉDICA PREMIUM === -->
     <div id="medical-modal" class="modal-overlay">
-        <div class="modal-card" style="max-width: 600px;">
+        <div class="modal-card" style="max-width: 650px; padding: 32px 30px;">
             <button onclick="closeMedicalFile()" class="modal-close">&times;</button>
-            <div class="modal-header">
+            
+            <div class="modal-header" style="margin-bottom: 20px;">
                 <span class="modal-icon">🏥</span>
                 <h3 class="modal-title">Ficha Médica Digital</h3>
-                <p class="modal-subtitle">Demonstração de Prontuário Integrado</p>
+                <p class="modal-subtitle">Demonstração Interativa do Prontuário Inteligente</p>
             </div>
-            
-            <div style="background: rgba(7, 11, 25, 0.6); border: 1px solid rgba(255,255,255,0.06); border-radius: 16px; padding: 20px; margin-bottom: 20px; text-align: left;">
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px; border-bottom: 1px solid rgba(255,255,255,0.06); padding-bottom: 16px;">
+
+            <!-- Patient Quick Header -->
+            <div style="background: rgba(0, 212, 255, 0.03); border: 1.5px solid var(--border-glow); border-radius: 16px; padding: 16px 20px; display: flex; align-items: center; justify-content: space-between; margin-bottom: 24px; text-align: left;">
+                <div style="display: flex; align-items: center; gap: 14px;">
+                    <div style="width: 48px; height: 48px; border-radius: 50%; background: linear-gradient(135deg, var(--primary) 0%, var(--electric-blue) 100%); display:flex; align-items:center; justify-content:center; font-weight:800; font-size:1.2rem; border:2px solid rgba(255,255,255,0.2);">MS</div>
                     <div>
-                        <span style="color: var(--text-muted); font-size: 0.8rem; font-weight: 600; display: block; text-transform: uppercase;">Paciente</span>
-                        <strong style="font-size: 1.1rem; color: #FFFFFF;">Maria Silva</strong>
+                        <h4 style="color:#FFF; font-size:1.05rem; font-weight:700;">Maria Silva</h4>
+                        <span style="color:var(--text-muted); font-size:0.8rem;">78 anos • RG 12.345.678-X</span>
+                    </div>
+                </div>
+                <span style="background: rgba(16, 185, 129, 0.15); color: var(--success); padding: 4px 10px; border-radius: 6px; font-size: 0.75rem; font-weight: 700; border: 1px solid rgba(16, 185, 129, 0.2);">Plano Pro Ativo</span>
+            </div>
+
+            <!-- Tab Headers -->
+            <div class="tab-headers">
+                <button class="tab-btn active" onclick="switchMedicalTab(event, 'tab-prontuario')">📋 Prontuário</button>
+                <button class="tab-btn" onclick="switchMedicalTab(event, 'tab-documentos')">📷 Documentos & OCR</button>
+                <button class="tab-btn" onclick="switchMedicalTab(event, 'tab-relatorios')">📊 Relatórios</button>
+                <button class="tab-btn" onclick="switchMedicalTab(event, 'tab-consultas')">🗓️ Consultas</button>
+            </div>
+
+            <!-- Tab 1: Prontuário -->
+            <div id="tab-prontuario" class="tab-panel active" style="text-align: left;">
+                <div style="display: flex; flex-direction: column; gap: 16px;">
+                    <div>
+                        <span style="color: var(--text-muted); font-size: 0.8rem; font-weight: 600; text-transform: uppercase;">Diagnósticos</span>
+                        <p style="font-size: 0.92rem; color: var(--text-light); line-height: 1.4; margin-top: 4px;">Hipertensão Arterial Sistêmica (HAS), Diabetes Mellitus Tipo 2 (DM2), Osteoartrite de Quadril.</p>
                     </div>
                     <div>
-                        <span style="color: var(--text-muted); font-size: 0.8rem; font-weight: 600; display: block; text-transform: uppercase;">Idade</span>
-                        <strong style="font-size: 1.1rem; color: #FFFFFF;">78 anos</strong>
+                        <span style="color: var(--text-muted); font-size: 0.8rem; font-weight: 600; text-transform: uppercase; display: block; margin-bottom: 6px;">Alergias Alimentares ou Medicamentosas</span>
+                        <span style="background: rgba(239, 68, 68, 0.12); color: #EF4444; border: 1px solid rgba(239, 68, 68, 0.2); padding: 4px 10px; border-radius: 6px; font-size: 0.8rem; font-weight: 700; display: inline-block;">Penicilina</span>
+                        <span style="background: rgba(239, 68, 68, 0.12); color: #EF4444; border: 1px solid rgba(239, 68, 68, 0.2); padding: 4px 10px; border-radius: 6px; font-size: 0.8rem; font-weight: 700; display: inline-block; margin-left: 8px;">Corante Tartrazina</span>
+                    </div>
+                    <div style="border-top: 1px solid rgba(255,255,255,0.06); padding-top: 14px; display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+                        <div>
+                            <span style="color: var(--text-muted); font-size: 0.8rem; font-weight: 600; text-transform: uppercase;">Familiar Responsável</span>
+                            <strong style="font-size: 0.9rem; color: #FFF; display:block; margin-top:4px;">Eliane Amorzinho</strong>
+                            <span style="color: var(--text-muted); font-size: 0.8rem;">Filha • (11) 99999-9999</span>
+                        </div>
+                        <div>
+                            <span style="color: var(--text-muted); font-size: 0.8rem; font-weight: 600; text-transform: uppercase;">Cuidador de Plantão</span>
+                            <strong style="font-size: 0.9rem; color: #FFF; display:block; margin-top:4px;">Carlos Souza</strong>
+                            <span style="color: var(--text-muted); font-size: 0.8rem;">Téc. de Enfermagem</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tab 2: Documentos & OCR -->
+            <div id="tab-documentos" class="tab-panel" style="text-align: left;">
+                <div style="margin-bottom: 16px;">
+                    <span style="color: var(--text-muted); font-size: 0.8rem; font-weight: 600; text-transform: uppercase; display: block; margin-bottom: 8px;">Documentos Ativos</span>
+                    <div id="documents-list" style="display: flex; flex-direction: column; gap: 10px;">
+                        <div style="background: rgba(7, 11, 25, 0.5); border: 1px solid rgba(255,255,255,0.04); border-radius: 10px; padding: 12px; display: flex; justify-content: space-between; align-items: center;">
+                            <div>
+                                <strong style="font-size: 0.85rem; color: #FFF; display: block;">Documento de Identidade (RG_Frente_Verso.pdf)</strong>
+                                <span style="font-size: 0.75rem; color: var(--success); font-weight: 600;">✓ Verificado • OCR Completo</span>
+                            </div>
+                            <span style="font-size: 0.75rem; color: var(--text-muted);">PDF (1.2 MB)</span>
+                        </div>
+                        <div style="background: rgba(7, 11, 25, 0.5); border: 1px solid rgba(255,255,255,0.04); border-radius: 10px; padding: 12px; display: flex; justify-content: space-between; align-items: center;">
+                            <div>
+                                <strong style="font-size: 0.85rem; color: #FFF; display: block;">Receita Médica - Dr. Carlos (Cardiologia)</strong>
+                                <span style="font-size: 0.75rem; color: var(--success); font-weight: 600;">✓ Metformina 850mg e Losartana extraídos via IA</span>
+                            </div>
+                            <span style="font-size: 0.75rem; color: var(--text-muted);">PNG (840 KB)</span>
+                        </div>
                     </div>
                 </div>
                 
-                <div style="display: flex; flex-direction: column; gap: 12px; margin-bottom: 16px;">
-                    <div>
-                        <span style="color: var(--text-muted); font-size: 0.8rem; font-weight: 600; display: block; text-transform: uppercase;">Condições Médicas</span>
-                        <p style="font-size: 0.9rem; color: var(--text-light); line-height: 1.4; margin-top: 4px;">Hipertensão Arterial Sistêmica, Diabetes Mellitus Tipo 2, Osteoartrite.</p>
+                <div style="text-align: center; border-top: 1px solid rgba(255,255,255,0.06); padding-top: 16px;">
+                    <button class="nav-btn" style="border-color: var(--electric-blue); color: var(--electric-blue); font-weight: 700; width: 100%;" onclick="simulateCameraCapture()">
+                        📷 Simular Captura/Foto de Nova Receita (OCR por IA)
+                    </button>
+                    <div id="ocr-loading" style="display:none; margin-top:12px; color: var(--electric-blue); font-size:0.85rem; font-weight:600; align-items:center; justify-content:center; gap:8px;">
+                        <span class="pulse-dot"></span> Processando OCR de Receita por IA...
                     </div>
-                    <div>
-                        <span style="color: var(--text-muted); font-size: 0.8rem; font-weight: 600; display: block; text-transform: uppercase;">Alergias</span>
-                        <span style="background: rgba(239, 68, 68, 0.15); color: #EF4444; border: 1px solid rgba(239, 68, 68, 0.2); padding: 4px 10px; border-radius: 6px; font-size: 0.8rem; font-weight: 700; display: inline-block; margin-top: 4px;">Penicilina</span>
-                    </div>
-                </div>
-
-                <div style="border-top: 1px solid rgba(255,255,255,0.06); padding-top: 16px;">
-                    <span style="color: var(--electric-blue); font-size: 0.85rem; font-weight: 700; display: block; text-transform: uppercase; margin-bottom: 10px; letter-spacing: 0.5px;">Plano de Cuidado IA Ativo</span>
-                    <ul style="font-size: 0.85rem; color: var(--text-light); list-style: none; display: flex; flex-direction: column; gap: 8px;">
-                        <li style="display:flex; gap:8px;">✓ <strong>Medicamentos:</strong> Metformina 850mg (8h/20h), Losartana 50mg (8h), Paracetamol se dor.</li>
-                        <li style="display:flex; gap:8px;">✓ <strong>Rotina:</strong> OCR de Receita atualizado ontem às 14h.</li>
-                        <li style="display:flex; gap:8px;">✓ <strong>Responsáveis:</strong> 2 familiares monitorando e alertas via WhatsApp.</li>
-                    </ul>
                 </div>
             </div>
+
+            <!-- Tab 3: Relatórios -->
+            <div id="tab-relatorios" class="tab-panel" style="text-align: left;">
+                <p style="font-size: 0.9rem; color: var(--text-light); line-height: 1.5; margin-bottom: 16px;">
+                    O sistema gera um resumo detalhado contendo a escala de medicamentos administrados, observações do cuidador gravadas via áudio e o status clínico. Esse relatório é consolidado em PDF e enviado de forma automatizada ao fim do dia.
+                </p>
+                <div style="background: rgba(7, 11, 25, 0.5); border: 1px solid rgba(255,255,255,0.04); border-radius: 12px; padding: 16px; margin-bottom: 20px;">
+                    <span style="color: var(--text-muted); font-size: 0.8rem; font-weight: 600; text-transform: uppercase; display: block; margin-bottom: 8px;">Configurações de Envio do Relatório Diário</span>
+                    <ul style="font-size: 0.85rem; color: var(--text-light); list-style: none; display: flex; flex-direction: column; gap: 8px;">
+                        <li>✓ Envio Automático Diário: <strong>Habilitado (20:00)</strong></li>
+                        <li>✓ Destinatário Principal: <strong>Eliane Amorzinho (WhatsApp e E-mail)</strong></li>
+                        <li>✓ Status do último envio: <strong style="color: var(--success);">Enviado com sucesso ontem às 20:01</strong></li>
+                    </ul>
+                </div>
+                <button class="btn-submit" style="margin-top: 0; background: rgba(16, 185, 129, 0.15); border: 1.5px solid var(--success); color: var(--success); font-weight: 700;" onclick="simulateReportSend()">
+                    🚀 Disparar Relatório de Hoje Agora para o Responsável
+                </button>
+            </div>
+
+            <!-- Tab 4: Consultas -->
+            <div id="tab-consultas" class="tab-panel" style="text-align: left;">
+                <p style="font-size: 0.9rem; color: var(--text-light); margin-bottom: 16px;">
+                    Agende uma nova consulta para o paciente. O prontuário, a ficha médica com histórico de medicamentos e as alergias serão enviados automaticamente via e-mail ao médico/consultório selecionado.
+                </p>
+                <form onsubmit="simulateAppointmentSchedule(event)" style="display: flex; flex-direction: column; gap: 14px;">
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                        <div>
+                            <label class="form-label">Médico / Especialidade</label>
+                            <input type="text" id="appt-doctor" class="form-input" placeholder="Ex: Dr. Carlos - Cardiologia" required>
+                        </div>
+                        <div>
+                            <label class="form-label">E-mail do Médico / Clínica</label>
+                            <input type="email" id="appt-email" class="form-input" placeholder="consultorio@cardiocare.com.br" required>
+                        </div>
+                    </div>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                        <div>
+                            <label class="form-label">Data da Consulta</label>
+                            <input type="date" id="appt-date" class="form-input" required>
+                        </div>
+                        <div>
+                            <label class="form-label">Horário</label>
+                            <input type="time" id="appt-time" class="form-input" required>
+                        </div>
+                    </div>
+                    <button type="submit" class="btn-submit" style="margin-top: 8px;">🗓️ Agendar Consulta & Enviar Prontuário por E-mail</button>
+                </form>
+            </div>
             
-            <button onclick="closeMedicalFile()" class="btn-submit" style="margin-top: 0; background: linear-gradient(135deg, var(--primary) 0%, var(--success) 100%);">Fechar Visualização</button>
+            <div style="border-top: 1px solid rgba(255,255,255,0.06); padding-top: 20px; margin-top: 24px; display: flex; justify-content: flex-end;">
+                <button onclick="closeMedicalFile()" class="btn-secondary" style="padding: 10px 24px;">Fechar Ficha</button>
+            </div>
         </div>
     </div>
+
+    <!-- === MODAL DE CADASTRO === -->
+    <!-- ... Resto dos modais permanecem exatamente iguais ... -->
 
     <script>
         // Generate Floating Particles
@@ -1520,6 +1730,106 @@
         }
         createParticles();
 
+        // Toast Notification System
+        function showToast(message, type = 'success') {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            toast.className = 'toast-card';
+            
+            const checkIcon = type === 'success' ? '✨' : '⚠️';
+            toast.innerHTML = `
+                <span class="toast-success-icon">${checkIcon}</span>
+                <span>${message}</span>
+            `;
+            
+            container.appendChild(toast);
+            
+            setTimeout(() => {
+                toast.style.animation = 'slideInRight 0.35s cubic-bezier(0.16, 1, 0.3, 1) reverse forwards';
+                setTimeout(() => {
+                    toast.remove();
+                }, 400);
+            }, 4500);
+        }
+
+        // Tab Switching Logic
+        function switchMedicalTab(event, tabId) {
+            // Remove active class from all buttons
+            document.querySelectorAll('.tab-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            // Add active class to clicked button
+            event.currentTarget.classList.add('active');
+            
+            // Hide all tab panels
+            document.querySelectorAll('.tab-panel').forEach(panel => {
+                panel.classList.remove('active');
+            });
+            // Show selected panel
+            document.getElementById(tabId).classList.add('active');
+        }
+
+        // Simulate Document OCR Capture
+        function simulateCameraCapture() {
+            const flash = document.getElementById('camera-flash');
+            const loading = document.getElementById('ocr-loading');
+            
+            // Trigger Flash
+            flash.classList.add('flash');
+            setTimeout(() => {
+                flash.classList.remove('flash');
+            }, 500);
+            
+            // Show Loading
+            loading.style.display = 'flex';
+            
+            setTimeout(() => {
+                loading.style.display = 'none';
+                
+                // Add new document card to list
+                const list = document.getElementById('documents-list');
+                const docCard = document.createElement('div');
+                docCard.style.cssText = 'background: rgba(0, 212, 255, 0.05); border: 1.5px solid var(--electric-blue); border-radius: 10px; padding: 12px; display: flex; justify-content: space-between; align-items: center; animation: fadeIn 0.4s ease;';
+                docCard.innerHTML = `
+                    <div>
+                        <strong style="font-size: 0.85rem; color: #FFF; display: block;">Receita Digitalizada Recém-Enviada (OCR_Receita.jpg)</strong>
+                        <span style="font-size: 0.75rem; color: var(--electric-blue); font-weight: 600;">✓ Losartana 50mg extraído com sucesso • Adicionado à agenda</span>
+                    </div>
+                    <span style="font-size: 0.75rem; color: var(--electric-blue); font-weight: 700;">AGORA</span>
+                `;
+                list.insertBefore(docCard, list.firstChild);
+                
+                showToast("Documento pessoal/receita capturado e processado via OCR com sucesso!");
+            }, 2500);
+        }
+
+        // Simulate Daily Report Send
+        function simulateReportSend() {
+            showToast("Gerando PDF consolidador do Relatório Diário de Saúde...");
+            setTimeout(() => {
+                showToast("Relatório de Saúde enviado com sucesso para Eliane Amorzinho via WhatsApp e E-mail!");
+            }, 2000);
+        }
+
+        // Simulate Appointment Scheduling & Email Send
+        function simulateAppointmentSchedule(e) {
+            e.preventDefault();
+            const doctor = document.getElementById('appt-doctor').value;
+            const email = document.getElementById('appt-email').value;
+            const date = document.getElementById('appt-date').value;
+            const time = document.getElementById('appt-time').value;
+
+            showToast(`Agendando consulta com ${doctor} para o dia ${date}...`);
+            
+            setTimeout(() => {
+                showToast(`Consulta agendada! Prontuário clínico e arquivos de exames enviados com sucesso para ${email}!`);
+                document.getElementById('appt-doctor').value = '';
+                document.getElementById('appt-email').value = '';
+                document.getElementById('appt-date').value = '';
+                document.getElementById('appt-time').value = '';
+            }, 2200);
+        }
+
         // Modal triggers
         function openLogin() {
             document.getElementById('login-modal').style.display = 'flex';
@@ -1527,21 +1837,23 @@
             document.getElementById('error-msg').textContent = '';
         }
 
-        // Close Login Modal
         function closeLogin() {
             document.getElementById('login-modal').style.display = 'none';
         }
 
-        // Open Register Modal
         function openRegister() {
             document.getElementById('register-modal').style.display = 'flex';
             document.getElementById('register-error').style.display = 'none';
         }
 
-        // Close Register Modal
         function closeRegister() {
             document.getElementById('register-modal').style.display = 'none';
             document.getElementById('register-form').reset();
+        }
+
+        function switchToRegister() {
+            closeLogin();
+            openRegister();
         }
 
         function openForgotPassword() {
@@ -1550,7 +1862,6 @@
             document.getElementById('forgot-success').style.display = 'none';
         }
 
-        // Close Forgot Password Modal
         function closeForgotPassword() {
             document.getElementById('forgot-modal').style.display = 'none';
             document.getElementById('forgot-form').reset();
@@ -1608,7 +1919,7 @@
         window.addEventListener('hashchange', checkRouteAndHash);
         window.addEventListener('DOMContentLoaded', checkRouteAndHash);
 
-        // Authentication redirect check (Unified routing: both clients and admin go to client dashboard)
+        // Authentication redirect check
         if (localStorage.getItem('is_logged_in') === 'true') {
             window.location.href = '/dashboard-cliente';
         }
@@ -1658,7 +1969,7 @@
                     
                     window.location.href = '/dashboard-cliente';
                 } else {
-                    // Fallback para admin demo (Unified redirect to client dashboard)
+                    // Fallback para admin demo
                     if (username.toLowerCase() === 'admin' && password === 'admin123') {
                         localStorage.setItem('currentUser', JSON.stringify({
                             full_name: 'Administrador',
