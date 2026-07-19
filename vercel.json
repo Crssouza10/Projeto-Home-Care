@@ -41,11 +41,15 @@
     },
     {
       "src": "/dashboard",
-      "dest": "/dashboard.html"
+      "dest": "/dashboard_cliente.html"
     },
     {
       "src": "/dashboard-cliente",
       "dest": "/dashboard_cliente.html"
+    },
+    {
+      "src": "/cadastro",
+      "dest": "/index.html"
     },
     {
       "src": "/index.html",

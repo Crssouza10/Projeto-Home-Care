@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CR$ HOME CARE AI - Cuidado Inteligente</title>
+    <title>CR$ HOME CARE AI - Cuidado Inteligente com Inteligência Artificial</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
     <style>
         * {
@@ -11,10 +11,26 @@
             margin: 0;
             padding: 0;
             box-sizing: border-box;
+            scroll-behavior: smooth;
+        }
+
+        :root {
+            --bg-dark: #070B19;
+            --bg-card: rgba(15, 23, 42, 0.8);
+            --primary: #0052FF;
+            --primary-glow: rgba(0, 82, 255, 0.3);
+            --electric-blue: #00D4FF;
+            --electric-glow: rgba(0, 212, 255, 0.4);
+            --success: #10B981;
+            --text-main: #FFFFFF;
+            --text-muted: #8A9BB5;
+            --text-light: #B8C5D6;
+            --border-glow: rgba(0, 212, 255, 0.15);
         }
 
         body {
-            background: linear-gradient(135deg, #0A1128 0%, #1a2f4a 100%);
+            background: linear-gradient(135deg, var(--bg-dark) 0%, #111B33 100%);
+            color: var(--text-main);
             min-height: 100vh;
             overflow-x: hidden;
             position: relative;
@@ -28,10 +44,11 @@
             width: 100%;
             height: 100%;
             background-image:
-                linear-gradient(rgba(0, 212, 255, 0.03) 1px, transparent 1px),
-                linear-gradient(90deg, rgba(0, 212, 255, 0.03) 1px, transparent 1px);
-            background-size: 60px 60px;
+                linear-gradient(rgba(0, 212, 255, 0.02) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(0, 212, 255, 0.02) 1px, transparent 1px);
+            background-size: 50px 50px;
             z-index: 0;
+            pointer-events: none;
         }
 
         /* Floating Particles */
@@ -49,98 +66,99 @@
             position: absolute;
             width: 3px;
             height: 3px;
-            background: rgba(0, 212, 255, 0.4);
+            background: rgba(0, 212, 255, 0.3);
             border-radius: 50%;
             animation: floatParticle 15s infinite ease-in-out;
         }
 
         @keyframes floatParticle {
-            0%, 100% { transform: translate(0, 0); opacity: 0.3; }
-            25% { transform: translate(50px, -30px); opacity: 0.6; }
-            50% { transform: translate(-20px, -60px); opacity: 0.4; }
-            75% { transform: translate(30px, -20px); opacity: 0.5; }
+            0%, 100% { transform: translate(0, 0); opacity: 0.2; }
+            25% { transform: translate(60px, -40px); opacity: 0.5; }
+            50% { transform: translate(-30px, -80px); opacity: 0.3; }
+            75% { transform: translate(40px, -30px); opacity: 0.4; }
         }
 
-        /* Glow Effects */
+        /* Glow Background Effects */
         .glow-effect {
             position: fixed;
             border-radius: 50%;
-            filter: blur(100px);
+            filter: blur(120px);
             z-index: 0;
             pointer-events: none;
         }
 
         .glow-1 {
-            width: 500px;
-            height: 500px;
-            background: radial-gradient(circle, rgba(0, 82, 255, 0.12) 0%, transparent 70%);
-            top: -150px;
+            width: 600px;
+            height: 600px;
+            background: radial-gradient(circle, rgba(0, 82, 255, 0.15) 0%, transparent 70%);
+            top: -200px;
             left: -150px;
-            animation: glowFloat 12s ease-in-out infinite;
+            animation: glowFloat 15s ease-in-out infinite;
         }
 
         .glow-2 {
-            width: 400px;
-            height: 400px;
-            background: radial-gradient(circle, rgba(0, 212, 255, 0.08) 0%, transparent 70%);
-            bottom: -100px;
+            width: 500px;
+            height: 500px;
+            background: radial-gradient(circle, rgba(0, 212, 255, 0.1) 0%, transparent 70%);
+            bottom: -150px;
             right: -100px;
-            animation: glowFloat 15s ease-in-out infinite reverse;
+            animation: glowFloat 18s ease-in-out infinite reverse;
         }
 
         @keyframes glowFloat {
             0%, 100% { transform: translate(0, 0); }
-            50% { transform: translate(40px, 30px); }
+            50% { transform: translate(50px, 40px); }
         }
 
-        /* Main Container - Centralizado */
-        .main-container {
+        /* Container Limit */
+        .landing-container {
             position: relative;
-            z-index: 10;
-            min-height: 100vh;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            padding: 40px 20px;
-        }
-
-        /* Content Wrapper */
-        .content-wrapper {
-            display: grid;
-            grid-template-columns: 1fr 420px;
-            gap: 60px;
+            z-index: 1;
             max-width: 1200px;
-            width: 100%;
-            align-items: center;
+            margin: 0 auto;
+            padding: 0 24px;
         }
 
-        /* Left Side - Branding */
-        .left-section {
+        /* Header / Navbar */
+        header {
+            position: sticky;
+            top: 0;
+            background: rgba(7, 11, 25, 0.8);
+            backdrop-filter: blur(12px);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            z-index: 100;
+        }
+
+        .nav-wrapper {
             display: flex;
-            flex-direction: column;
+            justify-content: space-between;
             align-items: center;
-            text-align: center;
-            padding: 20px;
+            height: 80px;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 24px;
         }
 
-        /* Logo Original */
-        .logo-container {
-            margin-bottom: 32px;
+        /* Hexagonal Logo CSS */
+        .logo-box {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            text-decoration: none;
         }
 
         .logo-wrapper {
             position: relative;
-            width: 140px;
-            height: 140px;
-            margin: 0 auto 24px;
+            width: 48px;
+            height: 48px;
             display: flex;
             align-items: center;
             justify-content: center;
         }
 
         .logo-hex {
-            width: 120px;
-            height: 120px;
+            width: 42px;
+            height: 42px;
             position: relative;
             z-index: 2;
         }
@@ -148,18 +166,17 @@
         .hex-bg {
             width: 100%;
             height: 100%;
-            background: linear-gradient(135deg, #0052FF 0%, #00D4FF 100%);
+            background: linear-gradient(135deg, var(--primary) 0%, var(--electric-blue) 100%);
             clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
             position: absolute;
             top: 0;
             left: 0;
-            box-shadow: 0 20px 60px rgba(0, 212, 255, 0.3);
         }
 
         .hex-inner {
-            width: 105px;
-            height: 105px;
-            background: linear-gradient(135deg, #0A1128 0%, #1a2f4a 100%);
+            width: 36px;
+            height: 36px;
+            background: #0D172E;
             clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
             position: absolute;
             top: 50%;
@@ -173,207 +190,641 @@
             top: 50%;
             left: 50%;
             transform: translate(-50%, -50%);
-            font-size: 2.8rem;
+            font-size: 1rem;
             font-weight: 900;
             color: #FFFFFF;
             z-index: 4;
-            letter-spacing: 2px;
+            letter-spacing: 0.5px;
         }
 
-        /* Circuit Lines */
-        .circuit-left {
-            position: absolute;
-            left: 0;
-            top: 50%;
-            transform: translateY(-50%);
-            width: 45px;
-            height: 50px;
-            z-index: 1;
-        }
-
-        .circuit-line {
-            position: absolute;
-            background: linear-gradient(90deg, rgba(255,255,255,0.3), rgba(0, 212, 255, 0.6));
-            height: 2px;
-            border-radius: 2px;
-        }
-
-        .circuit-line::after {
-            content: '';
-            position: absolute;
-            right: 0;
-            top: 50%;
-            transform: translateY(-50%);
-            width: 5px;
-            height: 5px;
-            background: rgba(0, 212, 255, 0.8);
-            border-radius: 50%;
-        }
-
-        .circuit-left .circuit-line:nth-child(1) { width: 40px; top: 0; left: 0; }
-        .circuit-left .circuit-line:nth-child(2) { width: 35px; top: 10px; left: 5px; }
-        .circuit-left .circuit-line:nth-child(3) { width: 45px; top: 20px; left: 0; }
-        .circuit-left .circuit-line:nth-child(4) { width: 38px; top: 30px; left: 3px; }
-        .circuit-left .circuit-line:nth-child(5) { width: 42px; top: 40px; left: 0; }
-
-        .circuit-right {
-            position: absolute;
-            right: 0;
-            top: 50%;
-            transform: translateY(-50%);
-            width: 45px;
-            height: 50px;
-            z-index: 1;
-        }
-
-        .circuit-right .circuit-line::after { left: 0; right: auto; }
-        .circuit-right .circuit-line:nth-child(1) { width: 40px; top: 0; right: 0; }
-        .circuit-right .circuit-line:nth-child(2) { width: 35px; top: 10px; right: 5px; }
-        .circuit-right .circuit-line:nth-child(3) { width: 45px; top: 20px; right: 0; }
-        .circuit-right .circuit-line:nth-child(4) { width: 38px; top: 30px; right: 3px; }
-        .circuit-right .circuit-line:nth-child(5) { width: 42px; top: 40px; right: 0; }
-
-        .brand-title {
-            font-size: 2rem;
+        .brand-name {
+            font-size: 1.3rem;
             font-weight: 800;
             color: #FFFFFF;
-            margin-bottom: 8px;
-            letter-spacing: 1px;
+            letter-spacing: 0.5px;
         }
 
-        .brand-title .cyan {
-            background: linear-gradient(135deg, #00D4FF, #0099FF);
+        .brand-name span {
+            background: linear-gradient(135deg, var(--electric-blue), #0099FF);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
             background-clip: text;
         }
 
-        .brand-subtitle {
-            font-size: 0.95rem;
-            color: #8A9BB5;
-            font-weight: 500;
-        }
-
-        /* Message Box */
-        .message-box {
-            background: rgba(11, 26, 58, 0.7);
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(0, 212, 255, 0.15);
-            border-radius: 20px;
-            padding: 28px;
-            width: 100%;
-            max-width: 500px;
-        }
-
-        .message-title {
-            font-size: 1.15rem;
-            font-weight: 700;
-            color: #00D4FF;
-            margin-bottom: 18px;
+        nav {
             display: flex;
             align-items: center;
-            justify-content: center;
-            gap: 10px;
+            gap: 32px;
         }
 
-        .pulse-dot {
-            width: 10px;
-            height: 10px;
-            background: #00D4FF;
+        nav a {
+            color: var(--text-muted);
+            text-decoration: none;
+            font-size: 0.95rem;
+            font-weight: 500;
+            transition: color 0.3s;
+        }
+
+        nav a:hover {
+            color: var(--electric-blue);
+        }
+
+        .nav-btn {
+            background: transparent;
+            border: 1.5px solid var(--electric-blue);
+            color: var(--electric-blue);
+            padding: 10px 20px;
+            border-radius: 10px;
+            font-weight: 600;
+            font-size: 0.9rem;
+            cursor: pointer;
+            transition: all 0.3s;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .nav-btn:hover {
+            background: var(--electric-blue);
+            color: #070B19;
+            box-shadow: 0 0 15px var(--electric-glow);
+            transform: translateY(-1px);
+        }
+
+        /* Hero Section */
+        .hero {
+            display: grid;
+            grid-template-columns: 1.1fr 0.9fr;
+            gap: 60px;
+            padding: 80px 0;
+            align-items: center;
+        }
+
+        .hero-left h1 {
+            font-size: 3.2rem;
+            font-weight: 900;
+            line-height: 1.2;
+            margin-bottom: 24px;
+            letter-spacing: -1px;
+        }
+
+        .hero-left h1 span {
+            background: linear-gradient(135deg, #00D4FF 30%, #0052FF 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .hero-left p {
+            color: var(--text-light);
+            font-size: 1.15rem;
+            line-height: 1.7;
+            margin-bottom: 40px;
+        }
+
+        .hero-ctas {
+            display: flex;
+            gap: 16px;
+            flex-wrap: wrap;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--electric-blue) 100%);
+            color: #FFFFFF;
+            padding: 16px 32px;
+            border-radius: 12px;
+            font-weight: 700;
+            font-size: 1rem;
+            border: none;
+            cursor: pointer;
+            transition: all 0.3s;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 10px 30px rgba(0, 82, 255, 0.3);
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 15px 35px rgba(0, 82, 255, 0.4), 0 0 20px var(--electric-glow);
+        }
+
+        .btn-secondary {
+            background: rgba(17, 27, 51, 0.6);
+            color: #FFFFFF;
+            padding: 16px 32px;
+            border-radius: 12px;
+            font-weight: 600;
+            font-size: 1rem;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            cursor: pointer;
+            transition: all 0.3s;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .btn-secondary:hover {
+            background: rgba(17, 27, 51, 0.9);
+            border-color: var(--electric-blue);
+            color: var(--electric-blue);
+            transform: translateY(-2px);
+        }
+
+        .hero-right {
+            display: flex;
+            justify-content: center;
+            position: relative;
+        }
+
+        /* Mockup Card design representing AI */
+        .mockup-card {
+            background: var(--bg-card);
+            backdrop-filter: blur(20px);
+            border: 1.5px solid var(--border-glow);
+            border-radius: 24px;
+            padding: 32px;
+            width: 100%;
+            max-width: 440px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4), 0 0 40px rgba(0, 212, 255, 0.05);
+            position: relative;
+            z-index: 2;
+        }
+
+        .mockup-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 24px;
+            padding-bottom: 16px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .mockup-status-dot {
+            width: 8px;
+            height: 8px;
+            background: var(--success);
             border-radius: 50%;
+            box-shadow: 0 0 10px var(--success);
             animation: pulse 2s infinite;
         }
 
-        @keyframes pulse {
-            0%, 100% { opacity: 1; transform: scale(1); }
-            50% { opacity: 0.5; transform: scale(1.3); }
-        }
-
-        .heart-icon {
-            color: #34D399;
-            animation: heartBeat 2s infinite;
-        }
-
-        @keyframes heartBeat {
-            0%, 100% { transform: scale(1); }
-            15% { transform: scale(1.15); }
-            30% { transform: scale(1); }
-            45% { transform: scale(1.1); }
-        }
-
-        .message-text {
-            color: #B8C5D6;
-            line-height: 1.8;
+        .mockup-title {
             font-size: 0.9rem;
-            margin-bottom: 16px;
-        }
-
-        .message-text p {
-            margin-bottom: 12px;
-        }
-
-        .message-text strong {
-            color: #FFFFFF;
-            font-weight: 600;
-        }
-
-        .highlight-box {
-            background: linear-gradient(135deg, rgba(0, 212, 255, 0.08), rgba(52, 211, 153, 0.08));
-            border: 1px solid rgba(52, 211, 153, 0.2);
-            border-radius: 12px;
-            padding: 14px;
-            margin-top: 16px;
-            text-align: center;
-        }
-
-        .highlight-text {
-            color: #34D399;
             font-weight: 700;
-            font-size: 0.95rem;
+            color: var(--electric-blue);
+            letter-spacing: 1px;
+            text-transform: uppercase;
+        }
+
+        .mockup-body {
             display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 8px;
+            flex-direction: column;
+            gap: 16px;
         }
 
-        /* Right Side - Login Form */
-        .right-section {
-            width: 100%;
+        .mockup-item {
+            background: rgba(7, 11, 25, 0.5);
+            border: 1px solid rgba(255, 255, 255, 0.03);
+            border-radius: 12px;
+            padding: 16px;
         }
 
-        .login-card {
-            background: rgba(11, 26, 58, 0.85);
-            backdrop-filter: blur(20px);
-            border: 1px solid rgba(0, 212, 255, 0.2);
-            border-radius: 24px;
-            padding: 40px 36px;
-            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4), 0 0 40px rgba(0, 212, 255, 0.08);
-        }
-
-        .login-header {
-            text-align: center;
-            margin-bottom: 32px;
-        }
-
-        .login-title {
-            font-size: 1.5rem;
-            font-weight: 800;
-            color: #FFFFFF;
+        .mockup-item-header {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.8rem;
+            color: var(--text-muted);
             margin-bottom: 8px;
         }
 
-        .login-subtitle {
-            font-size: 0.85rem;
-            color: #8A9BB5;
+        .mockup-item-content {
+            font-size: 0.9rem;
+            font-weight: 600;
+            color: #FFFFFF;
+            line-height: 1.4;
         }
 
+        .mockup-tag {
+            background: rgba(0, 212, 255, 0.1);
+            color: var(--electric-blue);
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 0.7rem;
+            font-weight: 700;
+        }
+
+        /* Section Headings */
+        .section-header {
+            text-align: center;
+            max-width: 700px;
+            margin: 80px auto 48px;
+        }
+
+        .section-tag {
+            color: var(--electric-blue);
+            font-size: 0.85rem;
+            font-weight: 700;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            margin-bottom: 12px;
+            display: inline-block;
+        }
+
+        .section-title {
+            font-size: 2.2rem;
+            font-weight: 800;
+            color: #FFFFFF;
+            letter-spacing: -0.5px;
+        }
+
+        /* Grid Areas of Use (Recursos) */
+        .features-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 30px;
+            margin-bottom: 80px;
+        }
+
+        .feature-card {
+            background: var(--bg-card);
+            backdrop-filter: blur(15px);
+            border: 1px solid var(--border-glow);
+            border-radius: 20px;
+            padding: 40px 32px;
+            transition: all 0.3s;
+            position: relative;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .feature-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 3px;
+            background: linear-gradient(90deg, var(--primary), var(--electric-blue));
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+
+        .feature-card:hover {
+            transform: translateY(-5px);
+            border-color: rgba(0, 212, 255, 0.3);
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.3), 0 0 20px rgba(0, 212, 255, 0.05);
+        }
+
+        .feature-card:hover::before {
+            opacity: 1;
+        }
+
+        .feature-icon {
+            font-size: 2.5rem;
+            margin-bottom: 24px;
+            display: inline-block;
+        }
+
+        .feature-name {
+            font-size: 1.25rem;
+            font-weight: 700;
+            color: #FFFFFF;
+            margin-bottom: 16px;
+        }
+
+        .feature-description {
+            color: var(--text-light);
+            font-size: 0.95rem;
+            line-height: 1.6;
+            flex-grow: 1;
+        }
+
+        /* Benefits Section */
+        .benefits-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 30px;
+            margin-bottom: 80px;
+        }
+
+        .benefit-card {
+            background: rgba(11, 26, 58, 0.3);
+            border: 1px solid rgba(255, 255, 255, 0.03);
+            border-radius: 20px;
+            padding: 36px;
+            transition: border-color 0.3s;
+        }
+
+        .benefit-card:hover {
+            border-color: var(--border-glow);
+        }
+
+        .benefit-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+
+        .benefit-badge {
+            background: rgba(0, 82, 255, 0.15);
+            color: #38bdf8;
+            padding: 6px 14px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 700;
+        }
+
+        .benefit-title {
+            font-size: 1.15rem;
+            font-weight: 700;
+            color: #FFFFFF;
+        }
+
+        .benefit-list {
+            list-style: none;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .benefit-list li {
+            font-size: 0.9rem;
+            color: var(--text-light);
+            display: flex;
+            gap: 10px;
+            line-height: 1.5;
+        }
+
+        .benefit-list li::before {
+            content: '✓';
+            color: var(--electric-blue);
+            font-weight: bold;
+        }
+
+        /* Pricing Section */
+        .pricing-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 30px;
+            margin-bottom: 100px;
+            align-items: stretch;
+        }
+
+        .pricing-card {
+            background: var(--bg-card);
+            backdrop-filter: blur(15px);
+            border: 1px solid var(--border-glow);
+            border-radius: 24px;
+            padding: 44px 32px;
+            display: flex;
+            flex-direction: column;
+            transition: all 0.3s;
+            position: relative;
+        }
+
+        .pricing-card.popular {
+            border: 2px solid var(--electric-blue);
+            box-shadow: 0 20px 40px rgba(0, 212, 255, 0.1);
+            transform: scale(1.03);
+        }
+
+        .popular-badge {
+            position: absolute;
+            top: -14px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: var(--electric-blue);
+            color: #070B19;
+            font-size: 0.75rem;
+            font-weight: 800;
+            padding: 6px 16px;
+            border-radius: 20px;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+        }
+
+        .plan-name {
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 12px;
+        }
+
+        .popular .plan-name {
+            color: var(--electric-blue);
+        }
+
+        .plan-price {
+            font-size: 2.2rem;
+            font-weight: 800;
+            color: #FFFFFF;
+            margin-bottom: 24px;
+        }
+
+        .plan-price span {
+            font-size: 0.95rem;
+            font-weight: 500;
+            color: var(--text-muted);
+        }
+
+        .plan-features {
+            list-style: none;
+            margin-bottom: 36px;
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+            flex-grow: 1;
+        }
+
+        .plan-features li {
+            font-size: 0.9rem;
+            color: var(--text-light);
+            display: flex;
+            gap: 12px;
+        }
+
+        .plan-features li::before {
+            content: '✓';
+            color: var(--success);
+            font-weight: bold;
+        }
+
+        .plan-features li.disabled {
+            color: rgba(138, 155, 181, 0.4);
+        }
+
+        .plan-features li.disabled::before {
+            content: '×';
+            color: rgba(239, 68, 68, 0.4);
+        }
+
+        .btn-plan {
+            width: 100%;
+            padding: 14px;
+            border-radius: 12px;
+            border: none;
+            font-size: 0.95rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.3s;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .btn-plan-outline {
+            background: transparent;
+            border: 1.5px solid rgba(255, 255, 255, 0.1);
+            color: #FFFFFF;
+        }
+
+        .btn-plan-outline:hover {
+            border-color: var(--electric-blue);
+            color: var(--electric-blue);
+            background: rgba(0, 212, 255, 0.02);
+        }
+
+        .btn-plan-solid {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--electric-blue) 100%);
+            color: #FFFFFF;
+            box-shadow: 0 8px 24px rgba(0, 82, 255, 0.2);
+        }
+
+        .btn-plan-solid:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 12px 28px rgba(0, 82, 255, 0.3), 0 0 15px var(--electric-glow);
+        }
+
+        /* Footer */
+        footer {
+            background: #040813;
+            border-top: 1px solid rgba(255, 255, 255, 0.05);
+            padding: 60px 0 40px;
+        }
+
+        .footer-wrapper {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 24px;
+            margin-bottom: 40px;
+        }
+
+        .footer-links {
+            display: flex;
+            gap: 32px;
+        }
+
+        .footer-links a {
+            color: var(--text-muted);
+            text-decoration: none;
+            font-size: 0.85rem;
+            transition: color 0.3s;
+        }
+
+        .footer-links a:hover {
+            color: var(--electric-blue);
+        }
+
+        .copyright {
+            color: rgba(138, 155, 181, 0.4);
+            font-size: 0.8rem;
+            text-align: center;
+            border-top: 1px solid rgba(255, 255, 255, 0.03);
+            padding-top: 30px;
+        }
+
+        /* Modais */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(7, 11, 25, 0.95);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+            padding: 24px;
+            backdrop-filter: blur(10px);
+        }
+
+        .modal-card {
+            background: var(--bg-card);
+            border: 1.5px solid var(--border-glow);
+            border-radius: 24px;
+            padding: 40px 36px;
+            width: 100%;
+            max-width: 460px;
+            position: relative;
+            animation: slideUp 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5), 0 0 45px rgba(0, 212, 255, 0.08);
+        }
+
+        @keyframes slideUp {
+            from { transform: translateY(40px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+
+        .modal-close {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: none;
+            border: none;
+            color: var(--text-muted);
+            font-size: 1.6rem;
+            cursor: pointer;
+            line-height: 1;
+            transition: color 0.3s;
+        }
+
+        .modal-close:hover {
+            color: var(--electric-blue);
+        }
+
+        .modal-header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .modal-icon {
+            font-size: 2rem;
+            margin-bottom: 8px;
+            display: inline-block;
+        }
+
+        .modal-title {
+            color: #FFFFFF;
+            font-size: 1.45rem;
+            font-weight: 800;
+            margin-bottom: 6px;
+        }
+
+        .modal-subtitle {
+            color: var(--text-muted);
+            font-size: 0.88rem;
+        }
+
+        /* Form Controls */
         .form-group {
             margin-bottom: 20px;
         }
 
         .form-label {
             display: block;
-            color: #C5D0E0;
+            color: var(--text-light);
             font-size: 0.85rem;
             font-weight: 600;
             margin-bottom: 8px;
@@ -382,8 +833,8 @@
         .form-input {
             width: 100%;
             padding: 14px 16px;
-            background: rgba(17, 27, 51, 0.8);
-            border: 1.5px solid rgba(138, 155, 181, 0.2);
+            background: rgba(7, 11, 25, 0.8);
+            border: 1.5px solid rgba(138, 155, 181, 0.15);
             border-radius: 12px;
             color: #FFFFFF;
             font-size: 0.95rem;
@@ -392,12 +843,12 @@
         }
 
         .form-input:focus {
-            border-color: #00D4FF;
+            border-color: var(--electric-blue);
             box-shadow: 0 0 0 3px rgba(0, 212, 255, 0.1);
         }
 
         .form-input::placeholder {
-            color: #5A6B8A;
+            color: rgba(138, 155, 181, 0.4);
         }
 
         .password-wrapper {
@@ -411,61 +862,14 @@
             transform: translateY(-50%);
             background: none;
             border: none;
-            color: #5A6B8A;
+            color: var(--text-muted);
             cursor: pointer;
             font-size: 1.1rem;
             padding: 4px;
-            transition: color 0.3s;
         }
 
         .password-toggle:hover {
-            color: #00D4FF;
-        }
-
-        .btn-login {
-            width: 100%;
-            padding: 16px;
-            background: linear-gradient(135deg, #0052FF 0%, #00D4FF 100%);
-            border: none;
-            border-radius: 12px;
-            color: #FFFFFF;
-            font-size: 1rem;
-            font-weight: 700;
-            cursor: pointer;
-            transition: all 0.3s;
-            margin-top: 8px;
-            position: relative;
-            overflow: hidden;
-        }
-
-        .btn-login::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: -100%;
-            width: 100%;
-            height: 100%;
-            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
-            transition: left 0.5s;
-        }
-
-        .btn-login:hover::before {
-            left: 100%;
-        }
-
-        .btn-login:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 10px 30px rgba(0, 82, 255, 0.4);
-        }
-
-        .btn-login:active {
-            transform: translateY(0);
-        }
-
-        .btn-login:disabled {
-            opacity: 0.6;
-            cursor: not-allowed;
-            transform: none !important;
+            color: var(--electric-blue);
         }
 
         .error-msg {
@@ -486,8 +890,34 @@
 
         @keyframes shake {
             0%, 100% { transform: translateX(0); }
-            25% { transform: translateX(-10px); }
-            75% { transform: translateX(10px); }
+            25% { transform: translateX(-8px); }
+            75% { transform: translateX(8px); }
+        }
+
+        .btn-submit {
+            width: 100%;
+            padding: 16px;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--electric-blue) 100%);
+            border: none;
+            border-radius: 12px;
+            color: #FFFFFF;
+            font-size: 1.05rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.3s;
+            margin-top: 8px;
+        }
+
+        .btn-submit:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(0, 82, 255, 0.3);
+        }
+
+        .btn-submit:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none !important;
+            box-shadow: none !important;
         }
 
         .divider {
@@ -500,11 +930,11 @@
         .divider-line {
             flex: 1;
             height: 1px;
-            background: rgba(255, 255, 255, 0.1);
+            background: rgba(255, 255, 255, 0.08);
         }
 
         .divider-text {
-            color: #5A6B8A;
+            color: var(--text-muted);
             font-size: 0.8rem;
         }
 
@@ -517,10 +947,10 @@
 
         .social-btn {
             padding: 12px;
-            background: rgba(17, 27, 51, 0.6);
-            border: 1px solid rgba(255, 255, 255, 0.1);
+            background: rgba(7, 11, 25, 0.5);
+            border: 1px solid rgba(255, 255, 255, 0.06);
             border-radius: 10px;
-            color: #C5D0E0;
+            color: var(--text-light);
             font-weight: 600;
             cursor: pointer;
             transition: all 0.3s;
@@ -532,24 +962,24 @@
         }
 
         .social-btn:hover {
-            background: rgba(17, 27, 51, 0.9);
-            border-color: rgba(255, 255, 255, 0.2);
-            transform: translateY(-2px);
+            background: rgba(7, 11, 25, 0.8);
+            border-color: rgba(0, 212, 255, 0.2);
+            transform: translateY(-1px);
         }
 
         .demo-credentials {
-            background: rgba(0, 212, 255, 0.05);
-            border: 1px solid rgba(0, 212, 255, 0.15);
+            background: rgba(0, 212, 255, 0.03);
+            border: 1px solid rgba(0, 212, 255, 0.1);
             border-radius: 12px;
-            padding: 16px;
+            padding: 14px;
             text-align: center;
             margin-bottom: 20px;
         }
 
         .demo-credentials p {
-            color: #8A9BB5;
+            color: var(--text-muted);
             font-size: 0.8rem;
-            margin-bottom: 8px;
+            margin-bottom: 6px;
             font-weight: 600;
         }
 
@@ -561,295 +991,521 @@
         }
 
         .cred-item {
-            background: rgba(0, 212, 255, 0.1);
-            padding: 6px 12px;
+            background: rgba(0, 212, 255, 0.08);
+            padding: 4px 10px;
             border-radius: 6px;
-            font-size: 0.8rem;
+            font-size: 0.78rem;
         }
 
         .cred-item code {
-            color: #00D4FF;
+            color: var(--electric-blue);
             font-weight: 700;
         }
 
-        .footer-text {
+        /* Version Tag */
+        .version-indicator {
+            position: fixed;
+            bottom: 15px;
+            left: 0;
+            right: 0;
             text-align: center;
-            color: #5A6B8A;
-            font-size: 0.75rem;
+            color: var(--electric-blue);
+            font-size: 0.72rem;
+            opacity: 0.55;
+            z-index: 10;
+            font-weight: 500;
+            pointer-events: none;
         }
 
-        /* Responsive */
+        /* Pulse Animation */
+        @keyframes pulse {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.5; transform: scale(1.2); }
+        }
+
+        /* Responsive Breakpoints */
         @media (max-width: 1024px) {
-            .content-wrapper {
+            .hero {
                 grid-template-columns: 1fr;
-                gap: 40px;
+                text-align: center;
+                gap: 48px;
+                padding: 60px 0;
+            }
+
+            .hero-ctas {
+                justify-content: center;
+            }
+
+            .hero-left h1 {
+                font-size: 2.6rem;
+            }
+
+            .features-grid, .benefits-grid, .pricing-grid {
+                grid-template-columns: 1fr;
                 max-width: 500px;
+                margin-left: auto;
+                margin-right: auto;
             }
 
-            .left-section {
-                order: 2;
-            }
-
-            .right-section {
-                order: 1;
-            }
-
-            .logo-wrapper {
-                width: 100px;
-                height: 100px;
-            }
-
-            .logo-hex {
-                width: 90px;
-                height: 90px;
-            }
-
-            .hex-inner {
-                width: 80px;
-                height: 80px;
-            }
-
-            .hex-text {
-                font-size: 2.2rem;
-            }
-
-            .brand-title {
-                font-size: 1.6rem;
-            }
-
-            .message-box {
-                padding: 24px;
+            .pricing-card.popular {
+                transform: none;
+                margin-top: 15px;
+                margin-bottom: 15px;
             }
         }
 
-        @media (max-width: 480px) {
-            .main-container {
-                padding: 20px 16px;
+        @media (max-width: 768px) {
+            nav {
+                display: none; /* Em projetos reais, implementa-se menu hambúrguer */
             }
 
-            .login-card {
-                padding: 32px 24px;
-            }
-
-            .social-login {
-                grid-template-columns: 1fr;
-            }
-
-            .logo-wrapper {
-                width: 80px;
-                height: 80px;
-            }
-
-            .logo-hex {
-                width: 70px;
+            .nav-wrapper {
                 height: 70px;
-            }
-
-            .hex-inner {
-                width: 62px;
-                height: 62px;
-            }
-
-            .hex-text {
-                font-size: 1.8rem;
             }
         }
     </style>
 </head>
 <body>
-    <!-- Background Effects -->
+
+    <!-- Background Grid & Glowing circles -->
     <div class="grid-bg"></div>
     <div class="glow-effect glow-1"></div>
     <div class="glow-effect glow-2"></div>
     <div class="particles" id="particles"></div>
 
+    <!-- Navigation Header -->
+    <header>
+        <div class="nav-wrapper">
+            <a href="https://cuidaidoso.ia.br/" class="logo-box">
+                <div class="logo-wrapper">
+                    <div class="logo-hex">
+                        <div class="hex-bg"></div>
+                        <div class="hex-inner"></div>
+                        <div class="hex-text">CR$</div>
+                    </div>
+                </div>
+                <span class="brand-name">CR$ <span>HOME CARE</span> AI</span>
+            </a>
+            
+            <nav>
+                <a href="https://cuidaidoso.ia.br/#recursos">Recursos</a>
+                <a href="https://cuidaidoso.ia.br/#beneficios">Benefícios</a>
+                <a href="https://cuidaidoso.ia.br/#precos">Preços</a>
+                <a href="https://cuidaidoso.ia.br/#login" class="nav-btn">Entrar no Sistema</a>
+            </nav>
+        </div>
+    </header>
+
     <!-- Main Container -->
-    <div class="main-container">
-        <div class="content-wrapper">
-            <!-- Left Side: Branding & Info -->
-            <div class="left-section">
-                <!-- Logo -->
-                <div class="logo-container">
-                    <div class="logo-wrapper">
-                        <div class="circuit-left">
-                            <div class="circuit-line"></div>
-                            <div class="circuit-line"></div>
-                            <div class="circuit-line"></div>
-                            <div class="circuit-line"></div>
-                            <div class="circuit-line"></div>
+    <main class="landing-container">
+        
+        <!-- Hero Section -->
+        <section class="hero">
+            <div class="hero-left">
+                <span class="section-tag">CUIDADO INTELIGENTE COM IA</span>
+                <h1>O Futuro da Saúde Domiciliar, <span>Guiado por IA</span></h1>
+                <p>A plataforma definitiva de Home Care que une inteligência artificial de ponta e humanização. Cuidamos de quem você ama e otimizamos a rotina de clínicas e cuidadores com alertas e monitoramento ativo.</p>
+                <div class="hero-ctas">
+                    <a href="https://cuidaidoso.ia.br/cadastro" class="btn-primary">Começar Agora</a>
+                    <a href="https://cuidaidoso.ia.br/#login" class="btn-secondary">Acessar Plataforma</a>
+                </div>
+            </div>
+            
+            <div class="hero-right">
+                <!-- Glowing Interactive Mockup -->
+                <div class="mockup-card">
+                    <div class="mockup-header">
+                        <span class="mockup-status-dot"></span>
+                        <span class="mockup-title">Monitoramento Ativo IA</span>
+                    </div>
+                    <div class="mockup-body">
+                        <div class="mockup-item">
+                            <div class="mockup-item-header">
+                                <span>Prescrição Digitalizada</span>
+                                <span class="mockup-tag">OCR Ativo</span>
+                            </div>
+                            <div class="mockup-item-content">
+                                "Dipirona 500mg — Tomar 1 comprimido de 6 em 6 horas se febre."
+                            </div>
                         </div>
+                        
+                        <div class="mockup-item">
+                            <div class="mockup-item-header">
+                                <span>Relatório de Voz Transcrito</span>
+                                <span class="mockup-tag">Áudio Processado</span>
+                            </div>
+                            <div class="mockup-item-content">
+                                "Paciente dormiu bem durante a noite. Sinais vitais estáveis às 8h."
+                            </div>
+                        </div>
+                        
+                        <div style="background: linear-gradient(135deg, rgba(0, 212, 255, 0.08), rgba(16, 185, 129, 0.08)); border: 1px solid rgba(16, 185, 129, 0.2); border-radius: 12px; padding: 14px; text-align: center;">
+                            <span style="color: #10B981; font-weight: 700; font-size: 0.85rem; display: flex; align-items: center; justify-content: center; gap: 8px;">
+                                🌿 Saúde organizada, vida tranquila.
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Areas of Use (Recursos) -->
+        <section id="recursos">
+            <div class="section-header">
+                <span class="section-tag">TECNOLOGIA</span>
+                <h2 class="section-title">Como a IA otimiza o seu cuidado</h2>
+            </div>
+            
+            <div class="features-grid">
+                <div class="feature-card">
+                    <span class="feature-icon">📄</span>
+                    <h3 class="feature-name">OCR de Receitas</h3>
+                    <p class="feature-description">Envie uma foto de qualquer receita médica manuscrita. Nossa inteligência artificial processa a caligrafia médica, extraindo dosagens e horários exatos para a agenda do paciente de forma imediata.</p>
+                </div>
+                
+                <div class="feature-card">
+                    <span class="feature-icon">🎙️</span>
+                    <h3 class="feature-name">Relatórios por Voz</h3>
+                    <p class="feature-description">Cuidadores e técnicos podem enviar relatórios diários de cuidado por áudio. A IA transcreve, sintetiza e adiciona os status e anotações automaticamente ao painel clínico.</p>
+                </div>
+                
+                <div class="feature-card">
+                    <span class="feature-icon">📊</span>
+                    <h3 class="feature-name">Alertas e Análises</h3>
+                    <p class="feature-description">Geração automatizada de resumos de saúde, cronograma consolidado e alarmes dinâmicos integrados para evitar qualquer esquecimento de medicação essencial.</p>
+                </div>
+
+                <div class="feature-card" style="border-color: rgba(16, 185, 129, 0.2);">
+                    <span class="feature-icon">🏥</span>
+                    <h3 class="feature-name">Ficha Médica Digital</h3>
+                    <p class="feature-description" style="margin-bottom: 24px;">Acesso instantâneo a históricos clínicos, alergias, contatos e plano de cuidado ativo do paciente.</p>
+                    <button class="nav-btn" style="width: 100%; border-color: var(--success); color: var(--success);" onclick="openMedicalFile()">Visualizar Ficha de Exemplo</button>
+                </div>
+            </div>
+        </section>
+
+        <!-- Benefits Section -->
+        <section id="beneficios">
+            <div class="section-header">
+                <span class="section-tag">BENEFÍCIOS</span>
+                <h2 class="section-title">A melhor experiência para todos</h2>
+            </div>
+            
+            <div class="benefits-grid">
+                <div class="benefit-card">
+                    <div class="benefit-header">
+                        <span class="benefit-badge">Para Clínicas</span>
+                    </div>
+                    <ul class="benefit-list">
+                        <li>Gestão inteligente de múltiplos pacientes e cuidadores.</li>
+                        <li>Redução drástica de falhas na medicação.</li>
+                        <li>Relatórios estruturados em tempo real para auditorias.</li>
+                    </ul>
+                </div>
+                
+                <div class="benefit-card">
+                    <div class="benefit-header">
+                        <span class="benefit-badge">Para Cuidadores</span>
+                    </div>
+                    <ul class="benefit-list">
+                        <li>Cadastro de medicamentos facilitado com OCR.</li>
+                        <li>Registro de ocorrências rápido via comandos de voz.</li>
+                        <li>Alertas visuais e sonoros nos horários certos.</li>
+                    </ul>
+                </div>
+                
+                <div class="benefit-card">
+                    <div class="benefit-header">
+                        <span class="benefit-badge">Para Familiares</span>
+                    </div>
+                    <ul class="benefit-list">
+                        <li>Tranquilidade com acompanhamento em tempo real.</li>
+                        <li>Notificações claras de status de administração de medicamentos.</li>
+                        <li>Histórico transparente e acesso direto ao progresso.</li>
+                    </ul>
+                </div>
+            </div>
+        </section>
+
+        <!-- Pricing Section -->
+        <section id="precos">
+            <div class="section-header">
+                <span class="section-tag">PREÇOS</span>
+                <h2 class="section-title">Escolha o plano ideal para você</h2>
+            </div>
+            
+            <div class="pricing-grid">
+                <!-- Basic Plan -->
+                <div class="pricing-card">
+                    <h3 class="plan-name">Básico</h3>
+                    <div class="plan-price">R$ 49,90<span>/mês</span></div>
+                    <ul class="plan-features">
+                        <li>✓ Monitoramento de 1 paciente</li>
+                        <li>✓ Agenda de Medicamentos Completa</li>
+                        <li>✓ Cadastro via OCR básico (até 15/mês)</li>
+                        <li>✓ Até 5 contatos de responsáveis</li>
+                        <li class="disabled">× Relatórios por Áudio Automatizados</li>
+                        <li class="disabled">× Alertas via WhatsApp personalizados</li>
+                    </ul>
+                    <a href="https://cuidaidoso.ia.br/cadastro" class="btn-plan btn-plan-outline">Criar Conta</a>
+                </div>
+                
+                <!-- Pro Plan (Most popular) -->
+                <div class="pricing-card popular">
+                    <span class="popular-badge">Mais Escolhido</span>
+                    <h3 class="plan-name">Pro</h3>
+                    <div class="plan-price">R$ 149,90<span>/mês</span></div>
+                    <ul class="plan-features">
+                        <li>✓ Monitoramento de até 5 pacientes</li>
+                        <li>✓ Agenda de Medicamentos Avançada</li>
+                        <li>✓ OCR de Receitas ilimitado</li>
+                        <li>✓ Relatórios e transcrição por áudio (IA)</li>
+                        <li>✓ Suporte prioritário 24/7</li>
+                        <li>✓ Alertas de notificação via WhatsApp</li>
+                    </ul>
+                    <a href="https://cuidaidoso.ia.br/cadastro" class="btn-plan btn-plan-solid">Criar Conta</a>
+                </div>
+                
+                <!-- Enterprise Plan -->
+                <div class="pricing-card">
+                    <h3 class="plan-name">Enterprise</h3>
+                    <div class="plan-price">Sob Consulta</div>
+                    <ul class="plan-features">
+                        <li>✓ Pacientes e cuidadores ilimitados</li>
+                        <li>✓ Painel de controle corporativo para Clínicas</li>
+                        <li>✓ Todo o ecossistema IA desbloqueado</li>
+                        <li>✓ SLA de suporte dedicado e exclusivo</li>
+                        <li>✓ Integrações de API customizadas</li>
+                        <li>✓ Backup redundante e relatórios avançados</li>
+                    </ul>
+                    <a href="https://cuidaidoso.ia.br/" class="btn-plan btn-plan-outline">Falar com Consultor</a>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- Footer -->
+    <footer>
+        <div class="landing-container">
+            <div class="footer-wrapper">
+                <a href="https://cuidaidoso.ia.br/" class="logo-box">
+                    <div class="logo-wrapper">
                         <div class="logo-hex">
                             <div class="hex-bg"></div>
                             <div class="hex-inner"></div>
                             <div class="hex-text">CR$</div>
                         </div>
-                        <div class="circuit-right">
-                            <div class="circuit-line"></div>
-                            <div class="circuit-line"></div>
-                            <div class="circuit-line"></div>
-                            <div class="circuit-line"></div>
-                            <div class="circuit-line"></div>
-                        </div>
                     </div>
-                    <h1 class="brand-title">CR$ <span class="cyan">HOME CARE</span> AI</h1>
-                    <p class="brand-subtitle">Cuidado Domiciliar Inteligente com IA</p>
-                </div>
-
-                <!-- Message Box -->
-                <div class="message-box">
-                    <div class="message-title">
-                        <span class="pulse-dot"></span>
-                        <span>Cuidar de você, no tempo certo.</span>
-                        <span class="heart-icon">💚</span>
-                    </div>
-                    <div class="message-text">
-                        <p>
-                            Vamos ajudá-lo a lembrar do que realmente importa:
-                            <strong>a atenção à saúde, na hora certa.</strong>
-                        </p>
-                        <p>
-                            Você não está sozinho nesse cuidado. Tudo foi pensado para facilitar o dia a dia,
-                            especialmente de quem mais precisa de atenção.
-                        </p>
-                        <p>
-                            Ao transformar a rotina de medicamentos em algo simples e confiável,
-                            o resultado é claro:
-                        </p>
-                    </div>
-                    <div class="highlight-box">
-                        <div class="highlight-text">
-                            <span>🌿</span>
-                            <span>Saúde organizada, vida tranquila.</span>
-                        </div>
-                    </div>
+                    <span class="brand-name">CR$ <span>HOME CARE</span> AI</span>
+                </a>
+                <div class="footer-links">
+                    <a href="https://cuidaidoso.ia.br/#recursos">Recursos</a>
+                    <a href="https://cuidaidoso.ia.br/#beneficios">Benefícios</a>
+                    <a href="https://cuidaidoso.ia.br/#precos">Preços</a>
+                    <a href="https://cuidaidoso.ia.br/">Termos de Uso</a>
                 </div>
             </div>
-
-            <!-- Right Side: Login Form -->
-            <div class="right-section">
-                <div class="login-card">
-                    <div class="login-header">
-                        <h2 class="login-title">Acesse sua conta</h2>
-                        <p class="login-subtitle">Entre para gerenciar seu cuidado</p>
-                    </div>
-
-                    <div class="error-msg" id="error-msg"></div>
-
-                    <form id="login-form" onsubmit="handleLogin(event)">
-                        <div class="form-group">
-                            <label class="form-label">Nome Completo ou Telefone</label>
-                            <input type="text" class="form-input" id="username" placeholder="Digite seu nome completo ou telefone"   
-                                autocomplete="username"
-                                required
-                            >
-                        </div>
-
-                        <div class="form-group">
-                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
-                                <label class="form-label" style="margin-bottom: 0;">Senha</label>
-                                <a href="javascript:void(0)" onclick="openForgotPassword()" style="color: #00D4FF; font-size: 0.8rem; text-decoration: none; font-weight: 500; opacity: 0.85; transition: opacity 0.2s;" onmouseover="this.style.opacity=1" onmouseout="this.style.opacity=0.85">Esqueci a Senha</a>
-                            </div>
-                            <div class="password-wrapper">
-                                <input
-                                    type="password"
-                                    class="form-input"
-                                    id="password"
-                                    placeholder="Digite sua senha"
-                                    autocomplete="current-password"
-                                    required
-                                >
-                                <button type="button" class="password-toggle" onclick="togglePassword()">
-                                    👁️
-                                </button>
-                            </div>
-                        </div>
-
-                        <button type="submit" class="btn-login" id="login-btn">
-                            🚀 Entrar no Sistema
-                        </button>
-                    </form>
-
-                    <div class="divider">
-                        <div class="divider-line"></div>
-                        <span class="divider-text">ou entre com</span>
-                        <div class="divider-line"></div>
-                    </div>
-
-                    <div class="social-login">
-                        <button class="social-btn" onclick="socialLogin('google')">
-                            <svg width="18" height="18" viewBox="0 0 24 24">
-                                <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z"/>
-                                <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
-                                <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
-                                <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
-                            </svg>
-                            Google
-                        </button>
-                        <button class="social-btn" onclick="socialLogin('apple')">
-                            <svg width="18" height="18" viewBox="0 0 24 24" fill="white">
-                                <path d="M17.05 20.28c-.98.95-2.05.88-3.08.4-1.09-.5-2.08-.48-3.24 0-1.44.62-2.2.44-3.06-.4C2.79 15.25 3.51 7.59 9.05 7.31c1.35.07 2.29.74 3.08.8 1.18-.24 2.31-.93 3.57-.84 1.51.12 2.65.72 3.4 1.8-3.12 1.87-2.38 5.98.48 7.13-.57 1.5-1.31 2.99-2.54 4.09zM12.03 7.25c-.15-2.23 1.66-4.07 3.74-4.25.29 2.58-2.34 4.5-3.74 4.25z"/>
-                            </svg>
-                            Apple
-                        </button>
-                    </div>
-
-                    <div class="demo-credentials">
-                        <p>👨‍💼 Credenciais de Demonstração:</p>
-                        <div class="credentials-box">
-                            <div class="cred-item">
-                                <span>Usuário: </span><code>Admin</code>
-                            </div>
-                            <div class="cred-item">
-                                <span>Senha: </span><code>admin123</code>
-                            </div>
-                        </div>
-                    </div>
-                    <!-- === SEÇÃO DE PLANOS (MVP BÁSICA) === -->
-                    <div style="margin-top: 24px; padding-top: 20px; border-top: 1px solid rgba(0, 212, 255, 0.1);">
-                        <p style="text-align: center; color: #8A9BB5; font-size: 0.85rem; margin-bottom: 16px;">
-                            Novo por aqui? Comece com a <strong style="color: #00D4FF;">Conta Básica</strong>
-                        </p>
-                        
-                        <div style="background: rgba(0, 212, 255, 0.05); border: 1px solid rgba(0, 212, 255, 0.2); border-radius: 12px; padding: 16px;">
-                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-                                <div>
-                                    <div style="font-weight: 700; color: #FFFFFF; font-size: 1rem;">Conta Básica</div>
-                                    <div style="font-size: 0.8rem; color: #8A9BB5;">Gratuita • Essencial</div>
-                                </div>
-                                <span style="background: rgba(0, 212, 255, 0.15); color: #00D4FF; padding: 4px 10px; border-radius: 6px; font-size: 0.75rem; font-weight: 700;">POPULAR</span>
-                            </div>
-                            
-                            <ul style="font-size: 0.8rem; color: #B8C5D6; margin-bottom: 16px; padding-left: 20px; line-height: 1.8;">
-                                <li>✅ Agenda de medicamentos</li>
-                                <li>✅ Lembretes por SMS</li>
-                                <li>✅ Até 5 contatos responsáveis</li>
-                            </ul>
-                            
-                            <button class="btn-login" style="background: linear-gradient(135deg, #00D4FF, #0099FF); padding: 12px; font-size: 0.95rem;" onclick="openRegister()">
-                                🚀 Criar Conta Gratuita
-                            </button>
-                        </div>
-                        
-                        <p style="text-align: center; font-size: 0.75rem; color: #5A6B8A; margin-top: 12px;">
-                            Planos Pro e Enterprise em breve
-                        </p>
-                    </div>
-                    <!-- === FIM SEÇÃO PLANOS === -->
-                    <div class="footer-text">
-                        © 2026 CR$ HOME CARE AI • Todos os direitos reservados
-                    </div>
-                </div>
+            <div class="copyright">
+                © 2026 CR$ HOME CARE AI • Todos os direitos reservados. Acesse nosso portal oficial em <a href="https://cuidaidoso.ia.br/" style="color: var(--electric-blue); text-decoration: none;">cuidaidoso.ia.br</a>
             </div>
         </div>
-    </div>
+    </footer>
 
     <!-- 🔖 INDICADOR DE VERSÃO -->
-    <div style="position: fixed; bottom: 15px; left: 0; right: 0; text-align: center; color: #00D4FF; font-size: 0.75rem; opacity: 0.6; z-index: 10; font-weight: 500; pointer-events: none;">
+    <div class="version-indicator">
         🏠 CR$ Home Care AI v2.2.1 — build 2026-07-13 — ID documento + PDF OCR + áudio melhorado
     </div>
 
+    <!-- === MODAL DE LOGIN === -->
+    <div id="login-modal" class="modal-overlay">
+        <div class="modal-card">
+            <button onclick="closeLogin()" class="modal-close">&times;</button>
+            <div class="modal-header">
+                <span class="modal-icon">🔐</span>
+                <h3 class="modal-title">Acesse sua conta</h3>
+                <p class="modal-subtitle">Entre para gerenciar seu cuidado</p>
+            </div>
+            
+            <div class="error-msg" id="error-msg"></div>
+            
+            <form id="login-form" onsubmit="handleLogin(event)">
+                <div class="form-group">
+                    <label class="form-label">Nome Completo ou Telefone</label>
+                    <input type="text" class="form-input" id="username" placeholder="Digite seu nome completo ou telefone" autocomplete="username" required>
+                </div>
+                
+                <div class="form-group">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                        <label class="form-label" style="margin-bottom: 0;">Senha</label>
+                        <a href="javascript:void(0)" onclick="openForgotPassword()" style="color: var(--electric-blue); font-size: 0.8rem; text-decoration: none; font-weight: 500; opacity: 0.85;">Esqueci a Senha</a>
+                    </div>
+                    <div class="password-wrapper">
+                        <input type="password" class="form-input" id="password" placeholder="Digite sua senha" autocomplete="current-password" required>
+                        <button type="button" class="password-toggle" onclick="togglePassword()">👁️</button>
+                    </div>
+                </div>
+                
+                <button type="submit" class="btn-submit" id="login-btn">🚀 Entrar no Sistema</button>
+            </form>
+            
+            <div class="divider">
+                <div class="divider-line"></div>
+                <span class="divider-text">ou entre com</span>
+                <div class="divider-line"></div>
+            </div>
+            
+            <div class="social-login">
+                <button class="social-btn" onclick="socialLogin('google')">
+                    <svg width="18" height="18" viewBox="0 0 24 24">
+                        <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z"/>
+                        <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+                        <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
+                        <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+                    </svg>
+                    Google
+                </button>
+                <button class="social-btn" onclick="socialLogin('apple')">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="white">
+                        <path d="M17.05 20.28c-.98.95-2.05.88-3.08.4-1.09-.5-2.08-.48-3.24 0-1.44.62-2.2.44-3.06-.4C2.79 15.25 3.51 7.59 9.05 7.31c1.35.07 2.29.74 3.08.8 1.18-.24 2.31-.93 3.57-.84 1.51.12 2.65.72 3.4 1.8-3.12 1.87-2.38 5.98.48 7.13-.57 1.5-1.31 2.99-2.54 4.09zM12.03 7.25c-.15-2.23 1.66-4.07 3.74-4.25.29 2.58-2.34 4.5-3.74 4.25z"/>
+                    </svg>
+                    Apple
+                </button>
+            </div>
+            
+            <div class="demo-credentials">
+                <p>👨‍💼 Credenciais de Demonstração:</p>
+                <div class="credentials-box">
+                    <div class="cred-item">
+                        <span>Usuário: </span><code>Admin</code>
+                    </div>
+                    <div class="cred-item">
+                        <span>Senha: </span><code>admin123</code>
+                    </div>
+                </div>
+            </div>
+            
+            <p style="text-align: center; color: var(--text-muted); font-size: 0.85rem;">
+                Não tem conta? <a href="https://cuidaidoso.ia.br/cadastro" style="color: var(--electric-blue); text-decoration: none; font-weight: 600;">Criar Conta Básica</a>
+            </p>
+        </div>
+    </div>
+
+    <!-- === MODAL DE CADASTRO === -->
+    <div id="register-modal" class="modal-overlay">
+        <div class="modal-card">
+            <button onclick="closeRegister()" class="modal-close">&times;</button>
+            <div class="modal-header">
+                <span class="modal-icon">✨</span>
+                <h3 class="modal-title">Criar Conta Básica</h3>
+                <p class="modal-subtitle">Gratuito • Sem cartão de crédito</p>
+            </div>
+            
+            <div id="register-error" class="error-msg"></div>
+            
+            <form id="register-form" onsubmit="handleRegister(event)">
+                <div class="form-group">
+                    <label class="form-label">Nome Completo</label>
+                    <input type="text" class="form-input" id="reg-name" placeholder="Seu nome completo" required>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label">Email</label>
+                    <input type="email" class="form-input" id="reg-email" placeholder="seu@email.com" required>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label">Telefone (opcional)</label>
+                    <input type="tel" class="form-input" id="reg-phone" placeholder="(00) 00000-0000">
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label">Senha</label>
+                    <input type="password" class="form-input" id="reg-pass" placeholder="Crie uma senha segura" required>
+                </div>
+                
+                <button type="submit" class="btn-submit" id="register-btn">✅ Finalizar Cadastro</button>
+            </form>
+            
+            <p style="text-align: center; font-size: 0.8rem; color: var(--text-muted); margin-top: 20px;">
+                Ao criar conta, você concorda com nossos <a href="https://cuidaidoso.ia.br/" style="color: var(--electric-blue); text-decoration: none;">Termos de Uso</a>
+            </p>
+        </div>
+    </div>
+
+    <!-- === MODAL RECUPERAÇÃO DE SENHA === -->
+    <div id="forgot-modal" class="modal-overlay">
+        <div class="modal-card">
+            <button onclick="closeForgotPassword()" class="modal-close">&times;</button>
+            <div class="modal-header">
+                <span class="modal-icon">🔑</span>
+                <h3 class="modal-title">Recuperar Senha</h3>
+                <p class="modal-subtitle">Insira seus dados para redefinição</p>
+            </div>
+            
+            <div id="forgot-error" class="error-msg"></div>
+            <div id="forgot-success" class="error-msg" style="background: rgba(16, 185, 129, 0.1); border-color: rgba(16, 185, 129, 0.3); color: var(--success);"></div>
+            
+            <form id="forgot-form" onsubmit="handleForgotPassword(event)">
+                <div class="form-group">
+                    <label class="form-label">E-mail ou Telefone Cadastrado</label>
+                    <input type="text" class="form-input" id="forgot-contact" placeholder="Digite seu e-mail ou telefone" required>
+                </div>
+                
+                <button type="submit" class="btn-submit" id="forgot-btn">🚀 Recuperar Senha</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- === MODAL FICHA MÉDICA === -->
+    <div id="medical-modal" class="modal-overlay">
+        <div class="modal-card" style="max-width: 600px;">
+            <button onclick="closeMedicalFile()" class="modal-close">&times;</button>
+            <div class="modal-header">
+                <span class="modal-icon">🏥</span>
+                <h3 class="modal-title">Ficha Médica Digital</h3>
+                <p class="modal-subtitle">Demonstração de Prontuário Integrado</p>
+            </div>
+            
+            <div style="background: rgba(7, 11, 25, 0.6); border: 1px solid rgba(255,255,255,0.06); border-radius: 16px; padding: 20px; margin-bottom: 20px; text-align: left;">
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px; border-bottom: 1px solid rgba(255,255,255,0.06); padding-bottom: 16px;">
+                    <div>
+                        <span style="color: var(--text-muted); font-size: 0.8rem; font-weight: 600; display: block; text-transform: uppercase;">Paciente</span>
+                        <strong style="font-size: 1.1rem; color: #FFFFFF;">Maria Silva</strong>
+                    </div>
+                    <div>
+                        <span style="color: var(--text-muted); font-size: 0.8rem; font-weight: 600; display: block; text-transform: uppercase;">Idade</span>
+                        <strong style="font-size: 1.1rem; color: #FFFFFF;">78 anos</strong>
+                    </div>
+                </div>
+                
+                <div style="display: flex; flex-direction: column; gap: 12px; margin-bottom: 16px;">
+                    <div>
+                        <span style="color: var(--text-muted); font-size: 0.8rem; font-weight: 600; display: block; text-transform: uppercase;">Condições Médicas</span>
+                        <p style="font-size: 0.9rem; color: var(--text-light); line-height: 1.4; margin-top: 4px;">Hipertensão Arterial Sistêmica, Diabetes Mellitus Tipo 2, Osteoartrite.</p>
+                    </div>
+                    <div>
+                        <span style="color: var(--text-muted); font-size: 0.8rem; font-weight: 600; display: block; text-transform: uppercase;">Alergias</span>
+                        <span style="background: rgba(239, 68, 68, 0.15); color: #EF4444; border: 1px solid rgba(239, 68, 68, 0.2); padding: 4px 10px; border-radius: 6px; font-size: 0.8rem; font-weight: 700; display: inline-block; margin-top: 4px;">Penicilina</span>
+                    </div>
+                </div>
+
+                <div style="border-top: 1px solid rgba(255,255,255,0.06); padding-top: 16px;">
+                    <span style="color: var(--electric-blue); font-size: 0.85rem; font-weight: 700; display: block; text-transform: uppercase; margin-bottom: 10px; letter-spacing: 0.5px;">Plano de Cuidado IA Ativo</span>
+                    <ul style="font-size: 0.85rem; color: var(--text-light); list-style: none; display: flex; flex-direction: column; gap: 8px;">
+                        <li style="display:flex; gap:8px;">✓ <strong>Medicamentos:</strong> Metformina 850mg (8h/20h), Losartana 50mg (8h), Paracetamol se dor.</li>
+                        <li style="display:flex; gap:8px;">✓ <strong>Rotina:</strong> OCR de Receita atualizado ontem às 14h.</li>
+                        <li style="display:flex; gap:8px;">✓ <strong>Responsáveis:</strong> 2 familiares monitorando e alertas via WhatsApp.</li>
+                    </ul>
+                </div>
+            </div>
+            
+            <button onclick="closeMedicalFile()" class="btn-submit" style="margin-top: 0; background: linear-gradient(135deg, var(--primary) 0%, var(--success) 100%);">Fechar Visualização</button>
+        </div>
+    </div>
+
     <script>
-        // Generate Particles
+        // Generate Floating Particles
         function createParticles() {
             const container = document.getElementById('particles');
             for (let i = 0; i < 30; i++) {
@@ -864,7 +1520,53 @@
         }
         createParticles();
 
-        // Toggle Password
+        // Modal triggers
+        function openLogin() {
+            document.getElementById('login-modal').style.display = 'flex';
+            document.getElementById('error-msg').classList.remove('show');
+            document.getElementById('error-msg').textContent = '';
+        }
+
+        // Close Login Modal
+        function closeLogin() {
+            document.getElementById('login-modal').style.display = 'none';
+        }
+
+        // Open Register Modal
+        function openRegister() {
+            document.getElementById('register-modal').style.display = 'flex';
+            document.getElementById('register-error').style.display = 'none';
+        }
+
+        // Close Register Modal
+        function closeRegister() {
+            document.getElementById('register-modal').style.display = 'none';
+            document.getElementById('register-form').reset();
+        }
+
+        function openForgotPassword() {
+            document.getElementById('forgot-modal').style.display = 'flex';
+            document.getElementById('forgot-error').style.display = 'none';
+            document.getElementById('forgot-success').style.display = 'none';
+        }
+
+        // Close Forgot Password Modal
+        function closeForgotPassword() {
+            document.getElementById('forgot-modal').style.display = 'none';
+            document.getElementById('forgot-form').reset();
+        }
+
+        // Open Medical File Modal
+        function openMedicalFile() {
+            document.getElementById('medical-modal').style.display = 'flex';
+        }
+
+        // Close Medical File Modal
+        function closeMedicalFile() {
+            document.getElementById('medical-modal').style.display = 'none';
+        }
+
+        // Toggle Password Visibility
         function togglePassword() {
             const passwordInput = document.getElementById('password');
             const toggleBtn = document.querySelector('.password-toggle');
@@ -878,7 +1580,40 @@
             }
         }
 
-        // Handle Login - VERSÃO CORRIGIDA COM API REAL
+        // Close modals on clicking overlay background
+        document.querySelectorAll('.modal-overlay').forEach(modal => {
+            modal.addEventListener('click', function(e) {
+                if (e.target === this) {
+                    this.style.display = 'none';
+                    // Reset URL hash or path state gracefully
+                    history.pushState("", document.title, window.location.pathname === '/cadastro' ? '/cadastro' : '/');
+                }
+            });
+        });
+
+        // Routing checks to trigger modals (Support for both clean URL paths and hash states)
+        function checkRouteAndHash() {
+            const path = window.location.pathname;
+            const hash = window.location.hash;
+
+            if (path === '/cadastro' || hash === '#register') {
+                openRegister();
+            } else if (hash === '#login') {
+                openLogin();
+            } else {
+                closeLogin();
+                closeRegister();
+            }
+        }
+        window.addEventListener('hashchange', checkRouteAndHash);
+        window.addEventListener('DOMContentLoaded', checkRouteAndHash);
+
+        // Authentication redirect check (Unified routing: both clients and admin go to client dashboard)
+        if (localStorage.getItem('is_logged_in') === 'true') {
+            window.location.href = '/dashboard-cliente';
+        }
+
+        // Handle Login (Preserved logic with FastAPI Integration)
         async function handleLogin(e) {
             e.preventDefault();
 
@@ -894,7 +1629,7 @@
             loginBtn.innerHTML = '⏳ Verificando...';
 
             try {
-                // 1️⃣ Tenta login via API (usuários cadastrados no banco)
+                // Tenta login via API
                 const response = await fetch('/api/cliente/login', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -910,38 +1645,31 @@
                     data = await response.json();
                 } else {
                     const text = await response.text();
-                    // Captura erros típicos de Vercel/Servidor
                     if (text.includes("A server error")) {
-                        throw new Error("Erro no servidor: O serviço pode estar temporariamente indisponível ou em processo de inicialização.");
+                        throw new Error("Erro no servidor: O serviço pode estar temporariamente indisponível ou em inicialização.");
                     }
                     throw new Error(text || `Erro desconhecido do servidor (Status ${response.status})`);
                 }
 
                 if (response.ok) {
-                    // ✅ Login bem-sucedido - usuário do banco
                     localStorage.setItem('currentUser', JSON.stringify(data.user));
                     localStorage.setItem('userId', data.user.id);
                     localStorage.setItem('is_logged_in', 'true');
                     
-                    // Redireciona para dashboard do cliente
                     window.location.href = '/dashboard-cliente';
-                    
                 } else {
-                    // ❌ Falhou na API - verifica se é admin demo
+                    // Fallback para admin demo (Unified redirect to client dashboard)
                     if (username.toLowerCase() === 'admin' && password === 'admin123') {
-                        // Login admin (fallback para demonstração)
                         localStorage.setItem('currentUser', JSON.stringify({
                             full_name: 'Administrador',
-
                             email: 'admin@homecare.com',
                             role: 'admin'
                         }));
                         localStorage.setItem('userId', 'admin-id');
                         localStorage.setItem('is_logged_in', 'true');
                         
-                        window.location.href = '/dashboard';
+                        window.location.href = '/dashboard-cliente';
                     } else {
-                        // Erro real
                         throw new Error(data.detail || 'Usuário ou senha incorretos');
                     }
                 }
@@ -953,43 +1681,8 @@
                 document.getElementById('password').value = '';
             }
         }
-        // Social Login
-        function socialLogin(provider) {
-            const providerName = provider === 'google' ? 'Google' : 'Apple';
-            alert(`🔐 Login com ${providerName}\n\nEm breve: Integração com OAuth2`);
-        }
 
-        // Check if already logged in
-        if (localStorage.getItem('is_logged_in') === 'true') {
-            window.location.href = '/dashboard';
-        }
-        // === FUNÇÕES DE CADASTRO (MVP BÁSICA) ===
-
-        // Abrir modal de cadastro
-        function openRegister() {
-            document.getElementById('register-modal').style.display = 'flex';
-            document.getElementById('register-error').style.display = 'none';
-        }
-
-        // Fechar modal
-        function closeRegister() {
-            document.getElementById('register-modal').style.display = 'none';
-            document.getElementById('register-form').reset();
-        }
-
-        // Fechar modal ao clicar fora
-        document.addEventListener('DOMContentLoaded', () => {
-            const regModal = document.getElementById('register-modal');
-            if (regModal) {
-                regModal.addEventListener('click', function(e) {
-                    if (e.target === this) {
-                        closeRegister();
-                    }
-                });
-            }
-        });
-
-        // Processar cadastro
+        // Handle Register (Preserved logic with FastAPI Integration)
         async function handleRegister(e) {
             e.preventDefault();
             
@@ -1000,14 +1693,12 @@
             const errorBox = document.getElementById('register-error');
             const btn = document.getElementById('register-btn');
             
-            // Reset
             errorBox.style.display = 'none';
             errorBox.textContent = '';
             btn.disabled = true;
             btn.innerHTML = '⏳ Criando conta...';
             
             try {
-                // Chama API do backend (FastAPI)
                 const response = await fetch('/api/users', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -1032,19 +1723,15 @@
                 }
                 
                 if (response.ok) {
-                    // Sucesso!
-                    alert('✅ Conta criada com sucesso!\n\nAgora faça login com seu email e senha.');
+                    alert('✅ Conta criada com sucesso!\n\nFaça login agora com suas credenciais.');
                     closeRegister();
-                    
-                    // Preenche o login com o email cadastrado (UX)
+                    openLogin();
                     document.getElementById('username').value = email;
                     document.getElementById('password').focus();
                 } else {
-                    // Erro da API
                     throw new Error(data.detail || 'Erro ao criar conta. Tente novamente.');
                 }
             } catch (error) {
-                // Exibe erro
                 errorBox.textContent = '❌ ' + error.message;
                 errorBox.style.display = 'block';
             } finally {
@@ -1052,21 +1739,9 @@
                 btn.innerHTML = '✅ Finalizar Cadastro';
             }
         }
-        // === FIM FUNÇÕES CADASTRO ===
 
-        // === FUNÇÕES RECUPERAÇÃO DE SENHA (ESQUECI A SENHA) ===
-        window.openForgotPassword = function() {
-            document.getElementById('forgot-modal').style.display = 'flex';
-            document.getElementById('forgot-error').style.display = 'none';
-            document.getElementById('forgot-success').style.display = 'none';
-        };
-
-        window.closeForgotPassword = function() {
-            document.getElementById('forgot-modal').style.display = 'none';
-            document.getElementById('forgot-form').reset();
-        };
-
-        window.handleForgotPassword = async function(e) {
+        // Handle Forgot Password
+        async function handleForgotPassword(e) {
             e.preventDefault();
             const contact = document.getElementById('forgot-contact').value.trim();
             const errorBox = document.getElementById('forgot-error');
@@ -1090,7 +1765,7 @@
                     successBox.textContent = '✅ ' + (data.detail || 'Instruções enviadas! Verifique o e-mail ou telefone.');
                     successBox.style.display = 'block';
                     setTimeout(() => {
-                        window.closeForgotPassword();
+                        closeForgotPassword();
                     }, 4000);
                 } else {
                     throw new Error(data.detail || 'Erro ao processar solicitação.');
@@ -1102,110 +1777,13 @@
                 btn.disabled = false;
                 btn.innerHTML = '🚀 Recuperar Senha';
             }
-        };
+        }
 
-        // Fechar ao clicar fora
-        document.addEventListener('DOMContentLoaded', () => {
-            const forgotModal = document.getElementById('forgot-modal');
-            if (forgotModal) {
-                forgotModal.addEventListener('click', function(e) {
-                    if (e.target === this) {
-                        window.closeForgotPassword();
-                    }
-                });
-            }
-        });
+        // Social login placeholder
+        function socialLogin(provider) {
+            const providerName = provider === 'google' ? 'Google' : 'Apple';
+            alert(`🔐 Login com ${providerName}\n\nEm breve: Integração com OAuth2.`);
+        }
     </script>
-
-    <!-- === MODAL DE CADASTRO (CONTA BÁSICA) === -->
-    <div id="register-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(10, 17, 40, 0.95); z-index: 1000; align-items: center; justify-content: center; padding: 20px;">
-        <div style="background: rgba(11, 26, 58, 0.95); border: 1px solid rgba(0, 212, 255, 0.3); border-radius: 24px; padding: 32px; width: 100%; max-width: 450px; position: relative; animation: slideUp 0.3s ease;">
-            
-            <!-- Botão Fechar -->
-            <button onclick="closeRegister()" style="position: absolute; top: 16px; right: 16px; background: none; border: none; color: #8A9BB5; font-size: 1.5rem; cursor: pointer; transition: color 0.3s;" onmouseover="this.style.color='#00D4FF'" onmouseout="this.style.color='#8A9BB5'">&times;</button>
-            
-            <!-- Cabeçalho -->
-            <div style="text-align: center; margin-bottom: 24px;">
-                <div style="font-size: 2rem; margin-bottom: 8px;">✨</div>
-                <h3 style="color: #FFFFFF; font-size: 1.4rem; font-weight: 800;">Criar Conta Básica</h3>
-                <p style="color: #8A9BB5; font-size: 0.9rem;">Gratuito • Sem cartão de crédito</p>
-            </div>
-            
-            <!-- Mensagem de Erro -->
-            <div id="register-error" style="background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.3); color: #EF4444; padding: 12px; border-radius: 8px; margin-bottom: 16px; font-size: 0.85rem; display: none;"></div>
-            
-            <!-- Formulário -->
-            <form id="register-form" onsubmit="handleRegister(event)">
-                <div class="form-group">
-                    <label class="form-label">Nome Completo</label>
-                    <input type="text" class="form-input" id="reg-name" placeholder="Seu nome completo" required style="background: rgba(17, 27, 51, 0.9);">
-                </div>
-                
-                <div class="form-group">
-                    <label class="form-label">Email</label>
-                    <input type="email" class="form-input" id="reg-email" placeholder="seu@email.com" required style="background: rgba(17, 27, 51, 0.9);">
-                </div>
-                
-                <div class="form-group">
-                    <label class="form-label">Telefone (opcional)</label>
-                    <input type="tel" class="form-input" id="reg-phone" placeholder="(00) 00000-0000" style="background: rgba(17, 27, 51, 0.9);">
-                </div>
-                
-                <div class="form-group">
-                    <label class="form-label">Senha</label>
-                    <input type="password" class="form-input" id="reg-pass" placeholder="Crie uma senha segura" required style="background: rgba(17, 27, 51, 0.9);">
-                </div>
-                
-                <button type="submit" class="btn-login" id="register-btn" style="margin-top: 8px;">
-                    ✅ Finalizar Cadastro
-                </button>
-            </form>
-            
-            <p style="text-align: center; font-size: 0.8rem; color: #5A6B8A; margin-top: 20px;">
-                Ao criar conta, você concorda com nossos <a href="#" style="color: #00D4FF; text-decoration: none;">Termos de Uso</a>
-            </p>
-        </div>
-    </div>
-
-    <!-- === MODAL RECUPERAÇÃO DE SENHA (ESQUECI A SENHA) === -->
-    <div id="forgot-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(10, 17, 40, 0.95); z-index: 1000; align-items: center; justify-content: center; padding: 20px;">
-        <div style="background: rgba(11, 26, 58, 0.95); border: 1px solid rgba(0, 212, 255, 0.3); border-radius: 24px; padding: 32px; width: 100%; max-width: 450px; position: relative; animation: slideUp 0.3s ease;">
-            
-            <!-- Botão Fechar -->
-            <button onclick="closeForgotPassword()" style="position: absolute; top: 16px; right: 16px; background: none; border: none; color: #8A9BB5; font-size: 1.5rem; cursor: pointer; transition: color 0.3s;" onmouseover="this.style.color='#00D4FF'" onmouseout="this.style.color='#8A9BB5'">&times;</button>
-            
-            <!-- Cabeçalho -->
-            <div style="text-align: center; margin-bottom: 24px;">
-                <div style="font-size: 2rem; margin-bottom: 8px;">🔑</div>
-                <h3 style="color: #FFFFFF; font-size: 1.4rem; font-weight: 800;">Recuperar Senha</h3>
-                <p style="color: #8A9BB5; font-size: 0.9rem;">Insira seus dados para redefinição</p>
-            </div>
-            
-            <!-- Mensagens de Feedback -->
-            <div id="forgot-error" style="background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.3); color: #EF4444; padding: 12px; border-radius: 8px; margin-bottom: 16px; font-size: 0.85rem; display: none;"></div>
-            <div id="forgot-success" style="background: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.3); color: #10B981; padding: 12px; border-radius: 8px; margin-bottom: 16px; font-size: 0.85rem; display: none;"></div>
-            
-            <!-- Formulário -->
-            <form id="forgot-form" onsubmit="handleForgotPassword(event)">
-                <div class="form-group">
-                    <label class="form-label">E-mail ou Telefone Cadastrado</label>
-                    <input type="text" class="form-input" id="forgot-contact" placeholder="Digite seu e-mail ou telefone" required style="background: rgba(17, 27, 51, 0.9);">
-                </div>
-                
-                <button type="submit" class="btn-login" id="forgot-btn" style="margin-top: 8px;">
-                    🚀 Recuperar Senha
-                </button>
-            </form>
-        </div>
-    </div>
-
-<style>
-@keyframes slideUp {
-    from { transform: translateY(30px); opacity: 0; }
-    to { transform: translateY(0); opacity: 1; }
-}
-</style>
-<!-- === FIM MODAL CADASTRO === -->
-
 </body>
 </html>
