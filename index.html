@@ -1214,7 +1214,7 @@
             <div class="hero-left">
                 <span class="section-tag">CUIDADO INTELIGENTE COM IA</span>
                 <h1>O Futuro da Saúde Domiciliar, <span>Guiado por IA</span></h1>
-                <p>A plataforma definitiva de Home Care que une inteligência artificial de ponta e humanização. Cuidamos de quem você ama e otimizamos a rotina de clínicas e cuidadores com alertas e monitoramento ativo.</p>
+                <p>A plataforma definitiva de Home Care que une inteligência artificial de ponta e humanização. Cuidamos de quem você ama e otimizamos a rotina de clínicas e cuidadores com alertas e monitoramento active.</p>
                 <div class="hero-ctas">
                     <a href="https://cuidaidoso.ia.br/cadastro" class="btn-primary">Começar Agora</a>
                     <a href="https://cuidaidoso.ia.br/#login" class="btn-secondary">Acessar Plataforma</a>
@@ -1288,8 +1288,8 @@
                 <div class="feature-card" style="border-color: rgba(16, 185, 129, 0.25);">
                     <span class="feature-icon">🏥</span>
                     <h3 class="feature-name">Ficha Médica Digital</h3>
-                    <p class="feature-description" style="margin-bottom: 24px;">Controle prontuários, digitalize documentos pessoais/clínicos, envie relatórios aos responsáveis e envie prontuários por e-mail automaticamente no agendamento de consultas.</p>
-                    <button class="nav-btn" style="width: 100%; border-color: var(--success); color: var(--success); font-weight: 700;" onclick="openMedicalFile()">Abrir Ficha de Demonstração</button>
+                    <p class="feature-description" style="margin-bottom: 24px;">Controla prontuários, digitaliza documentos pessoais/clínicos, envia relatórios aos responsáveis e envie documentos por e-mail automaticamente no agendamento de consultas</p>
+                    <button class="nav-btn" style="width: 100%; border-color: var(--success); color: var(--success); font-weight: 700;" onclick="openMedicalFile()">Visualizar Ficha Médica</button>
                 </div>
             </div>
         </section>
@@ -1567,7 +1567,7 @@
         </div>
     </div>
 
-    <!-- === MODAL FICHA MÉDICA PREMIUM === -->
+    <!-- === MODAL FICHA MÉDICA PREMIUM (ESTADO INICIAL SEM PREENCHIMENTO) === -->
     <div id="medical-modal" class="modal-overlay">
         <div class="modal-card" style="max-width: 650px; padding: 32px 30px;">
             <button onclick="closeMedicalFile()" class="modal-close">&times;</button>
@@ -1575,19 +1575,19 @@
             <div class="modal-header" style="margin-bottom: 20px;">
                 <span class="modal-icon">🏥</span>
                 <h3 class="modal-title">Ficha Médica Digital</h3>
-                <p class="modal-subtitle">Demonstração Interativa do Prontuário Inteligente</p>
+                <p class="modal-subtitle">Demonstração Interativa do Prontuário em Branco</p>
             </div>
 
-            <!-- Patient Quick Header -->
+            <!-- Patient Quick Header (Clean State) -->
             <div style="background: rgba(0, 212, 255, 0.03); border: 1.5px solid var(--border-glow); border-radius: 16px; padding: 16px 20px; display: flex; align-items: center; justify-content: space-between; margin-bottom: 24px; text-align: left;">
                 <div style="display: flex; align-items: center; gap: 14px;">
-                    <div style="width: 48px; height: 48px; border-radius: 50%; background: linear-gradient(135deg, var(--primary) 0%, var(--electric-blue) 100%); display:flex; align-items:center; justify-content:center; font-weight:800; font-size:1.2rem; border:2px solid rgba(255,255,255,0.2);">MS</div>
+                    <div id="patient-avatar" style="width: 48px; height: 48px; border-radius: 50%; background: rgba(255,255,255,0.06); display:flex; align-items:center; justify-content:center; font-weight:800; font-size:1.2rem; border:2px solid rgba(255,255,255,0.1); color: var(--text-muted);">?</div>
                     <div>
-                        <h4 style="color:#FFF; font-size:1.05rem; font-weight:700;">Maria Silva</h4>
-                        <span style="color:var(--text-muted); font-size:0.8rem;">78 anos • RG 12.345.678-X</span>
+                        <h4 id="patient-name" style="color:var(--text-muted); font-size:1.05rem; font-weight:700;">Nenhum paciente cadastrado</h4>
+                        <span id="patient-docs" style="color:rgba(138, 155, 181, 0.6); font-size:0.8rem;">-- anos • RG --</span>
                     </div>
                 </div>
-                <span style="background: rgba(16, 185, 129, 0.15); color: var(--success); padding: 4px 10px; border-radius: 6px; font-size: 0.75rem; font-weight: 700; border: 1px solid rgba(16, 185, 129, 0.2);">Plano Pro Ativo</span>
+                <span id="patient-plan" style="background: rgba(255,255,255,0.04); color: var(--text-muted); padding: 4px 10px; border-radius: 6px; font-size: 0.75rem; font-weight: 700; border: 1px solid rgba(255,255,255,0.06);">Nenhum plano ativo</span>
             </div>
 
             <!-- Tab Headers -->
@@ -1603,23 +1603,24 @@
                 <div style="display: flex; flex-direction: column; gap: 16px;">
                     <div>
                         <span style="color: var(--text-muted); font-size: 0.8rem; font-weight: 600; text-transform: uppercase;">Diagnósticos</span>
-                        <p style="font-size: 0.92rem; color: var(--text-light); line-height: 1.4; margin-top: 4px;">Hipertensão Arterial Sistêmica (HAS), Diabetes Mellitus Tipo 2 (DM2), Osteoartrite de Quadril.</p>
+                        <p id="clinical-diagnoses" style="font-size: 0.92rem; color: rgba(138, 155, 181, 0.7); line-height: 1.4; margin-top: 4px; font-style: italic;">Nenhum diagnóstico registrado.</p>
                     </div>
                     <div>
                         <span style="color: var(--text-muted); font-size: 0.8rem; font-weight: 600; text-transform: uppercase; display: block; margin-bottom: 6px;">Alergias Alimentares ou Medicamentosas</span>
-                        <span style="background: rgba(239, 68, 68, 0.12); color: #EF4444; border: 1px solid rgba(239, 68, 68, 0.2); padding: 4px 10px; border-radius: 6px; font-size: 0.8rem; font-weight: 700; display: inline-block;">Penicilina</span>
-                        <span style="background: rgba(239, 68, 68, 0.12); color: #EF4444; border: 1px solid rgba(239, 68, 68, 0.2); padding: 4px 10px; border-radius: 6px; font-size: 0.8rem; font-weight: 700; display: inline-block; margin-left: 8px;">Corante Tartrazina</span>
+                        <div id="allergies-list" style="font-size: 0.92rem; color: rgba(138, 155, 181, 0.7); font-style: italic;">
+                            Nenhuma alergia cadastrada.
+                        </div>
                     </div>
                     <div style="border-top: 1px solid rgba(255,255,255,0.06); padding-top: 14px; display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
                         <div>
                             <span style="color: var(--text-muted); font-size: 0.8rem; font-weight: 600; text-transform: uppercase;">Familiar Responsável</span>
-                            <strong style="font-size: 0.9rem; color: #FFF; display:block; margin-top:4px;">Eliane Amorzinho</strong>
-                            <span style="color: var(--text-muted); font-size: 0.8rem;">Filha • (11) 99999-9999</span>
+                            <strong id="family-responsible" style="font-size: 0.9rem; color: rgba(138, 155, 181, 0.7); display:block; margin-top:4px; font-weight:500;">Nenhum responsável associado</strong>
+                            <span id="family-sub" style="color: rgba(138, 155, 181, 0.4); font-size: 0.8rem;">--</span>
                         </div>
                         <div>
                             <span style="color: var(--text-muted); font-size: 0.8rem; font-weight: 600; text-transform: uppercase;">Cuidador de Plantão</span>
-                            <strong style="font-size: 0.9rem; color: #FFF; display:block; margin-top:4px;">Carlos Souza</strong>
-                            <span style="color: var(--text-muted); font-size: 0.8rem;">Téc. de Enfermagem</span>
+                            <strong id="caregiver-duty" style="font-size: 0.9rem; color: rgba(138, 155, 181, 0.7); display:block; margin-top:4px; font-weight:500;">Nenhum cuidador associado</strong>
+                            <span id="caregiver-sub" style="color: rgba(138, 155, 181, 0.4); font-size: 0.8rem;">--</span>
                         </div>
                     </div>
                 </div>
@@ -1630,20 +1631,7 @@
                 <div style="margin-bottom: 16px;">
                     <span style="color: var(--text-muted); font-size: 0.8rem; font-weight: 600; text-transform: uppercase; display: block; margin-bottom: 8px;">Documentos Ativos</span>
                     <div id="documents-list" style="display: flex; flex-direction: column; gap: 10px;">
-                        <div style="background: rgba(7, 11, 25, 0.5); border: 1px solid rgba(255,255,255,0.04); border-radius: 10px; padding: 12px; display: flex; justify-content: space-between; align-items: center;">
-                            <div>
-                                <strong style="font-size: 0.85rem; color: #FFF; display: block;">Documento de Identidade (RG_Frente_Verso.pdf)</strong>
-                                <span style="font-size: 0.75rem; color: var(--success); font-weight: 600;">✓ Verificado • OCR Completo</span>
-                            </div>
-                            <span style="font-size: 0.75rem; color: var(--text-muted);">PDF (1.2 MB)</span>
-                        </div>
-                        <div style="background: rgba(7, 11, 25, 0.5); border: 1px solid rgba(255,255,255,0.04); border-radius: 10px; padding: 12px; display: flex; justify-content: space-between; align-items: center;">
-                            <div>
-                                <strong style="font-size: 0.85rem; color: #FFF; display: block;">Receita Médica - Dr. Carlos (Cardiologia)</strong>
-                                <span style="font-size: 0.75rem; color: var(--success); font-weight: 600;">✓ Metformina 850mg e Losartana extraídos via IA</span>
-                            </div>
-                            <span style="font-size: 0.75rem; color: var(--text-muted);">PNG (840 KB)</span>
-                        </div>
+                        <p id="empty-docs-msg" style="font-size: 0.9rem; color: rgba(138, 155, 181, 0.7); font-style: italic; text-align: center; padding: 20px 0;">Nenhum documento digitalizado.</p>
                     </div>
                 </div>
                 
@@ -1666,11 +1654,11 @@
                     <span style="color: var(--text-muted); font-size: 0.8rem; font-weight: 600; text-transform: uppercase; display: block; margin-bottom: 8px;">Configurações de Envio do Relatório Diário</span>
                     <ul style="font-size: 0.85rem; color: var(--text-light); list-style: none; display: flex; flex-direction: column; gap: 8px;">
                         <li>✓ Envio Automático Diário: <strong>Habilitado (20:00)</strong></li>
-                        <li>✓ Destinatário Principal: <strong>Eliane Amorzinho (WhatsApp e E-mail)</strong></li>
-                        <li>✓ Status do último envio: <strong style="color: var(--success);">Enviado com sucesso ontem às 20:01</strong></li>
+                        <li>✓ Destinatário Principal: <strong id="report-receiver">Nenhum responsável cadastrado</strong></li>
+                        <li>✓ Status do último envio: <strong id="report-status" style="color: var(--text-muted); font-weight: 500;">Nenhum relatório enviado ainda</strong></li>
                     </ul>
                 </div>
-                <button class="btn-submit" style="margin-top: 0; background: rgba(16, 185, 129, 0.15); border: 1.5px solid var(--success); color: var(--success); font-weight: 700;" onclick="simulateReportSend()">
+                <button id="report-send-btn" class="btn-submit" style="margin-top: 0; background: rgba(255,255,255,0.05); border: 1.5px solid rgba(255,255,255,0.1); color: var(--text-muted); font-weight: 700; cursor: not-allowed;" disabled onclick="simulateReportSend()">
                     🚀 Disparar Relatório de Hoje Agora para o Responsável
                 </button>
             </div>
@@ -1701,18 +1689,19 @@
                             <input type="time" id="appt-time" class="form-input" required>
                         </div>
                     </div>
-                    <button type="submit" class="btn-submit" style="margin-top: 8px;">🗓️ Agendar Consulta & Enviar Prontuário por E-mail</button>
+                    <button type="submit" class="btn-submit" style="margin-top: 8px;">🗓️ Agendar Consulta & Enviar Documentos por E-mail</button>
                 </form>
             </div>
             
-            <div style="border-top: 1px solid rgba(255,255,255,0.06); padding-top: 20px; margin-top: 24px; display: flex; justify-content: flex-end;">
+            <div style="border-top: 1px solid rgba(255,255,255,0.06); padding-top: 20px; margin-top: 24px; display: flex; justify-content: flex-end; gap: 12px;">
+                <button onclick="resetMedicalFile()" class="nav-btn" style="border-color: rgba(239, 68, 68, 0.4); color: #EF4444; padding: 10px 18px; font-size: 0.85rem;">Limpar Prontuário</button>
                 <button onclick="closeMedicalFile()" class="btn-secondary" style="padding: 10px 24px;">Fechar Ficha</button>
             </div>
         </div>
     </div>
 
     <!-- === MODAL DE CADASTRO === -->
-    <!-- ... Resto dos modais permanecem exatamente iguais ... -->
+    <!-- ... Modais de autenticação inalterados ... -->
 
     <script>
         // Generate Floating Particles
@@ -1754,52 +1743,129 @@
 
         // Tab Switching Logic
         function switchMedicalTab(event, tabId) {
-            // Remove active class from all buttons
             document.querySelectorAll('.tab-btn').forEach(btn => {
                 btn.classList.remove('active');
             });
-            // Add active class to clicked button
             event.currentTarget.classList.add('active');
             
-            // Hide all tab panels
             document.querySelectorAll('.tab-panel').forEach(panel => {
                 panel.classList.remove('active');
             });
-            // Show selected panel
             document.getElementById(tabId).classList.add('active');
         }
 
-        // Simulate Document OCR Capture
+        // Reset medical file to completely empty state
+        function resetMedicalFile() {
+            // Header
+            document.getElementById('patient-avatar').textContent = '?';
+            document.getElementById('patient-avatar').style.background = 'rgba(255,255,255,0.06)';
+            document.getElementById('patient-avatar').style.color = 'var(--text-muted)';
+            document.getElementById('patient-name').textContent = 'Nenhum paciente cadastrado';
+            document.getElementById('patient-name').style.color = 'var(--text-muted)';
+            document.getElementById('patient-docs').textContent = '-- anos • RG --';
+            document.getElementById('patient-plan').className = '';
+            document.getElementById('patient-plan').style.cssText = 'background: rgba(255,255,255,0.04); color: var(--text-muted); padding: 4px 10px; border-radius: 6px; font-size: 0.75rem; font-weight: 700; border: 1px solid rgba(255,255,255,0.06);';
+            document.getElementById('patient-plan').textContent = 'Nenhum plano ativo';
+
+            // Tab 1
+            document.getElementById('clinical-diagnoses').textContent = 'Nenhum diagnóstico registrado.';
+            document.getElementById('clinical-diagnoses').style.fontStyle = 'italic';
+            document.getElementById('clinical-diagnoses').style.color = 'rgba(138, 155, 181, 0.7)';
+            document.getElementById('allergies-list').innerHTML = 'Nenhuma alergia cadastrada.';
+            
+            document.getElementById('family-responsible').textContent = 'Nenhum responsável associado';
+            document.getElementById('family-responsible').style.color = 'rgba(138, 155, 181, 0.7)';
+            document.getElementById('family-sub').textContent = '--';
+            document.getElementById('caregiver-duty').textContent = 'Nenhum cuidador associado';
+            document.getElementById('caregiver-duty').style.color = 'rgba(138, 155, 181, 0.7)';
+            document.getElementById('caregiver-sub').textContent = '--';
+
+            // Tab 2
+            document.getElementById('documents-list').innerHTML = '<p id="empty-docs-msg" style="font-size: 0.9rem; color: rgba(138, 155, 181, 0.7); font-style: italic; text-align: center; padding: 20px 0;">Nenhum documento digitalizado.</p>';
+
+            // Tab 3
+            document.getElementById('report-receiver').textContent = 'Nenhum responsável cadastrado';
+            document.getElementById('report-status').textContent = 'Nenhum relatório enviado ainda';
+            document.getElementById('report-status').className = '';
+            document.getElementById('report-status').style.cssText = 'color: var(--text-muted); font-weight: 500;';
+            document.getElementById('report-send-btn').disabled = true;
+            document.getElementById('report-send-btn').style.cssText = 'margin-top: 0; background: rgba(255,255,255,0.05); border: 1.5px solid rgba(255,255,255,0.1); color: var(--text-muted); font-weight: 700; cursor: not-allowed;';
+
+            showToast("Prontuário limpo com sucesso!");
+        }
+
+        // Simulate Document OCR Capture & Populate Patient Info
         function simulateCameraCapture() {
             const flash = document.getElementById('camera-flash');
             const loading = document.getElementById('ocr-loading');
             
-            // Trigger Flash
+            // Trigger Flash Animation
             flash.classList.add('flash');
             setTimeout(() => {
                 flash.classList.remove('flash');
             }, 500);
             
-            // Show Loading
+            // Show Loading Indicator
             loading.style.display = 'flex';
             
             setTimeout(() => {
                 loading.style.display = 'none';
                 
+                // Remove empty msg if present
+                const emptyMsg = document.getElementById('empty-docs-msg');
+                if (emptyMsg) {
+                    emptyMsg.remove();
+                }
+                
                 // Add new document card to list
                 const list = document.getElementById('documents-list');
                 const docCard = document.createElement('div');
-                docCard.style.cssText = 'background: rgba(0, 212, 255, 0.05); border: 1.5px solid var(--electric-blue); border-radius: 10px; padding: 12px; display: flex; justify-content: space-between; align-items: center; animation: fadeIn 0.4s ease;';
+                docCard.style.cssText = 'background: rgba(0, 212, 255, 0.05); border: 1.5px solid var(--electric-blue); border-radius: 10px; padding: 12px; display: flex; justify-content: space-between; align-items: center; animation: fadeIn 0.4s ease; margin-bottom: 10px;';
                 docCard.innerHTML = `
                     <div>
-                        <strong style="font-size: 0.85rem; color: #FFF; display: block;">Receita Digitalizada Recém-Enviada (OCR_Receita.jpg)</strong>
-                        <span style="font-size: 0.75rem; color: var(--electric-blue); font-weight: 600;">✓ Losartana 50mg extraído com sucesso • Adicionado à agenda</span>
+                        <strong style="font-size: 0.85rem; color: #FFF; display: block;">Receita Digitalizada (OCR_Receita_Maria.jpg)</strong>
+                        <span style="font-size: 0.75rem; color: var(--electric-blue); font-weight: 600;">✓ Metformina 850mg extraído com sucesso • OCR ativo</span>
                     </div>
                     <span style="font-size: 0.75rem; color: var(--electric-blue); font-weight: 700;">AGORA</span>
                 `;
                 list.insertBefore(docCard, list.firstChild);
+
+                // Populate patient profile dynamic details (OCR successfully registers the patient)
+                document.getElementById('patient-avatar').textContent = 'MS';
+                document.getElementById('patient-avatar').style.background = 'linear-gradient(135deg, var(--primary) 0%, var(--electric-blue) 100%)';
+                document.getElementById('patient-avatar').style.color = '#FFFFFF';
                 
-                showToast("Documento pessoal/receita capturado e processado via OCR com sucesso!");
+                document.getElementById('patient-name').textContent = 'Maria Silva';
+                document.getElementById('patient-name').style.color = '#FFFFFF';
+                document.getElementById('patient-docs').textContent = '78 anos • RG 12.345.678-X';
+                
+                document.getElementById('patient-plan').style.cssText = 'background: rgba(16, 185, 129, 0.15); color: var(--success); padding: 4px 10px; border-radius: 6px; font-size: 0.75rem; font-weight: 700; border: 1px solid rgba(16, 185, 129, 0.2);';
+                document.getElementById('patient-plan').textContent = 'Plano Pro Ativo';
+
+                // Populate Tab 1
+                document.getElementById('clinical-diagnoses').textContent = 'Hipertensão Arterial Sistêmica (HAS), Diabetes Mellitus Tipo 2 (DM2), Osteoartrite de Quadril.';
+                document.getElementById('clinical-diagnoses').style.fontStyle = 'normal';
+                document.getElementById('clinical-diagnoses').style.color = 'var(--text-light)';
+                
+                document.getElementById('allergies-list').innerHTML = `
+                    <span style="background: rgba(239, 68, 68, 0.12); color: #EF4444; border: 1px solid rgba(239, 68, 68, 0.2); padding: 4px 10px; border-radius: 6px; font-size: 0.8rem; font-weight: 700; display: inline-block;">Penicilina</span>
+                    <span style="background: rgba(239, 68, 68, 0.12); color: #EF4444; border: 1px solid rgba(239, 68, 68, 0.2); padding: 4px 10px; border-radius: 6px; font-size: 0.8rem; font-weight: 700; display: inline-block; margin-left: 8px;">Corante Tartrazina</span>
+                `;
+
+                document.getElementById('family-responsible').textContent = 'Eliane Amorzinho';
+                document.getElementById('family-responsible').style.color = '#FFFFFF';
+                document.getElementById('family-sub').textContent = 'Filha • (11) 99999-9999';
+                
+                document.getElementById('caregiver-duty').textContent = 'Carlos Souza';
+                document.getElementById('caregiver-duty').style.color = '#FFFFFF';
+                document.getElementById('caregiver-sub').textContent = 'Téc. de Enfermagem';
+
+                // Enable Tab 3 Relatórios button and receiver
+                document.getElementById('report-receiver').textContent = 'Eliane Amorzinho (WhatsApp e E-mail)';
+                document.getElementById('report-send-btn').disabled = false;
+                document.getElementById('report-send-btn').style.cssText = 'margin-top: 0; background: linear-gradient(135deg, var(--primary) 0%, var(--success) 100%); color: #FFFFFF; font-weight: 700; cursor: pointer;';
+
+                showToast("Receita capturada! OCR processado e prontuário médico preenchido automaticamente com sucesso!");
             }, 2500);
         }
 
@@ -1808,6 +1874,8 @@
             showToast("Gerando PDF consolidador do Relatório Diário de Saúde...");
             setTimeout(() => {
                 showToast("Relatório de Saúde enviado com sucesso para Eliane Amorzinho via WhatsApp e E-mail!");
+                document.getElementById('report-status').textContent = 'Enviado com sucesso hoje às 20:00';
+                document.getElementById('report-status').style.cssText = 'color: var(--success); font-weight: 700;';
             }, 2000);
         }
 
@@ -1822,7 +1890,7 @@
             showToast(`Agendando consulta com ${doctor} para o dia ${date}...`);
             
             setTimeout(() => {
-                showToast(`Consulta agendada! Prontuário clínico e arquivos de exames enviados com sucesso para ${email}!`);
+                showToast(`Consulta agendada! Documentos médicos e histórico do prontuário enviados com sucesso para ${email}!`);
                 document.getElementById('appt-doctor').value = '';
                 document.getElementById('appt-email').value = '';
                 document.getElementById('appt-date').value = '';
@@ -1896,7 +1964,6 @@
             modal.addEventListener('click', function(e) {
                 if (e.target === this) {
                     this.style.display = 'none';
-                    // Reset URL hash or path state gracefully
                     history.pushState("", document.title, window.location.pathname === '/cadastro' ? '/cadastro' : '/');
                 }
             });
@@ -1940,7 +2007,6 @@
             loginBtn.innerHTML = '⏳ Verificando...';
 
             try {
-                // Tenta login via API
                 const response = await fetch('/api/cliente/login', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
