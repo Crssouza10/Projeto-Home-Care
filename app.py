@@ -1808,10 +1808,12 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=[
         "http://localhost:8000",
+        "http://localhost:8866",
         "https://projeto-home-care.vercel.app",
+        "https://cuidaidoso.ia.br",
+        "https://landing-cuidaidoso.vercel.app",
         "https://*.vercel.app"
     ],
-    allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
