@@ -223,6 +223,84 @@
             display: flex; gap: 40px; justify-content: center;
             flex-wrap: wrap;
         }
+
+        /* ─── Plans ─── */
+        .plans-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+            gap: 28px; max-width: 800px; margin: 0 auto;
+        }
+        .plan-card {
+            background: rgba(10,36,71,0.7); border: 1px solid var(--border);
+            border-radius: 20px; padding: 36px 32px;
+            text-align: center; position: relative;
+            transition: all 0.3s;
+        }
+        .plan-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 16px 48px rgba(0,0,0,0.3);
+            border-color: rgba(0,210,255,0.3);
+        }
+        .plan-card.featured {
+            border-color: var(--cyan);
+            box-shadow: 0 8px 40px rgba(0,210,255,0.15);
+        }
+        .plan-badge {
+            position: absolute; top: -14px; left: 50%; transform: translateX(-50%);
+            padding: 6px 20px; border-radius: 50px;
+            background: linear-gradient(135deg, var(--cyan), #0098cc);
+            color: #051937; font-size: 13px; font-weight: 700;
+            letter-spacing: 1px; text-transform: uppercase;
+        }
+        .plan-name {
+            font-size: 22px; font-weight: 700; margin-bottom: 6px;
+            margin-top: 8px;
+        }
+        .plan-price {
+            font-size: 42px; font-weight: 800;
+            background: linear-gradient(135deg, var(--cyan), #4dc9f6);
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+            margin-bottom: 4px;
+        }
+        .plan-price small {
+            font-size: 18px; font-weight: 400;
+            -webkit-text-fill-color: var(--gray);
+        }
+        .plan-period {
+            font-size: 14px; color: var(--gray-light); margin-bottom: 24px;
+        }
+        .plan-features {
+            list-style: none; padding: 0; margin: 0 0 28px 0;
+            text-align: left;
+        }
+        .plan-features li {
+            padding: 10px 0; font-size: 16px; color: var(--gray);
+            border-bottom: 1px solid rgba(255,255,255,0.04);
+            display: flex; align-items: center; gap: 10px;
+        }
+        .plan-features li::before {
+            content: '✅'; font-size: 14px; flex-shrink: 0;
+        }
+        .plan-btn {
+            display: block; width: 100%; padding: 14px;
+            border-radius: 50px; font-size: 17px; font-weight: 700;
+            cursor: pointer; border: 2px solid var(--cyan);
+            background: transparent; color: var(--cyan);
+            font-family: 'Inter', sans-serif; transition: all 0.3s;
+        }
+        .plan-btn:hover {
+            background: var(--cyan); color: #051937;
+            transform: translateY(-2px);
+            box-shadow: 0 8px 32px rgba(0,210,255,0.25);
+        }
+        .plan-btn.featured {
+            background: linear-gradient(135deg, var(--cyan), #0098cc);
+            color: #051937; border: none;
+            box-shadow: 0 8px 32px rgba(0,210,255,0.3);
+        }
+        .plan-btn.featured:hover {
+            box-shadow: 0 14px 40px rgba(0,210,255,0.4);
+        }
         .step {
             flex: 1; min-width: 240px; max-width: 310px;
             text-align: center; padding: 32px 20px;
@@ -389,7 +467,62 @@
     <div class="circuit-line"></div>
 </div>
 
-<!-- ═══════════ FUNCIONALIDADES ═══════════ -->
+<!-- ═══════════ PLANOS ═══════════ -->
+<section id="planos">
+    <div class="container">
+        <div class="section-label">Planos</div>
+        <h2 class="section-title">Escolha o plano ideal para sua família</h2>
+        <p class="section-subtitle">
+            Comece agora e tenha todo o controle dos cuidados na palma da sua mão.
+        </p>
+
+        <div class="plans-grid">
+            <!-- Plano Básico -->
+            <div class="plan-card">
+                <div class="plan-name">🏠 Plano Básico</div>
+                <div class="plan-price">R$29<small>,90</small></div>
+                <div class="plan-period">por mês</div>
+                <ul class="plan-features">
+                    <li>1 Responsável</li>
+                    <li>Até 5 pessoas cuidadas</li>
+                    <li>Lembretes de medicamentos</li>
+                    <li>Agenda de consultas</li>
+                    <li>Notificações para familiares</li>
+                    <li>Contatos de emergência</li>
+                    <li>Ficha clínica digital</li>
+                </ul>
+                <button class="plan-btn" onclick="openModal('register')">Começar Grátis</button>
+            </div>
+
+            <!-- Plano Pro -->
+            <div class="plan-card featured">
+                <div class="plan-badge">Recomendado</div>
+                <div class="plan-name">⭐ Plano Pro</div>
+                <div class="plan-price">R$49<small>,90</small></div>
+                <div class="plan-period">por mês</div>
+                <ul class="plan-features">
+                    <li>1 Responsável</li>
+                    <li>Até 10 pessoas cuidadas</li>
+                    <li>Tudo do Plano Básico</li>
+                    <li>OCR de receitas médicas</li>
+                    <li>Reconhecimento de voz</li>
+                    <li>Áudio dos lembretes</li>
+                    <li>Suporte prioritário</li>
+                </ul>
+                <button class="plan-btn featured" onclick="openModal('register')">Assinar Pro</button>
+            </div>
+        </div>
+    </div>
+</section>
+
+<div class="circuit-divider">
+    <div class="circuit-line"></div><div class="circuit-dot"></div>
+    <div class="circuit-line"></div><div class="circuit-dot"></div>
+    <div class="circuit-line"></div><div class="circuit-dot"></div>
+    <div class="circuit-line"></div>
+</div>
+
+<!-- ═══════════ COMO FUNCIONA ═══════════ -->
 <section id="funcionalidades">
     <div class="container">
         <div class="section-label">Funcionalidades</div>

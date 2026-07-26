@@ -119,6 +119,15 @@ try:
 except Exception as e:
     print(f"⚠️ Erro ao verificar/adicionar colunas clínicas na tabela users: {e}")
 
+# Garante que a coluna plan existe na tabela users
+try:
+    with engine.connect() as conn:
+        conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS plan VARCHAR(20) DEFAULT 'basico';"))
+        conn.commit()
+        print("✅ Coluna plan verificada/adicionada com sucesso na tabela users.")
+except Exception as e:
+    print(f"⚠️ Erro ao verificar/adicionar coluna plan: {e}")
+
 
 # ==================== MODELOS (TABELAS) ====================
 
@@ -140,6 +149,7 @@ class User(Base):
     conditions = Column(Text, nullable=True)
     blood_type = Column(String(10), nullable=True)
     health_insurance = Column(String(100), nullable=True)
+    plan = Column(String(20), default="basico")  # basico | pro
 
 class Medication(Base):
     __tablename__ = "medications"
@@ -255,6 +265,7 @@ class UserResponse(BaseModel):
     email: str
     phone: Optional[str]
     is_active: bool
+    plan: Optional[str] = "basico"
     created_at: datetime
     model_config = ConfigDict(from_attributes=True)
 
@@ -560,7 +571,8 @@ async def cliente_login(credentials: dict, db: Session = Depends(get_db)):
             "id": str(user.id),
             "full_name": user.full_name,
             "email": user.email,
-            "phone": user.phone
+            "phone": user.phone,
+            "plan": user.plan or "basico"
         }
     }
 
@@ -581,6 +593,7 @@ async def get_clinical_info(user_id: str, db: Session = Depends(get_db)):
         "conditions": user.conditions,
         "blood_type": user.blood_type,
         "health_insurance": user.health_insurance,
+        "plan": user.plan or "basico",
         "full_name": user.full_name,
         "phone": user.phone,
         "email": user.email

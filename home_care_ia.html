@@ -388,6 +388,31 @@
             <section class="page" id="page-clinical">
                 <h2 class="page-title">🩺 Dados Clínicos</h2>
                 <p class="page-subtitle">Informações importantes para seu atendimento</p>
+
+                <!-- Plano Atual -->
+                <div id="plan-card" class="card" style="max-width:600px;margin-bottom:20px;border-color:rgba(0,212,255,0.3);">
+                    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;">
+                        <div>
+                            <div style="font-size:12px;color:var(--text-muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:4px;">Seu Plano</div>
+                            <div style="font-size:20px;font-weight:700;" id="plan-name-display">
+                                <span class="badge badge-info">Plano Básico</span>
+                            </div>
+                        </div>
+                        <div style="text-align:right;">
+                            <div style="font-size:13px;color:var(--text-muted);">Limites do plano:</div>
+                            <div style="font-size:14px;font-weight:600;margin-top:4px;" id="plan-limits-display">
+                                👤 1 Responsável · 👥 5 pessoas cuidadas
+                            </div>
+                        </div>
+                    </div>
+                    <div style="margin-top:16px;padding-top:16px;border-top:1px solid var(--border);">
+                        <p style="font-size:13px;color:var(--text-muted);margin-bottom:8px;">
+                            Precisa de mais? <a href="#" style="color:var(--accent);font-weight:600;" onclick="upgradePlan()">Faça upgrade para o Plano Pro</a>
+                            e gerencie até 10 pessoas cuidadas.
+                        </p>
+                    </div>
+                </div>
+
                 <div class="card" style="max-width:600px;">
                     <div class="form-group">
                         <label>Idade</label>
@@ -1050,6 +1075,23 @@ function renderClinicalInfo() {
     document.getElementById('clin-allergies').value = info.allergies || '';
     document.getElementById('clin-conditions').value = info.conditions || '';
     document.getElementById('clin-insurance').value = info.health_insurance || '';
+
+    // Plan info
+    const plan = state.user?.plan || 'basico';
+    const isPro = plan === 'pro';
+    const planNameEl = document.getElementById('plan-name-display');
+    const limitsEl = document.getElementById('plan-limits-display');
+    const planCard = document.getElementById('plan-card');
+
+    if (isPro) {
+        planCard.style.borderColor = 'rgba(0,200,83,0.4)';
+        planNameEl.innerHTML = '<span class="badge" style="background:rgba(0,200,83,0.15);color:var(--success);">⭐ Plano Pro</span>';
+        limitsEl.innerHTML = '👤 1 Responsável · 👥 10 pessoas cuidadas';
+    } else {
+        planCard.style.borderColor = 'rgba(0,212,255,0.3)';
+        planNameEl.innerHTML = '<span class="badge badge-info">🏠 Plano Básico</span>';
+        limitsEl.innerHTML = '👤 1 Responsável · 👥 5 pessoas cuidadas';
+    }
 }
 
 async function saveClinicalInfo() {
@@ -1068,6 +1110,21 @@ async function saveClinicalInfo() {
         state.clinicalInfo = body;
         toast('Dados clínicos salvos! 🩺');
     } catch(e) { toast(e.message, 'error'); }
+}
+
+// ═══════════════ PLAN UPGRADE ═══════════════
+function upgradePlan() {
+    if (state.user?.plan === 'pro') {
+        toast('Você já está no Plano Pro! ⭐', 'success');
+        return;
+    }
+    // Redireciona para o checkout ou abre modal de upgrade
+    if (confirm('Deseja fazer upgrade para o Plano Pro?\n\n⭐ 1 Responsável\n👥 Até 10 pessoas cuidadas\n🔊 OCR de receitas\n🎤 Reconhecimento de voz\n🔔 Áudio dos lembretes\n\nPor apenas R$49,90/mês')) {
+        // Por enquanto, atualiza localmente e mostra mensagem
+        state.user.plan = 'pro';
+        toast('Upgrade solicitado! Entre em contato para ativar. ⭐', 'success');
+        renderClinicalInfo();
+    }
 }
 
 // ═══════════════ MODAL HELPERS ═══════════════
