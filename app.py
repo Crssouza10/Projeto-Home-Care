@@ -402,10 +402,10 @@ async def global_exception_handler(request: Request, exc: Exception):
 
 # --- FRONTEND ---
 @app.get("/", response_class=HTMLResponse)
-async def serve_frontend():
-    html_file = Path(__file__).parent / "index.html"
+async def serve_landing():
+    html_file = Path(__file__).parent / "landing.html"
     if not html_file.exists():
-        return HTMLResponse(content="<h1>Erro: index.html não encontrado</h1>", status_code=500)
+        return HTMLResponse(content="<h1>Erro: landing.html não encontrado</h1>", status_code=500)
     return HTMLResponse(content=html_file.read_text(encoding="utf-8"))
 
 @app.get("/dashboard", response_class=HTMLResponse)
@@ -420,6 +420,13 @@ async def serve_dashboard_cliente():
     html_file = Path(__file__).parent / "dashboard_cliente.html"
     if not html_file.exists():
         return HTMLResponse(content="<h1>Erro: dashboard_cliente.html não encontrado</h1>", status_code=500)
+    return HTMLResponse(content=html_file.read_text(encoding="utf-8"))
+
+@app.get("/ia", response_class=HTMLResponse)
+async def serve_home_care_ia():
+    html_file = Path(__file__).parent / "home_care_ia.html"
+    if not html_file.exists():
+        return HTMLResponse(content="<h1>Erro: home_care_ia.html não encontrado</h1>", status_code=500)
     return HTMLResponse(content=html_file.read_text(encoding="utf-8"))
 
 # --- HEALTH CHECK ---
