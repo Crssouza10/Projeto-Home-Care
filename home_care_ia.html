@@ -1000,6 +1000,15 @@ async function saveResponsible() {
 
     if (!name || !relationship || !phone) { toast('Preencha todos os campos.', 'error'); return; }
 
+    // Verifica limite do plano
+    const plan = state.user?.plan || 'basico';
+    const maxResp = plan === 'pro' ? 2 : 1;
+    const currentCount = state.responsibles.length;
+    if (currentCount >= maxResp) {
+        toast(`Limite atingido: plano ${plan.toUpperCase()} permite apenas ${maxResp} responsável(is).`, 'error');
+        return;
+    }
+
     try {
         const resp = await fetch(`${API}/api/cliente/${state.user.id}/responsibles`, {
             method:'POST', headers:{'Content-Type':'application/json'},
@@ -1086,7 +1095,7 @@ function renderClinicalInfo() {
     if (isPro) {
         planCard.style.borderColor = 'rgba(0,200,83,0.4)';
         planNameEl.innerHTML = '<span class="badge" style="background:rgba(0,200,83,0.15);color:var(--success);">⭐ Plano Pro</span>';
-        limitsEl.innerHTML = '👤 1 Responsável · 👥 10 pessoas cuidadas';
+        limitsEl.innerHTML = '👤 2 Responsáveis · 👥 10 pessoas cuidadas';
     } else {
         planCard.style.borderColor = 'rgba(0,212,255,0.3)';
         planNameEl.innerHTML = '<span class="badge badge-info">🏠 Plano Básico</span>';
@@ -1119,7 +1128,7 @@ function upgradePlan() {
         return;
     }
     // Redireciona para o checkout ou abre modal de upgrade
-    if (confirm('Deseja fazer upgrade para o Plano Pro?\n\n⭐ 1 Responsável\n👥 Até 10 pessoas cuidadas\n🔊 OCR de receitas\n🎤 Reconhecimento de voz\n🔔 Áudio dos lembretes\n\nPor apenas R$49,90/mês')) {
+    if (confirm('Deseja fazer upgrade para o Plano Pro?\n\n⭐ 2 Responsáveis\n👥 Até 10 pessoas cuidadas\n🔊 OCR de receitas\n🎤 Reconhecimento de voz\n🔔 Áudio dos lembretes\n\nPor apenas R$49,90/mês')) {
         // Por enquanto, atualiza localmente e mostra mensagem
         state.user.plan = 'pro';
         toast('Upgrade solicitado! Entre em contato para ativar. ⭐', 'success');

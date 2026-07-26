@@ -1017,6 +1017,18 @@ async def create_responsible(user_id: str, resp: ResponsibleCreate, db: Session 
     except ValueError:
         raise HTTPException(status_code=400, detail="ID de usuário inválido")
     
+    # Verifica limite de responsáveis por plano
+    user = db.query(User).filter(User.id == user_uuid).first()
+    if user:
+        plan = user.plan or 'basico'
+        max_resp = 2 if plan == 'pro' else 1
+        current = db.query(Responsible).filter(Responsible.user_id == user_uuid).count()
+        if current >= max_resp:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Limite atingido: plano {plan.upper()} permite no máximo {max_resp} responsável(is). Você já possui {current}."
+            )
+    
     novo_resp = Responsible(
         user_id=user_uuid,
         name=resp.name,
