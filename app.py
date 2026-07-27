@@ -626,6 +626,7 @@ async def cliente_login(credentials: dict, db: Session = Depends(get_db)):
     if not username or not password:
         raise HTTPException(status_code=400, detail="Usuário e senha obrigatórios")
     
+    # 1. Tenta buscar o usuário direto
     user = db.query(User).filter(
         or_(
             User.full_name.ilike(f"%{username}%"),
@@ -634,6 +635,17 @@ async def cliente_login(credentials: dict, db: Session = Depends(get_db)):
         ),
         User.is_active == True
     ).first()
+    
+    # 2. Se não encontrar, busca se o username pertence a um Responsável vinculado
+    if not user:
+        resp = db.query(Responsible).filter(
+            or_(
+                Responsible.name.ilike(f"%{username}%"),
+                Responsible.phone == username
+            )
+        ).first()
+        if resp:
+            user = db.query(User).filter(User.id == resp.user_id, User.is_active == True).first()
     
     if not user:
         raise HTTPException(status_code=401, detail="Usuário não encontrado")
