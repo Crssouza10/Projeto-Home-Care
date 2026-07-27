@@ -1721,6 +1721,27 @@
         <!-- ============================================ -->
         <script>
             // ============================================
+            // 🔗 AUTO-LOGIN CROSS-DOMAIN (landing page → dashboard)
+            // ============================================
+            (function() {
+                const params = new URLSearchParams(window.location.search);
+                const userParam = params.get('user');
+                if (userParam) {
+                    try {
+                        const user = JSON.parse(decodeURIComponent(userParam));
+                        if (user && user.id && user.full_name) {
+                            localStorage.setItem('userId', user.id);
+                            localStorage.setItem('currentUser', JSON.stringify(user));
+                            sessionStorage.setItem('hc_user', JSON.stringify(user));
+                            // Limpa URL sem recarregar
+                            window.history.replaceState({}, document.title, window.location.pathname);
+                            console.log('🔗 Auto-login cross-domain: ' + user.full_name);
+                        }
+                    } catch(e) { console.error('Auto-login parse error:', e); }
+                }
+            })();
+
+            // ============================================
             // 🌍 CONFIGURAÇÃO DA API (PRIMEIRA COISA!)
             // ============================================
             const API_URL = window.location.hostname === 'localhost'
