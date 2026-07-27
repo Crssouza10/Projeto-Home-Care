@@ -972,9 +972,32 @@ async def serve_audio(medication: str = "Seu medicamento", dosage: str = "confor
 # 💊 CRUD MEDICAÇÕES
 # =========================================================
 
+def marcar_nao_tomados_fim_do_dia(db: Session):
+    """
+    Busca agendamentos passados (scheduled_date < hoje) que ainda estejam pendentes
+    e os marca como não tomados ('not_taken').
+    """
+    from datetime import timezone, timedelta
+    brasilia_tz = timezone(timedelta(hours=-3))
+    hoje = datetime.now(brasilia_tz).date()
+    try:
+        expired = db.query(MedicationSchedule).filter(
+            MedicationSchedule.scheduled_date < hoje,
+            MedicationSchedule.status == "pending"
+        ).all()
+        if expired:
+            for sched in expired:
+                sched.status = "not_taken"
+            db.commit()
+            print(f"🧹 [CRON/API] {len(expired)} doses expiradas marcadas como 'not_taken'")
+    except Exception as e:
+        db.rollback()
+        print(f"⚠️ Erro ao marcar não tomados ao fim do dia: {e}")
+
 @app.get("/api/cliente/{user_id}/medications", response_model=List[ClienteMedicationResponse])
 async def get_client_medications(user_id: str, date: str = None, db: Session = Depends(get_db)):
     """Lista medicamentos com schedules de uma data específica (ou hoje, se não informada)"""
+    marcar_nao_tomados_fim_do_dia(db)
     try:
         user_uuid = uuid.UUID(user_id)
     except ValueError:
@@ -2586,6 +2609,7 @@ async def check_reminders(db: Session = Depends(get_db)):
     
     # Executa também a verificação de relatórios diários
     verificar_e_enviar_relatorios(db)
+    marcar_nao_tomados_fim_do_dia(db)
     
     try:
         brasilia_tz = timezone(timedelta(hours=-3))
@@ -3470,6 +3494,7 @@ def verificar_medicamentos_sincrono():
     try:
         # Executa também a verificação de relatórios diários
         verificar_e_enviar_relatorios(db)
+        marcar_nao_tomados_fim_do_dia(db)
         
         agora = datetime.now()
         hora_atual = agora.strftime("%H:%M")
