@@ -1,4 +1,11 @@
-# ===== versão 1.04 - 2026-06-02 ================================
+# ===== versão 2.3.6 - 2026-07-16 ================================
+# Correções:
+# - GET /api/cliente/{user_id}/medications agora aceita ?date=YYYY-MM-DD
+# - Frontend busca horários reais da data visualizada (não só de hoje)
+# - Independência real dos dias: editar horário dia 15 NÃO afeta dia 16
+# - Visualização nativa de PDFs (Documentos e Carteirinha) via rotas HTTP inline
+# - Fuso horário estrito de Brasília (UTC-3) para mitigar vazamentos de data do servidor
+# - Correções de erros JavaScript de escopo e constante na renderização do frontend
 import sys
 # Garante codificação UTF-8 para evitar erros de unicode no console (especialmente no Windows)
 if sys.platform.startswith('win'):
@@ -10,15 +17,12 @@ if sys.platform.startswith('win'):
 
 from fastapi import FastAPI, HTTPException, Depends, status, Request, File, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import HTMLResponse, JSONResponse, FileResponse, StreamingResponse
+from fastapi.responses import HTMLResponse, JSONResponse, FileResponse, StreamingResponse, Response
 from fastapi.staticfiles import StaticFiles  # ✅ IMPORTAÇÃO CRÍTICA!
 from sqlalchemy import create_engine, Column, String, DateTime, Boolean, Time, Date, Text, or_, Integer, text
 from sqlalchemy.orm import sessionmaker, declarative_base, Session
 from sqlalchemy.dialects.postgresql import UUID, JSONB
 from fastapi.middleware.cors import CORSMiddleware
-from sqlalchemy import create_engine
-from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import sessionmaker
 from pydantic import BaseModel, EmailStr, ConfigDict
 from typing import Optional, List
 from datetime import datetime, time, date, timedelta, timezone
@@ -43,6 +47,8 @@ from sqlalchemy import Column, String, Text, JSON, DateTime, ForeignKey
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.sql import func
 import uuid
+# scheduler_engine - motor de recorrência (regras 5a-5d)
+from scheduler_engine import generate_medication_schedules, get_schedule_summary, is_review_needed, get_review_date
 # pytesseract e PIL
 try:
     import pytesseract
@@ -60,13 +66,13 @@ if IS_VERCEL:
     sys.path.append(os.getcwd())
 
 # Carrega variáveis de ambiente ANTES de usar
-load_dotenv()
+load_dotenv(override=True)
 
 # ===== CRIAÇÃO DO APP (APENAS UMA VEZ) =====
 app = FastAPI(
     title="CR$ HOME CARE AI",
     description="Sistema de Cuidado Domiciliar Inteligente",
-    version="1.0.4"
+    version="1.0.5"
 )
 
 # ===== CORS =====
@@ -78,8 +84,10 @@ app.add_middleware(
 )
 
 # ===== ARQUIVOS ESTÁTICOS =====
-os.makedirs("static/audio", exist_ok=True)
-app.mount("/static", StaticFiles(directory="static"), name="static")
+# Na Vercel, filesystem é read-only — estáticos são servidos pelo próprio deploy
+if not IS_VERCEL:
+    os.makedirs("static/audio", exist_ok=True)
+    app.mount("/static", StaticFiles(directory="static"), name="static")
 
 # ===== BANCO DE DADOS =====
 DATABASE_URL = os.getenv("DATABASE_URL")
@@ -113,6 +121,9 @@ try:
         conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS conditions TEXT;"))
         conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS blood_type VARCHAR(10);"))
         conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS health_insurance VARCHAR(100);"))
+        conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS health_insurance_card TEXT;"))
+        conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS identity_document VARCHAR(100);"))
+        conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS identity_document_file TEXT;"))
         conn.commit()
         print("✅ Colunas clínicas adicionadas/verificadas com sucesso na tabela users.")
 except Exception as e:
@@ -126,6 +137,29 @@ try:
         print("✅ Coluna plan verificada/adicionada com sucesso na tabela users.")
 except Exception as e:
     print(f"⚠️ Erro ao verificar/adicionar coluna plan: {e}")
+
+# Garante que a tabela medication_schedules existe
+try:
+    with engine.connect() as conn:
+        conn.execute(text("""
+            CREATE TABLE IF NOT EXISTS medication_schedules (
+                id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+                medication_id UUID NOT NULL,
+                user_id UUID NOT NULL,
+                scheduled_date DATE NOT NULL,
+                scheduled_time TIME NOT NULL,
+                status VARCHAR(20) DEFAULT 'pending',
+                confirmed_at TIMESTAMP,
+                created_at TIMESTAMP DEFAULT NOW()
+            );
+            CREATE INDEX IF NOT EXISTS idx_schedules_med_id ON medication_schedules(medication_id);
+            CREATE INDEX IF NOT EXISTS idx_schedules_user_id ON medication_schedules(user_id);
+            CREATE INDEX IF NOT EXISTS idx_schedules_date ON medication_schedules(scheduled_date);
+        """))
+        conn.commit()
+        print("✅ Tabela medication_schedules verificada/criada com sucesso.")
+except Exception as e:
+    print(f"⚠️ Erro ao verificar/criar tabela medication_schedules: {e}")
 
 
 # ==================== MODELOS (TABELAS) ====================
@@ -149,6 +183,10 @@ class User(Base):
     blood_type = Column(String(10), nullable=True)
     health_insurance = Column(String(100), nullable=True)
     plan = Column(String(20), default="basico")  # basico | pro
+    health_insurance_card = Column(Text, nullable=True)
+    identity_document = Column(String(100), nullable=True)
+    identity_document_file = Column(Text, nullable=True)
+    report_time = Column(String(5), nullable=True)
 
 class Medication(Base):
     __tablename__ = "medications"
@@ -161,6 +199,8 @@ class Medication(Base):
     days_of_week = Column(JSONB, default=[0,1,2,3,4,5,6])
     is_active = Column(Boolean, default=True)
     is_continuous = Column(Boolean, default=False)
+    continuous_months = Column(Integer, default=6)
+    start_date = Column(String(10), nullable=True)  # "YYYY-MM-DD" data de início do tratamento
     created_at = Column(DateTime, default=datetime.utcnow)
     end_date = Column(String(10), nullable=True)  # "YYYY-MM-DD" ou use Date
     
@@ -250,6 +290,22 @@ class EmergencyContact(Base):
     notes = Column(Text, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)  # ou datetime.utcnow se mudar o import
 
+
+# ==================== NOVO MODELO: MedicationSchedule ====================
+# Armazena cada ocorrência individual de um medicamento (suporte às regras 5a-5d)
+class MedicationSchedule(Base):
+    __tablename__ = "medication_schedules"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    medication_id = Column(UUID(as_uuid=True), nullable=False, index=True)
+    user_id = Column(UUID(as_uuid=True), nullable=False, index=True)
+    scheduled_date = Column(Date, nullable=False)
+    scheduled_time = Column(Time, nullable=False)
+    status = Column(String(20), default="pending")  # pending, taken, skipped, cancelled
+    confirmed_at = Column(DateTime, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+
 # ==================== PYDANTIC SCHEMAS ====================
 
 class UserCreate(BaseModel):
@@ -274,6 +330,10 @@ class ClinicalInfoUpdate(BaseModel):
     conditions: Optional[str] = None
     blood_type: Optional[str] = None
     health_insurance: Optional[str] = None
+    health_insurance_card: Optional[str] = None
+    identity_document: Optional[str] = None
+    identity_document_file: Optional[str] = None
+    report_time: Optional[str] = None
 
 class MedicationCreate(BaseModel):
     user_id: uuid.UUID
@@ -282,6 +342,7 @@ class MedicationCreate(BaseModel):
     time: str
     days_of_week: List[int] = [0,1,2,3,4,5,6]
     is_continuous: bool = False
+    continuous_months: int = 6
     duration_days: Optional[int] = None
     end_date: Optional[str] = None
     start_date: Optional[str] = None
@@ -339,8 +400,14 @@ class ClienteMedicationResponse(BaseModel):
     days_of_week: list
     taken_status: Optional[str] = "pending"
     is_active: Optional[bool] = True
+    is_continuous: Optional[bool] = False
+    start_date: Optional[str] = None
+    created_at: Optional[str] = None
+    end_date: Optional[str] = None
     last_taken_date: Optional[date] = None
     box_image: Optional[str] = None
+    is_review_needed: Optional[bool] = False
+    review_date: Optional[str] = None
     model_config = ConfigDict(from_attributes=True)
 
 class ClienteAppointmentResponse(BaseModel):
@@ -370,6 +437,19 @@ class EmergencyContactCreate(BaseModel):
     email: Optional[str] = None
     notes: Optional[str] = None
     model_config = ConfigDict(from_attributes=True)
+
+class ChatRequest(BaseModel):
+    user_id: str
+    message: str
+    history: list = []
+
+class ForgotPasswordRequest(BaseModel):
+    contact: str
+
+class PushSubscriptionCreate(BaseModel):
+    user_id: str
+    endpoint: str
+    keys: dict
 
 
 
@@ -492,38 +572,35 @@ async def get_medication_history(user_id: str, date: str, db: Session = Depends(
         
         print(f"✅ {len(medications)} medicamentos encontrados")
         
-        # ✅ CORREÇÃO: Usa scheduled_datetime e confirmed_at (nomes corretos!)
-        logs_query = text("""
-            SELECT medication_id, status, confirmed_at
-            FROM medication_logs
-            WHERE user_id = :user_id
-            AND CAST(scheduled_datetime AS DATE) = :target_date
-        """)
-        logs_result = db.execute(logs_query, {
-            "user_id": user_uuid,
-            "target_date": target_date
-        })
-        
-        logs_dict = {}
-        for log in logs_result:
-            logs_dict[str(log[0])] = {
-                "status": log[1],
-                "actual_time": log[2].strftime("%H:%M") if log[2] else None
-            }
+        # Busca os schedules do dia na tabela MedicationSchedule
+        schedules = db.query(MedicationSchedule).filter(
+            MedicationSchedule.user_id == user_uuid,
+            MedicationSchedule.scheduled_date == target_date
+        ).all()
+        schedules_by_med = {s.medication_id: s for s in schedules}
         
         resultado = []
         for med in medications:
             med_id = str(med.id)
-            log = logs_dict.get(med_id, {})
+            sched = schedules_by_med.get(med.id)
+            if sched:
+                status = sched.status
+                med_time = sched.scheduled_time
+                confirmed_at = sched.confirmed_at
+            else:
+                # Fallback seguro para o caso de não haver schedule criado para essa data
+                status = "pending"
+                med_time = med.time
+                confirmed_at = None
             
             resultado.append({
                 "id": med_id,
                 "name": med.name,
                 "dosage": med.dosage,
-                "time": med.time.strftime("%H:%M") if med.time else None,
+                "time": med_time.strftime("%H:%M") if med_time else None,
                 "days_of_week": med.days_of_week or [],
-                "taken_status": log.get("status", "pending"),
-                "taken_time": log.get("actual_time"),
+                "taken_status": status,
+                "taken_time": confirmed_at.strftime("%H:%M") if confirmed_at else None,
                 "created_at": med.created_at.strftime("%Y-%m-%d") if med.created_at else None,
                 "end_date": med.end_date,
                 "is_history": True,
@@ -552,7 +629,8 @@ async def cliente_login(credentials: dict, db: Session = Depends(get_db)):
     user = db.query(User).filter(
         or_(
             User.full_name.ilike(f"%{username}%"),
-            User.phone == username
+            User.phone == username,
+            User.email == username
         ),
         User.is_active == True
     ).first()
@@ -593,6 +671,10 @@ async def get_clinical_info(user_id: str, db: Session = Depends(get_db)):
         "blood_type": user.blood_type,
         "health_insurance": user.health_insurance,
         "plan": user.plan or "basico",
+        "health_insurance_card": user.health_insurance_card,
+        "identity_document": user.identity_document,
+        "identity_document_file": user.identity_document_file,
+        "report_time": user.report_time,
         "full_name": user.full_name,
         "phone": user.phone,
         "email": user.email
@@ -614,12 +696,230 @@ async def update_clinical_info(user_id: str, info: ClinicalInfoUpdate, db: Sessi
     user.conditions = info.conditions
     user.blood_type = info.blood_type
     user.health_insurance = info.health_insurance
+    user.health_insurance_card = info.health_insurance_card
+    user.identity_document = info.identity_document
+    user.identity_document_file = info.identity_document_file
+    user.report_time = info.report_time
     db.commit()
     
     return {
         "status": "success",
         "message": "Informações clínicas atualizadas com sucesso"
     }
+
+@app.post("/api/cliente/{user_id}/send-documents-email")
+async def send_documents_email(user_id: str, payload: dict, db: Session = Depends(get_db)):
+    """Envia os documentos do usuário (Identidade e Carteirinha) por e-mail"""
+    try:
+        user_uuid = uuid.UUID(user_id)
+        user = db.query(User).filter(User.id == user_uuid).first()
+        if not user:
+            raise HTTPException(status_code=404, detail="Usuário não encontrado")
+            
+        destinatario = payload.get("email", "").strip()
+        if not destinatario:
+            raise HTTPException(status_code=400, detail="E-mail destinatário é obrigatório")
+            
+        # SMTP Config
+        smtp_server = os.getenv("SMTP_SERVER", "smtp.gmail.com")
+        smtp_port_str = os.getenv("SMTP_PORT", "465")
+        smtp_username = os.getenv("SMTP_USERNAME")
+        smtp_password = os.getenv("SMTP_PASSWORD")
+        
+        is_mock = not smtp_username or not smtp_password
+        
+        # Cria a mensagem
+        from email.mime.multipart import MIMEMultipart
+        from email.mime.text import MIMEText
+        from email.mime.base import MIMEBase
+        from email import encoders
+        import base64
+        
+        msg = MIMEMultipart()
+        msg['From'] = smtp_username if smtp_username else "sistema@homecare.com.br"
+        msg['To'] = destinatario
+        msg['Subject'] = f"📋 Documentos Médicos/Identificação - Paciente: {user.full_name}"
+        
+        corpo = (
+            f"Olá,\n\n"
+            f"Seguem em anexo os documentos de identificação e carteirinha do plano de saúde referentes ao paciente {user.full_name}.\n\n"
+            f"Este e-mail foi gerado automaticamente pelo aplicativo CR$ Home Care AI.\n"
+        )
+        msg.attach(MIMEText(corpo, 'plain'))
+        
+        attachments_info = []
+        
+        # Função auxiliar para anexar arquivos base64
+        def anexar_base64(data_uri, default_filename):
+            if not data_uri or not data_uri.startswith("data:"):
+                return False
+            try:
+                header, base64_data = data_uri.split(",", 1)
+                mime_type = header.split(";")[0].split(":")[1]
+                file_bytes = base64.b64decode(base64_data)
+                
+                # Identifica extensão
+                ext = ".jpg"
+                if "pdf" in mime_type:
+                    ext = ".pdf"
+                elif "png" in mime_type:
+                    ext = ".png"
+                elif "gif" in mime_type:
+                    ext = ".gif"
+                    
+                filename = default_filename + ext
+                
+                part = MIMEBase('application', 'octet-stream')
+                part.set_payload(file_bytes)
+                encoders.encode_base64(part)
+                part.add_header('Content-Disposition', f'attachment; filename="{filename}"')
+                msg.attach(part)
+                attachments_info.append(filename)
+                return True
+            except Exception as e:
+                print(f"⚠️ Erro ao anexar {default_filename}: {e}")
+                return False
+                
+        # Anexa os arquivos
+        anexou_id = anexar_base64(user.identity_document_file, "documento_identidade")
+        anexou_card = anexar_base64(user.health_insurance_card, "carteirinha_plano")
+        
+        if not anexou_id and not anexou_card:
+            raise HTTPException(status_code=400, detail="O usuário não possui nenhum documento cadastrado para envio.")
+            
+        if is_mock:
+            # Em modo de desenvolvimento/mock
+            print(f"📨 [SMTP MOCK] Envio de e-mail simulado com sucesso!")
+            print(f"   Destinatário: {destinatario}")
+            print(f"   Assunto: {msg['Subject']}")
+            print(f"   Anexos: {', '.join(attachments_info)}")
+            return {
+                "status": "mock",
+                "message": "Simulação de envio concluída com sucesso! (SMTP não configurado no .env)"
+            }
+            
+        # Envio SMTP real
+        import smtplib
+        try:
+            port = int(smtp_port_str)
+            if port == 465:
+                # SSL
+                server = smtplib.SMTP_SSL(smtp_server, port)
+            else:
+                # STARTTLS
+                server = smtplib.SMTP(smtp_server, port)
+                server.starttls()
+                
+            server.login(smtp_username, smtp_password)
+            server.sendmail(msg['From'], destinatario, msg.as_string())
+            server.quit()
+            
+            print(f"✅ E-mail de documentos enviado com sucesso para {destinatario}")
+            return {
+                "status": "success",
+                "message": "E-mail enviado com sucesso!"
+            }
+        except Exception as smtp_err:
+            print(f"❌ Erro na conexao SMTP: {smtp_err}")
+            raise HTTPException(status_code=502, detail=f"Erro ao conectar com servidor de e-mail SMTP: {str(smtp_err)}")
+            
+    except HTTPException as http_ex:
+        raise http_ex
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/cliente/{user_id}/view-document")
+async def view_document(user_id: str, db: Session = Depends(get_db)):
+    try:
+        user_uuid = uuid.UUID(user_id)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="ID de usuário inválido")
+    
+    user = db.query(User).filter(User.id == user_uuid).first()
+    if not user or not user.identity_document_file:
+        raise HTTPException(status_code=404, detail="Documento não encontrado")
+    
+    file_data = user.identity_document_file
+    if file_data.startswith("data:"):
+        try:
+            header, encoded = file_data.split(",", 1)
+            mime_type = header.split(";")[0].split(":")[1]
+            import base64
+            decoded = base64.b64decode(encoded)
+            headers = {}
+            if mime_type == "application/pdf":
+                headers["Content-Disposition"] = "inline; filename=documento.pdf"
+            return Response(content=decoded, media_type=mime_type, headers=headers)
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=f"Erro ao processar documento: {str(e)}")
+    else:
+        if file_data.startswith("http"):
+            from fastapi.responses import RedirectResponse
+            return RedirectResponse(url=file_data)
+        else:
+            import os
+            filepath = os.path.join("static/uploads", os.path.basename(file_data))
+            if not os.path.exists(filepath):
+                filepath = file_data
+            if os.path.exists(filepath):
+                media_type = "application/octet-stream"
+                if filepath.lower().endswith(".pdf"):
+                    media_type = "application/pdf"
+                elif filepath.lower().endswith((".png", ".jpg", ".jpeg", ".gif", ".webp")):
+                    media_type = f"image/{filepath.split('.')[-1].lower().replace('jpg', 'jpeg')}"
+                headers = {}
+                if media_type == "application/pdf":
+                    headers["Content-Disposition"] = "inline; filename=" + os.path.basename(filepath)
+                return FileResponse(filepath, media_type=media_type, headers=headers)
+            raise HTTPException(status_code=404, detail="Arquivo local não encontrado")
+
+@app.get("/api/cliente/{user_id}/view-insurance")
+async def view_insurance(user_id: str, db: Session = Depends(get_db)):
+    try:
+        user_uuid = uuid.UUID(user_id)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="ID de usuário inválido")
+    
+    user = db.query(User).filter(User.id == user_uuid).first()
+    if not user or not user.health_insurance_card:
+        raise HTTPException(status_code=404, detail="Carteirinha não encontrada")
+    
+    file_data = user.health_insurance_card
+    if file_data.startswith("data:"):
+        try:
+            header, encoded = file_data.split(",", 1)
+            mime_type = header.split(";")[0].split(":")[1]
+            import base64
+            decoded = base64.b64decode(encoded)
+            headers = {}
+            if mime_type == "application/pdf":
+                headers["Content-Disposition"] = "inline; filename=carteirinha.pdf"
+            return Response(content=decoded, media_type=mime_type, headers=headers)
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=f"Erro ao processar carteirinha: {str(e)}")
+    else:
+        if file_data.startswith("http"):
+            from fastapi.responses import RedirectResponse
+            return RedirectResponse(url=file_data)
+        else:
+            import os
+            filepath = os.path.join("static/uploads", os.path.basename(file_data))
+            if not os.path.exists(filepath):
+                filepath = file_data
+            if os.path.exists(filepath):
+                media_type = "application/octet-stream"
+                if filepath.lower().endswith(".pdf"):
+                    media_type = "application/pdf"
+                elif filepath.lower().endswith((".png", ".jpg", ".jpeg", ".gif", ".webp")):
+                    media_type = f"image/{filepath.split('.')[-1].lower().replace('jpg', 'jpeg')}"
+                headers = {}
+                if media_type == "application/pdf":
+                    headers["Content-Disposition"] = "inline; filename=" + os.path.basename(filepath)
+                return FileResponse(filepath, media_type=media_type, headers=headers)
+            raise HTTPException(status_code=404, detail="Arquivo local não encontrado")
+
 
 # ========================================================
 # NOVA ROTA: Gerar Áudio TTS (Sem Google Cloud Key!)
@@ -673,44 +973,78 @@ async def serve_audio(medication: str = "Seu medicamento", dosage: str = "confor
 # =========================================================
 
 @app.get("/api/cliente/{user_id}/medications", response_model=List[ClienteMedicationResponse])
-async def get_client_medications(user_id: str, db: Session = Depends(get_db)):
+async def get_client_medications(user_id: str, date: str = None, db: Session = Depends(get_db)):
+    """Lista medicamentos com schedules de uma data específica (ou hoje, se não informada)"""
     try:
         user_uuid = uuid.UUID(user_id)
     except ValueError:
         raise HTTPException(status_code=400, detail="ID de usuário inválido")
     
-    today_str = datetime.now().strftime("%Y-%m-%d")
+    brasilia_tz = timezone(timedelta(hours=-3))
+    # ⚙️ v2.3.4: Aceita ?date=YYYY-MM-DD para consultar schedules de qualquer dia
+    if date:
+        try:
+            target_date = datetime.strptime(date, "%Y-%m-%d").date()
+        except ValueError:
+            raise HTTPException(status_code=400, detail="Formato de data inválido. Use YYYY-MM-DD")
+    else:
+        target_date = datetime.now(brasilia_tz).date()
+    
+    today_str = datetime.now(brasilia_tz).strftime("%Y-%m-%d")
+    target_str = target_date.strftime("%Y-%m-%d")
+    
     medications = db.query(Medication).filter(
         Medication.user_id == user_uuid,
         Medication.is_active == True,
         or_(
             Medication.end_date == None,
-            Medication.end_date >= today_str
+            Medication.end_date >= target_str
         )
     ).all()
     
+    # Busca schedules da DATA ALVO (não sempre hoje!)
+    schedules = db.query(MedicationSchedule).filter(
+        MedicationSchedule.user_id == user_uuid,
+        MedicationSchedule.scheduled_date == target_date
+    ).all()
+    schedules_by_med = {s.medication_id: s for s in schedules}
+    
     resultado = []
-    today_date = datetime.now().date()
     
     for med in medications:
-        status = med.taken_status
-        # Se foi tomado em um dia anterior, resetamos para pending na resposta
-        if status == 'taken' and med.last_taken_date != today_date:
-            status = 'pending'
+        sched = schedules_by_med.get(med.id)
+        if sched:
+            status = sched.status
+            med_time = sched.scheduled_time
+        else:
+            # Fallback: usa medication.time do template (horário padrão)
+            status = "pending"
+            med_time = med.time
             
         resultado.append({
             "id": str(med.id),
             "name": med.name,
             "dosage": med.dosage,
-            "time": med.time.strftime('%H:%M') if med.time else None,
-            "periodo": _get_periodo(med.time),
+            "time": med_time.strftime('%H:%M') if med_time else None,
+            "periodo": _get_periodo(med_time),
             "days_of_week": med.days_of_week if med.days_of_week is not None else [],
             "taken_status": status,
             "is_active": med.is_active,
+            "is_continuous": med.is_continuous,
+            "start_date": med.start_date,
             "created_at": med.created_at.strftime("%Y-%m-%d") if med.created_at else None,
-            "end_date": med.end_date,
+            "end_date": med.end_date.isoformat() if hasattr(med.end_date, 'isoformat') else (str(med.end_date) if med.end_date else None),
             "last_taken_date": med.last_taken_date.isoformat() if med.last_taken_date else None,
-            "box_image": med.box_image
+            "box_image": med.box_image,
+            # Revisão para medicamentos contínuos
+            "is_review_needed": is_review_needed(
+                datetime.strptime(med.start_date, "%Y-%m-%d").date(),
+                med.continuous_months
+            ) if med.is_continuous and med.start_date else False,
+            "review_date": get_review_date(
+                datetime.strptime(med.start_date, "%Y-%m-%d").date(),
+                med.continuous_months
+            ).isoformat() if med.is_continuous and med.start_date else None,
         })
     
     return resultado
@@ -725,6 +1059,61 @@ def get_actual_start_date(start_date: date, days_of_week: list) -> date:
         if custom_day in days_of_week:
             return candidate
     return start_date
+
+# ===== DISTRIBUIÇÃO DE HORÁRIOS PARA EVITAR INTOXICAÇÃO (v2.3.1 - 30min) =====
+def distribute_time(user_id, preferred_time_str: str, db: Session, current_med_id=None) -> str:
+    """
+    Verifica se já existe medicamento ativo no mesmo horário para o usuário.
+    Se houver conflito, adiciona 15 minutos até encontrar horário livre.
+    
+    Regra de segurança: evita múltiplos medicamentos no mesmo minuto
+    para prevenir intoxicação por ingestão simultânea.
+    """
+    from datetime import timedelta
+    
+    try:
+        base_time = datetime.strptime(preferred_time_str, "%H:%M").time()
+    except ValueError:
+        return preferred_time_str  # Se não conseguir parsear, mantém original
+    
+    # Horário limite: não passar das 23:30
+    max_time = time(23, 30)
+    max_attempts = 8  # Máximo 4 horas de distribuição (8 × 30 min)
+    
+    check_time = base_time
+    for attempt in range(max_attempts):
+        # Consulta medicamentos ativos do usuário neste horário
+        # NOTA: Medication.time é tipo Time no banco, comparar com objeto time, não string
+        query = db.query(Medication).filter(
+            Medication.user_id == user_id,
+            Medication.time == check_time,
+            # Medicamento ativo: sem end_date OU end_date >= hoje
+            (Medication.end_date == None) | (Medication.end_date >= date.today().strftime("%Y-%m-%d"))
+        )
+        if current_med_id:
+            query = query.filter(Medication.id != current_med_id)
+        
+        existing = query.first()
+        
+        if not existing:
+            # Horário livre!
+            result_str = check_time.strftime("%H:%M")
+            if attempt > 0:
+                print(f"⏰ Horário {preferred_time_str} ocupado → ajustado para {result_str} (tentativa {attempt})")
+            return result_str
+        
+        # Avança 30 minutos
+        dummy_dt = datetime.combine(date.today(), check_time) + timedelta(minutes=30)
+        check_time = dummy_dt.time()
+        
+        # Se passou das 23:45, volta para o início da manhã seguinte
+        if check_time > max_time:
+            break
+    
+    # Se todos os horários estiverem ocupados, retorna o preferido mesmo assim
+    # (melhor que não criar o medicamento)
+    print(f"⚠️ Todos os horários ocupados para {preferred_time_str} — mantendo original")
+    return preferred_time_str
 
 @app.post("/api/cliente/{user_id}/medications", status_code=status.HTTP_201_CREATED)
 async def create_medication(user_id: str, med: MedicationCreate, db: Session = Depends(get_db)):
@@ -747,47 +1136,220 @@ async def create_medication(user_id: str, med: MedicationCreate, db: Session = D
     # 3. Calcular data final do tratamento
     end_date = None
     if hasattr(med, 'is_continuous') and med.is_continuous:
-        end_date = None
+        end_date = None  # Contínuo não tem data final
     elif hasattr(med, 'duration_days') and med.duration_days is not None and med.duration_days > 0:
         end_date = (actual_start + timedelta(days=med.duration_days - 1)).strftime("%Y-%m-%d")
     
+    # 4. 🛡️ Distribuir horário para evitar intoxicação (múltiplos medicamentos no mesmo horário)
+    adjusted_time = distribute_time(user_uuid, med.time, db)
+    
+    # 5. Criar o medicamento
     nova_med = Medication(
         user_id=user_uuid,
         name=med.name,
         dosage=med.dosage,
-        time=med.time,
+        time=adjusted_time,
         days_of_week=med.days_of_week,
         is_continuous=getattr(med, 'is_continuous', False),
+        continuous_months=getattr(med, 'continuous_months', 6),
+        start_date=actual_start.strftime("%Y-%m-%d"),
         end_date=end_date,
-        created_at=datetime.combine(actual_start, time(0, 0, 0)) # O tratamento inicia no primeiro dia de fato
+        created_at=datetime.combine(actual_start, time(0, 0, 0))
     )
     
     db.add(nova_med)
+    db.flush()  # Garante que nova_med.id esteja disponível
+    
+    # 6. ✅ NOVO: Gerar schedules automaticamente usando o scheduler_engine
+    time_obj = datetime.strptime(adjusted_time, "%H:%M").time() if isinstance(adjusted_time, str) else adjusted_time
+    schedules = generate_medication_schedules(
+        user_id=user_uuid,
+        medication_id=nova_med.id,
+        med_time=time_obj,
+        days_of_week=med.days_of_week if med.days_of_week else [0, 1, 2, 3, 4, 5, 6],
+        start_date=actual_start,
+        duration_days=getattr(med, 'duration_days', None),
+        is_continuous=getattr(med, 'is_continuous', False),
+    )
+    
+    # Inserir schedules no banco
+    for s in schedules:
+        db.add(MedicationSchedule(
+            medication_id=nova_med.id,
+            user_id=user_uuid,
+            scheduled_date=s["scheduled_date"],
+            scheduled_time=s["scheduled_time"],
+            status=s["status"],
+        ))
+    
     db.commit()
     db.refresh(nova_med)
     
-    return {"status": "sucesso", "id": str(nova_med.id)}
+    # Resumo para o frontend
+    summary = get_schedule_summary(schedules, med.days_of_week, actual_start, 
+                                   datetime.strptime(end_date, "%Y-%m-%d").date() if end_date else None)
+    
+    # Verifica se o horário foi ajustado
+    horario_ajustado = adjusted_time != med.time
+    
+    return {
+        "status": "sucesso",
+        "id": str(nova_med.id),
+        "schedules_gerados": len(schedules),
+        "resumo": summary,
+        "time": adjusted_time,
+        "time_original": med.time if horario_ajustado else None,
+        "horario_ajustado": horario_ajustado,
+        "aviso": f"⏰ Horário ajustado de {med.time} para {adjusted_time} para evitar intoxicação" if horario_ajustado else None,
+    }
 
 
 # =========================================================
 #  ROTAS DE ESTADO DO MEDICAMENTO (FLUXO DE 7 ESTADOS)
 # =========================================================
 
+# =========================================================
+# 📅 NOVAS ROTAS: MEDICATION SCHEDULES
+# =========================================================
+
+@app.get("/api/medications/{med_id}/schedules")
+async def get_medication_schedules(med_id: str, db: Session = Depends(get_db)):
+    """Lista todos os schedules de um medicamento (histórico completo)"""
+    try:
+        med_uuid = uuid.UUID(med_id)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="ID inválido")
+    
+    schedules = db.query(MedicationSchedule).filter(
+        MedicationSchedule.medication_id == med_uuid
+    ).order_by(MedicationSchedule.scheduled_date).all()
+    
+    return [{
+        "id": str(s.id),
+        "scheduled_date": s.scheduled_date.isoformat(),
+        "scheduled_time": s.scheduled_time.strftime("%H:%M"),
+        "status": s.status,
+        "confirmed_at": s.confirmed_at.isoformat() if s.confirmed_at else None,
+    } for s in schedules]
+
+
+@app.get("/api/medications/{med_id}/schedules/count")
+async def count_future_schedules(med_id: str, db: Session = Depends(get_db)):
+    """Conta quantos schedules futuros (hoje em diante) existem - para o modal de delete"""
+    try:
+        med_uuid = uuid.UUID(med_id)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="ID inválido")
+    
+    today = date.today()
+    
+    total = db.query(MedicationSchedule).filter(
+        MedicationSchedule.medication_id == med_uuid
+    ).count()
+    
+    past = db.query(MedicationSchedule).filter(
+        MedicationSchedule.medication_id == med_uuid,
+        MedicationSchedule.scheduled_date < today
+    ).count()
+    
+    future = db.query(MedicationSchedule).filter(
+        MedicationSchedule.medication_id == med_uuid,
+        MedicationSchedule.scheduled_date >= today
+    ).count()
+    
+    future_pending = db.query(MedicationSchedule).filter(
+        MedicationSchedule.medication_id == med_uuid,
+        MedicationSchedule.scheduled_date >= today,
+        MedicationSchedule.status == "pending"
+    ).count()
+    
+    return {
+        "total": total,
+        "passados": past,
+        "futuros": future,
+        "futuros_pendentes": future_pending,
+    }
+
+
+@app.post("/api/schedules/{schedule_id}/take")
+async def mark_schedule_taken(schedule_id: str, db: Session = Depends(get_db)):
+    """Marca um schedule específico como tomado (NOVO - por ocorrência)"""
+    try:
+        sched_uuid = uuid.UUID(schedule_id)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="ID inválido")
+    
+    sched = db.query(MedicationSchedule).filter(
+        MedicationSchedule.id == sched_uuid
+    ).first()
+    
+    if not sched:
+        raise HTTPException(status_code=404, detail="Schedule não encontrado")
+    
+    sched.status = "taken"
+    sched.confirmed_at = datetime.now()
+    
+    # Também atualiza o medication_log para compatibilidade
+    db.add(MedicationLog(
+        user_id=sched.user_id,
+        medication_id=sched.medication_id,
+        scheduled_datetime=datetime.combine(sched.scheduled_date, sched.scheduled_time),
+        status="taken",
+        confirmed_at=datetime.now(),
+    ))
+    
+    db.commit()
+    
+    return {"status": "success", "message": "✅ Registrado como tomado"}
+
 @app.post("/api/medications/{med_id}/take")
-async def mark_taken(med_id: str):
+async def mark_taken(med_id: str, date: Optional[str] = None):
     """Estado 3 ou 6: Marca como tomado e encerra monitoramento do dia"""
+    from datetime import timezone, timedelta
+    brasilia_tz = timezone(timedelta(hours=-3))
+    now_br = datetime.now(brasilia_tz)
+    if now_br.hour == 23 and now_br.minute == 59:
+        raise HTTPException(status_code=403, detail="Ações travadas às 23:59.")
+
     db = SessionLocal()
     try:
         med = db.query(Medication).filter(Medication.id == med_id).first()
         if not med: raise HTTPException(404, "Medicamento não encontrado")
         
-        med.taken_status = "taken"
-        med.last_taken_date = datetime.now().date()
-        med.reminder_count = 0
-        med.responsible_notified = False
+        if date:
+            try:
+                target_date = datetime.strptime(date, "%Y-%m-%d").date()
+            except ValueError:
+                raise HTTPException(status_code=400, detail="Formato de data inválido. Use YYYY-MM-DD")
+        else:
+            target_date = now_br.date()
         
-        if med.time:
-            sched_dt = datetime.combine(datetime.now().date(), med.time)
+        # Busca ou cria o schedule do dia especificado
+        sched = db.query(MedicationSchedule).filter(
+            MedicationSchedule.medication_id == med.id,
+            MedicationSchedule.scheduled_date == target_date
+        ).first()
+        
+        if not sched:
+            sched = MedicationSchedule(
+                medication_id=med.id,
+                user_id=med.user_id,
+                scheduled_date=target_date,
+                scheduled_time=med.time or time(0, 0),
+                status="taken",
+                confirmed_at=datetime.now()
+            )
+            db.add(sched)
+        else:
+            sched.status = "taken"
+            sched.confirmed_at = datetime.now()
+            
+        # ⚠️ NÃO atualiza med.taken_status — cada dia é independente!
+        # O status fica APENAS no MedicationSchedule (schedule do dia)
+        
+        use_time = sched.scheduled_time if sched else med.time
+        if use_time:
+            sched_dt = datetime.combine(target_date, use_time)
         else:
             sched_dt = datetime.now()
             
@@ -813,8 +1375,14 @@ async def mark_taken(med_id: str):
 # =========================================================
 
 @app.put("/api/medications/{med_id}/reschedule")
-async def reschedule_medication(med_id: str, new_time: str):
+async def reschedule_medication(med_id: str, new_time: str, date: Optional[str] = None):
     """Estado 4: Reagenda e muda status para aguardar novo horário"""
+    from datetime import timezone, timedelta
+    brasilia_tz = timezone(timedelta(hours=-3))
+    now_br = datetime.now(brasilia_tz)
+    if now_br.hour == 23 and now_br.minute == 59:
+        raise HTTPException(status_code=403, detail="Ações travadas às 23:59.")
+
     db = SessionLocal()
     try:
         med = db.query(Medication).filter(Medication.id == med_id).first()
@@ -824,7 +1392,34 @@ async def reschedule_medication(med_id: str, new_time: str):
         if not (0 <= h <= 23 and 0 <= m <= 59):
             raise ValueError("Horário inválido")
             
-        med.time = time(h, m)
+        if date:
+            try:
+                target_date = datetime.strptime(date, "%Y-%m-%d").date()
+            except ValueError:
+                raise HTTPException(status_code=400, detail="Formato de data inválido. Use YYYY-MM-DD")
+        else:
+            target_date = now_br.date()
+            
+        # Busca ou cria o schedule do dia especificado
+        sched = db.query(MedicationSchedule).filter(
+            MedicationSchedule.medication_id == med.id,
+            MedicationSchedule.scheduled_date == target_date
+        ).first()
+        
+        if not sched:
+            sched = MedicationSchedule(
+                medication_id=med.id,
+                user_id=med.user_id,
+                scheduled_date=target_date,
+                scheduled_time=time(h, m),
+                status="rescheduled"
+            )
+            db.add(sched)
+        else:
+            sched.scheduled_time = time(h, m)
+            sched.status = "rescheduled"
+            
+        # Não altera med.time do template global!
         med.taken_status = "rescheduled"
         med.reminder_count = 0
         db.commit()
@@ -837,19 +1432,53 @@ async def reschedule_medication(med_id: str, new_time: str):
         db.close()
 
 @app.post("/api/medications/{med_id}/not-taken")
-async def mark_not_taken(med_id: str):
+async def mark_not_taken(med_id: str, date: Optional[str] = None):
     """Estado 7: Não tomado no reagendamento -> Aciona responsável"""
+    from datetime import timezone, timedelta
+    brasilia_tz = timezone(timedelta(hours=-3))
+    now_br = datetime.now(brasilia_tz)
+    if now_br.hour == 23 and now_br.minute == 59:
+        raise HTTPException(status_code=403, detail="Ações travadas às 23:59.")
+
     db = SessionLocal()
     try:
         med = db.query(Medication).filter(Medication.id == med_id).first()
         if not med: raise HTTPException(404, "Medicamento não encontrado")
         
-        med.taken_status = "not_taken"
+        if date:
+            try:
+                target_date = datetime.strptime(date, "%Y-%m-%d").date()
+            except ValueError:
+                raise HTTPException(status_code=400, detail="Formato de data inválido. Use YYYY-MM-DD")
+        else:
+            target_date = now_br.date()
+        
+        # Busca ou cria o schedule do dia especificado
+        sched = db.query(MedicationSchedule).filter(
+            MedicationSchedule.medication_id == med.id,
+            MedicationSchedule.scheduled_date == target_date
+        ).first()
+        
+        if not sched:
+            sched = MedicationSchedule(
+                medication_id=med.id,
+                user_id=med.user_id,
+                scheduled_date=target_date,
+                scheduled_time=med.time or time(0, 0),
+                status="not_taken"
+            )
+            db.add(sched)
+        else:
+            sched.status = "not_taken"
+            
+        # ⚠️ NÃO atualiza med.taken_status — cada dia é independente!
+        # O status fica APENAS no MedicationSchedule (schedule do dia)
         med.responsible_notified = True
         med.reminder_count += 1
         
-        if med.time:
-            sched_dt = datetime.combine(datetime.now().date(), med.time)
+        use_time = sched.scheduled_time if sched else med.time
+        if use_time:
+            sched_dt = datetime.combine(target_date, use_time)
         else:
             sched_dt = datetime.now()
             
@@ -864,7 +1493,7 @@ async def mark_not_taken(med_id: str):
         db.add(new_log)
         db.commit()
         
-        #  Dispara notificação (assíncrono para não travar UI)
+        # Dispara notificação (assíncrono para não travar UI)
         asyncio.create_task(notify_responsible_async(med.id))
         
         return {"status": "success", "message": "❌ Não tomado. Responsável acionado."}
@@ -1291,10 +1920,24 @@ async def update_medication(
     if not medication:
         raise HTTPException(status_code=404, detail="Medicação não encontrada")
     
-    # Atualizar campos
+    # ⚙️ CORREÇÃO v2.3.4: Cada dia é independente.
+    # Ao editar um medicamento, NÃO alteramos o medication.time do template —
+    # apenas o schedule de HOJE. Isso garante que mudanças de horário feitas
+    # hoje não afetem os dias seguintes (amanhã mantém o horário original).
+    
+    h, m = map(int, med.time.split(":"))
+    med_time_obj = time(h, m)
+    
+    # ✅ Campos de identidade (nome, dosagem) são permanentes e afetam todos os dias
     medication.name = med.name
     medication.dosage = med.dosage
-    medication.time = med.time
+    
+    # ⚠️ NÃO alterar medication.time — dias futuros mantêm o horário original!
+    # medication.time permanece como estava (o template original)
+    # O novo horário (med_time_obj) será aplicado APENAS no schedule de hoje
+    
+    # days_of_week pode mudar? Sim — se o usuário adicionar/remover dias, 
+    # isso afeta a recorrência futura. Mantemos a atualização.
     medication.days_of_week = med.days_of_week
     
     start_dt = medication.created_at.date() if medication.created_at else date.today()
@@ -1317,21 +1960,100 @@ async def update_medication(
         medication.end_date = None
         medication.is_continuous = False
     
-    # Ao editar, resetar o status para garantir que o alarme toque caso o horário mude
+    # Limpa flags globais de status do dia — NÃO devem poluir dias futuros
     medication.taken_status = "pending"
     medication.last_taken_date = None
     medication.reminder_count = 0
     medication.responsible_notified = False
     
+    # ⚙️ ATUALIZA APENAS O SCHEDULE DE HOJE (os dias não se relacionam)
+    today = date.today()
+    sched = db.query(MedicationSchedule).filter(
+        MedicationSchedule.medication_id == medication.id,
+        MedicationSchedule.scheduled_date == today
+    ).first()
+    
+    if not sched:
+        # Se não existe schedule para hoje, cria um com o novo horário
+        sched = MedicationSchedule(
+            medication_id=medication.id,
+            user_id=medication.user_id,
+            scheduled_date=today,
+            scheduled_time=med_time_obj,
+            status="pending"
+        )
+        db.add(sched)
+    else:
+        # Se já existe, atualiza apenas o horário de hoje e reseta status
+        sched.scheduled_time = med_time_obj
+        sched.status = "pending"
+        
     db.commit()
     db.refresh(medication)
     
     return {"status": "sucesso", "mensagem": "Medicação atualizada"}
 
 
+# ==================== ROTA: ALERTA DE REVISÃO (REGRA 5c) ====================
+@app.get("/api/medications/review-needed")
+async def get_review_needed_medications(user_id: str = None, db: Session = Depends(get_db)):
+    """
+    Retorna medicamentos contínuos que já passaram do prazo de revisão.
+    
+    Parâmetro opcional:
+        user_id: filtra por usuário específico
+    
+    Retorna:
+        Lista de medicamentos com is_review_needed=true e review_date
+    """
+    query = db.query(Medication).filter(
+        Medication.is_continuous == True,
+        Medication.is_active == True,
+        Medication.start_date != None
+    )
+    
+    if user_id:
+        try:
+            user_uuid = uuid.UUID(user_id)
+            query = query.filter(Medication.user_id == user_uuid)
+        except ValueError:
+            raise HTTPException(status_code=400, detail="ID de usuário inválido")
+    
+    all_continuous = query.all()
+    
+    resultado = []
+    for med in all_continuous:
+        try:
+            start_dt = datetime.strptime(med.start_date, "%Y-%m-%d").date()
+            needs_review = is_review_needed(start_dt, med.continuous_months)
+            review_dt = get_review_date(start_dt, med.continuous_months)
+            
+            if needs_review:
+                resultado.append({
+                    "id": str(med.id),
+                    "user_id": str(med.user_id),
+                    "name": med.name,
+                    "dosage": med.dosage,
+                    "start_date": med.start_date,
+                    "continuous_months": med.continuous_months,
+                    "review_date": review_dt.isoformat(),
+                    "days_overdue": (date.today() - review_dt).days,
+                    "is_review_needed": True,
+                })
+        except (ValueError, TypeError):
+            continue  # Pula registros com data inválida
+    
+    return resultado
+
+
 @app.delete("/api/medications/{med_id}")
-async def delete_medication(med_id: str, db: Session = Depends(get_db)):
-    """Excluir um medicamento (soft delete)"""
+async def delete_medication(med_id: str, scope: str = "all", db: Session = Depends(get_db)):
+    """
+    Excluir medicamento com opções de escopo (Requisito 7):
+    - scope=today: Cancela apenas schedules de hoje
+    - scope=future: Cancela schedules de hoje em diante, preserva passado
+    - scope=all: Soft delete total (comportamento padrão)
+    """
     try:
         med_uuid = uuid.UUID(med_id)
     except ValueError:
@@ -1341,11 +2063,67 @@ async def delete_medication(med_id: str, db: Session = Depends(get_db)):
     if not medication:
         raise HTTPException(status_code=404, detail="Medicação não encontrada")
     
-    # Soft delete: apenas marca como inativo
-    medication.is_active = False
-    db.commit()
+    today = date.today()
     
-    return {"status": "sucesso", "mensagem": "Medicação excluída"}
+    if scope == "today":
+        # Cancela apenas os schedules de HOJE
+        updated = db.query(MedicationSchedule).filter(
+            MedicationSchedule.medication_id == med_uuid,
+            MedicationSchedule.scheduled_date == today,
+            MedicationSchedule.status == "pending"
+        ).update({"status": "cancelled"})
+        db.commit()
+        return {
+            "status": "sucesso",
+            "mensagem": f"{updated} dose(s) de hoje cancelada(s). Próximas doses mantidas.",
+            "scope": "today",
+            "cancelados": updated,
+        }
+    
+    elif scope == "future":
+        # Cancela schedules de hoje em diante, preserva os passados
+        updated = db.query(MedicationSchedule).filter(
+            MedicationSchedule.medication_id == med_uuid,
+            MedicationSchedule.scheduled_date >= today,
+            MedicationSchedule.status == "pending"
+        ).update({"status": "cancelled"})
+        
+        # Atualiza end_date do medicamento para ontem
+        medication.end_date = (today - timedelta(days=1)).strftime("%Y-%m-%d")
+        
+        db.commit()
+        
+        # Conta quantos schedules passados permanecem
+        past_count = db.query(MedicationSchedule).filter(
+            MedicationSchedule.medication_id == med_uuid,
+            MedicationSchedule.scheduled_date < today,
+        ).count()
+        
+        return {
+            "status": "sucesso",
+            "mensagem": f"{updated} dose(s) futuras canceladas. {past_count} registros passados preservados no histórico.",
+            "scope": "future",
+            "cancelados": updated,
+            "historico_preservado": past_count,
+        }
+    
+    else:  # scope == "all"
+        # Soft delete: marca medicamento como inativo
+        medication.is_active = False
+        
+        # Cancela todos os schedules pendentes
+        db.query(MedicationSchedule).filter(
+            MedicationSchedule.medication_id == med_uuid,
+            MedicationSchedule.status == "pending"
+        ).update({"status": "cancelled"})
+        
+        db.commit()
+        
+        return {
+            "status": "sucesso",
+            "mensagem": "Medicação excluída completamente.",
+            "scope": "all",
+        }
 
 
 # --- 👥 RESPONSIBLES - EDITAR E EXCLUIR ---
@@ -1573,10 +2351,56 @@ def enviar_whatsapp_custom(telefone: str, texto: str) -> bool:
         print(f"❌ Falha de conexão WhatsApp Custom: {e}")
         return False
 
-# Rota fictícia para o Frontend não quebrar caso ainda tente enviar Web Push
+# Função auxiliar para enviar Web Push
+def enviar_web_push(subscription_info: dict, message_text: str) -> bool:
+    private_key = os.getenv("VAPID_PRIVATE_KEY")
+    if not private_key:
+        print("⚠️ VAPID_PRIVATE_KEY ausente no .env!")
+        return False
+        
+    vapid_claims = {
+        "sub": "mailto:suporte@homecare.com.br"
+    }
+    
+    try:
+        webpush(
+            subscription_info=subscription_info,
+            data=message_text,
+            vapid_private_key=private_key,
+            vapid_claims=vapid_claims
+        )
+        return True
+    except WebPushException as ex:
+        print(f"❌ Erro ao enviar Web Push: {ex}")
+        return False
+    except Exception as e:
+        print(f"❌ Falha genérica Web Push: {e}")
+        return False
+
+# Rota ativa para salvar a inscrição de Web Push
 @app.post("/api/push/subscribe")
-async def dummy_subscribe():
-    return {"status": "ok", "msg": "Web Push desativado. Usando WhatsApp."}
+async def subscribe_push(req: PushSubscriptionCreate, db: Session = Depends(get_db)):
+    try:
+        user_uuid = uuid.UUID(req.user_id)
+        # Verifica se já existe
+        sub = db.query(PushSubscription).filter(PushSubscription.endpoint == req.endpoint).first()
+        if not sub:
+            sub = PushSubscription(
+                user_id=user_uuid,
+                endpoint=req.endpoint,
+                keys=req.keys
+            )
+            db.add(sub)
+        else:
+            sub.user_id = user_uuid
+            sub.keys = req.keys
+        db.commit()
+        return {"status": "success", "message": "Inscrição de Web Push registrada com sucesso!"}
+    except Exception as e:
+        db.rollback()
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=str(e))
 
 # 2. Endpoint para TESTE RÁPIDO DO WHATSAPP (Dispara manualmente)
 @app.api_route("/api/teste-push", methods=["GET", "POST"])
@@ -1593,6 +2417,160 @@ async def test_whatsapp(db: Session = Depends(get_db)):
     else:
         return {"msg": "Falha ao enviar WhatsApp. Verifique os logs do Vercel e as variáveis de ambiente."}
 
+def verificar_e_enviar_relatorios(db: Session):
+    """
+    Verifica se existem relatorios diarios de medicamentos para enviar
+    neste minuto (horario de Brasilia) para o responsavel do paciente.
+    """
+    try:
+        from datetime import timezone, timedelta
+        brasilia_tz = timezone(timedelta(hours=-3))
+        now = datetime.now(brasilia_tz)
+        current_time = now.strftime("%H:%M")
+        hoje = now.date()
+        
+        # Busca usuarios que tem relatorio agendado para o minuto atual
+        users_to_report = db.query(User).filter(User.report_time == current_time).all()
+        if not users_to_report:
+            return
+            
+        print(f"📊 [RELATORIO] Processando relatorios diarios para o horario: {current_time}. Total de usuarios: {len(users_to_report)}")
+        
+        for user in users_to_report:
+            # Busca os responsaveis configurados que querem WhatsApp
+            responsibles = db.query(Responsible).filter(
+                Responsible.user_id == user.id,
+                Responsible.notify_whatsapp == True
+            ).all()
+            
+            if not responsibles:
+                print(f"⚠️ [RELATORIO] Usuario {user.full_name} tem relatorio agendado, mas nenhum responsavel com WhatsApp configurado.")
+                continue
+                
+            # Busca todos os medicamentos agendados de hoje para este usuario
+            schedules = db.query(MedicationSchedule).filter(
+                MedicationSchedule.user_id == user.id,
+                MedicationSchedule.scheduled_date == hoje
+            ).all()
+            
+            if not schedules:
+                print(f"ℹ️ [RELATORIO] Usuario {user.full_name} nao possui agendamentos de medicamentos cadastrados para hoje.")
+                continue
+                
+            # Ordena schedules por horario
+            schedules.sort(key=lambda s: s.scheduled_time)
+            
+            linhas_relatorio = []
+            for sched in schedules:
+                # Busca detalhes do remedio
+                med = db.query(Medication).filter(Medication.id == sched.medication_id).first()
+                med_name = med.name if med else "Medicamento"
+                med_dosage = med.dosage if med else ""
+                
+                time_str = sched.scheduled_time.strftime("%H:%M")
+                
+                # Formata status
+                if sched.status == "taken":
+                    conf_time = sched.confirmed_at.replace(tzinfo=timezone.utc).astimezone(brasilia_tz).strftime("%H:%M") if sched.confirmed_at else "--:--"
+                    status_text = f"Tomou (Confirmado as {conf_time})"
+                elif sched.status == "skipped" or sched.status == "cancelled":
+                    status_text = "Nao tomou (Nao tomado)"
+                else:
+                    status_text = "Nao tomou (Atrasado/Pendente)"
+                    
+                linhas_relatorio.append(f"💊 *{med_name}* ({med_dosage}) - {time_str} - {status_text}")
+                
+            # Montar a mensagem do relatorio
+            dia_str = hoje.strftime("%d/%m/%Y")
+            mensagem = (
+                f"📋 *CR$ HOME CARE AI - RELATORIO DIARIO*\n\n"
+                f"Ola! Segue o relatorio diario de medicamentos de *{user.full_name}* referente ao dia *{dia_str}*:\n\n"
+                + "\n".join(linhas_relatorio) +
+                f"\n\nTenha uma excelente noite!"
+            )
+            
+            for resp in responsibles:
+                print(f"📱 [RELATORIO] Enviando Relatorio Diario para {resp.name} ({resp.phone})")
+                enviar_whatsapp_custom(resp.phone, mensagem)
+                
+    except Exception as e:
+        print(f"❌ Erro ao enviar relatorios diarios: {e}")
+        import traceback
+        traceback.print_exc()
+
+@app.get("/api/teste-relatorio/{user_id}")
+async def test_report(user_id: str, db: Session = Depends(get_db)):
+    """Rota de teste para enviar o relatorio diario manualmente e ver como fica"""
+    try:
+        user_uuid = uuid.UUID(user_id)
+        user = db.query(User).filter(User.id == user_uuid).first()
+        if not user:
+            raise HTTPException(status_code=404, detail="Usuario nao encontrado")
+            
+        responsibles = db.query(Responsible).filter(
+            Responsible.user_id == user.id,
+            Responsible.notify_whatsapp == True
+        ).all()
+        
+        if not responsibles:
+            return {"status": "error", "mensagem": "Nenhum responsavel com WhatsApp configurado para este usuario"}
+            
+        from datetime import timezone, timedelta
+        brasilia_tz = timezone(timedelta(hours=-3))
+        now = datetime.now(brasilia_tz)
+        hoje = now.date()
+        
+        schedules = db.query(MedicationSchedule).filter(
+            MedicationSchedule.user_id == user.id,
+            MedicationSchedule.scheduled_date == hoje
+        ).all()
+        
+        if not schedules:
+            return {"status": "error", "mensagem": "Nenhum agendamento de medicamento encontrado para hoje"}
+            
+        schedules.sort(key=lambda s: s.scheduled_time)
+        
+        linhas_relatorio = []
+        for sched in schedules:
+            med = db.query(Medication).filter(Medication.id == sched.medication_id).first()
+            med_name = med.name if med else "Medicamento"
+            med_dosage = med.dosage if med else ""
+            time_str = sched.scheduled_time.strftime("%H:%M")
+            
+            if sched.status == "taken":
+                conf_time = sched.confirmed_at.replace(tzinfo=timezone.utc).astimezone(brasilia_tz).strftime("%H:%M") if sched.confirmed_at else "--:--"
+                status_text = f"Tomou (Confirmado as {conf_time})"
+            elif sched.status == "skipped" or sched.status == "cancelled":
+                status_text = "Nao tomou (Nao tomado)"
+            else:
+                status_text = "Nao tomou (Atrasado/Pendente)"
+                
+            linhas_relatorio.append(f"💊 *{med_name}* ({med_dosage}) - {time_str} - {status_text}")
+            
+        dia_str = hoje.strftime("%d/%m/%Y")
+        mensagem = (
+            f"📋 *CR$ HOME CARE AI - RELATORIO DIARIO (TESTE MOCK)*\n\n"
+            f"Ola! Segue o relatorio diario de medicamentos de *{user.full_name}* referente ao dia *{dia_str}*:\n\n"
+            + "\n".join(linhas_relatorio) +
+            f"\n\nTenha uma excelente noite!"
+        )
+        
+        enviados = []
+        for resp in responsibles:
+            enviado = enviar_whatsapp_custom(resp.phone, mensagem)
+            enviados.append({"nome": resp.name, "telefone": resp.phone, "sucesso": enviado})
+            
+        return {
+            "status": "success",
+            "mensagem": "Relatorio de teste enviado",
+            "detalhes_envio": enviados,
+            "conteudo": mensagem
+        }
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=str(e))
+
 # =========================================================
 # 3. AGENDADOR AUTOMÁTICO (O "Cérebro" que roda a cada minuto)
 # =========================================================
@@ -1605,6 +2583,9 @@ async def check_reminders(db: Session = Depends(get_db)):
     from datetime import timezone, timedelta
     
     print("🔔 [CRON] INICIANDO VERIFICAÇÃO DE MEDICAMENTOS (WHATSAPP)...")
+    
+    # Executa também a verificação de relatórios diários
+    verificar_e_enviar_relatorios(db)
     
     try:
         brasilia_tz = timezone(timedelta(hours=-3))
@@ -1623,21 +2604,52 @@ async def check_reminders(db: Session = Depends(get_db)):
             print(f"ℹ️ Nenhum medicamento agendado para {current_time}")
             return {"status": "ok", "msg": "Nenhum remédio neste horário", "hora_brasilia": current_time}
             
+        # Para cada medicamento, busca o usuário dono dele, manda WhatsApp e Web Push
         sent_count = 0
         failed_count = 0
+        push_sent_count = 0
         
-        # Para cada medicamento, busca o usuário dono dele e manda WhatsApp
         for med in meds_due:
             user = db.query(User).filter(User.id == med.user_id).first()
-            if user and user.phone:
-                print(f"📤 Enviando WhatsApp para {user.full_name} ({user.phone}) - Remédio: {med.name}")
-                sucesso = enviar_whatsapp(user.phone, med.name, med.dosage)
-                if sucesso:
-                    sent_count += 1
+            if user:
+                # 1. Envia WhatsApp
+                if user.phone:
+                    print(f"📤 Enviando WhatsApp para {user.full_name} ({user.phone}) - Remédio: {med.name}")
+                    sucesso = enviar_whatsapp(user.phone, med.name, med.dosage)
+                    if sucesso:
+                        sent_count += 1
+                    else:
+                        failed_count += 1
                 else:
+                    print(f"⚠️ Usuário {user.full_name} sem telefone para o medicamento {med.name}")
                     failed_count += 1
+                
+                # 2. Envia Web Push
+                subs = db.query(PushSubscription).filter(PushSubscription.user_id == user.id).all()
+                for sub in subs:
+                    sub_info = {
+                        "endpoint": sub.endpoint,
+                        "keys": sub.keys
+                    }
+                    payload = json.dumps({
+                        "title": "💊 Hora do Medicamento!",
+                        "body": f"Olá {user.full_name}, está na hora de tomar seu remédio {med.name} ({med.dosage}) agendado para às {med.time}.",
+                        "icon": "/static/icons/icon-192x192.png",
+                        "badge": "/static/icons/icon-72x72.png",
+                        "data": {
+                            "url": "/dashboard-cliente",
+                            "medication_id": str(med.id),
+                            "medication_name": med.name,
+                            "medication_dosage": med.dosage,
+                            "medication_time": med.time
+                        }
+                    })
+                    print(f"📤 Enviando Web Push para {user.full_name}...")
+                    push_sucesso = enviar_web_push(sub_info, payload)
+                    if push_sucesso:
+                        push_sent_count += 1
             else:
-                print(f"⚠️ Usuário não encontrado ou sem telefone para o medicamento {med.name}")
+                print(f"⚠️ Usuário não encontrado para o medicamento {med.name}")
                 failed_count += 1
                 
         resultado = {
@@ -1645,7 +2657,8 @@ async def check_reminders(db: Session = Depends(get_db)):
             "hora_brasilia": current_time,
             "medicamentos_encontrados": len(meds_due),
             "whatsapp_enviados": sent_count,
-            "whatsapp_falhados": failed_count
+            "whatsapp_falhados": failed_count,
+            "web_push_enviados": push_sent_count
         }
         
         print(f"📊 [CRON] RESULTADO FINAL: {resultado}")
@@ -1691,10 +2704,6 @@ async def upload_prescription(file: UploadFile = File(...)):
         # Converte para base64
         base64_data = base64.b64encode(contents).decode("utf-8")
         
-        # API REST do Gemini 2.5 Flash
-        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={gemini_key}"
-        headers = {"Content-Type": "application/json"}
-        
         prompt = (
             "Voce e um assistente medico especialista em transcricao de receitas. "
             "Analise o documento enviado (imagem ou PDF) e extraia todos os medicamentos listados. "
@@ -1721,8 +2730,8 @@ async def upload_prescription(file: UploadFile = File(...)):
                         {"text": prompt},
                         {
                             "inlineData": {
-                                "mimeType": mime_type,
-                                "data": base64_data
+                               "mimeType": mime_type,
+                               "data": base64_data
                             }
                         }
                     ]
@@ -1733,21 +2742,42 @@ async def upload_prescription(file: UploadFile = File(...)):
             }
         }
         
-        print(f"📡 Enviando receita para o Gemini 2.5 Flash ({mime_type})...")
+        # Lista de modelos candidatas para fallback
+        candidate_models = ["gemini-3.1-flash-lite", "gemini-3.5-flash", "gemini-2.0-flash"]
+        response = None
+        errors = []
+        chosen_model = ""
         
         async with httpx.AsyncClient(timeout=30.0) as client:
-            response = await client.post(url, headers=headers, json=payload)
-            
-        if response.status_code != 200:
-            error_detail = response.text
-            print(f"❌ Erro da API do Gemini: {error_detail}")
-            raise HTTPException(status_code=502, detail=f"Erro da API do Gemini (Status {response.status_code})")
+            for model in candidate_models:
+                url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={gemini_key}"
+                headers = {"Content-Type": "application/json"}
+                print(f"📡 Tentando enviar receita para o Gemini via modelo {model} ({mime_type})...")
+                try:
+                    r = await client.post(url, headers=headers, json=payload)
+                    if r.status_code == 200:
+                        response = r
+                        chosen_model = model
+                        print(f"✅ Sucesso com o modelo {model}!")
+                        break
+                    else:
+                        err_msg = f"Modelo {model} retornou status {r.status_code}: {r.text[:300]}"
+                        errors.append(err_msg)
+                        print(f"⚠️ {err_msg}")
+                except Exception as ex:
+                    err_msg = f"Erro ao tentar modelo {model}: {str(ex)}"
+                    errors.append(err_msg)
+                    print(f"⚠️ {err_msg}")
+        
+        if not response:
+            all_errors_str = " | ".join(errors)
+            raise HTTPException(status_code=502, detail=f"Erro da API do Gemini (Todos os modelos falharam). Detalhes: {all_errors_str}")
             
         resp_json = response.json()
         
         try:
             generated_text = resp_json["candidates"][0]["content"]["parts"][0]["text"].strip()
-            print(f"🤖 Resposta do Gemini:\n{generated_text}")
+            print(f"🤖 Resposta do Gemini ({chosen_model}):\n{generated_text}")
             
             if generated_text.startswith("```"):
                 generated_text = re.sub(r"^```(?:json)?\n", "", generated_text)
@@ -1762,7 +2792,7 @@ async def upload_prescription(file: UploadFile = File(...)):
         return JSONResponse(content={
             "success": True,
             "medications": medications,
-            "raw_text_preview": "Extraido via Gemini 2.5 Flash",
+            "raw_text_preview": f"Extraido via Gemini ({chosen_model})",
             "message": f"✅ {len(medications)} medicamentos identificados com IA!"
         })
         
@@ -1770,6 +2800,544 @@ async def upload_prescription(file: UploadFile = File(...)):
         raise http_ex
     except Exception as e:
         print(f"🔥 Erro no upload de receita: {e}")
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/cliente/{user_id}/ocr-allergies")
+async def ocr_allergies(user_id: str, file: UploadFile = File(...)):
+    try:
+        import base64
+        import os
+        contents = await file.read()
+        filename = file.filename.lower()
+        mime_type = file.content_type or "image/jpeg"
+        
+        if filename.endswith('.pdf'):
+            mime_type = 'application/pdf'
+        elif filename.endswith('.png'):
+            mime_type = 'image/png'
+        elif filename.endswith('.jpg') or filename.endswith('.jpeg'):
+            mime_type = 'image/jpeg'
+            
+        gemini_key = os.getenv("GEMINI_API_KEY")
+        if not gemini_key:
+            raise HTTPException(
+                status_code=500, 
+                detail="GEMINI_API_KEY nao configurada no servidor."
+            )
+            
+        base64_data = base64.b64encode(contents).decode("utf-8")
+        
+        prompt = (
+            "Voce e um assistente medico especialista em analise de laudos e exames. "
+            "Analise a imagem ou documento enviado, que contem informacoes sobre alergias do paciente. "
+            "Extraia todas as alergias listadas (podem ser a medicamentos, alimentos, produtos quimicos ou substancias). "
+            "Retorne a lista de alergias identificadas separadas por virgula em formato de texto simples. "
+            "Exemplo: 'Dipirona, Penicilina, Corantes alimenticios, Lactose'. "
+            "Se nao encontrar nenhuma alergia listada ou o documento nao for sobre isso, retorne 'Nenhuma alergia relatada'."
+            "Retorne APENAS a lista no formato de texto simples, sem markdown ou explicacoes adicionais."
+        )
+        
+        payload = {
+            "contents": [
+                {
+                    "parts": [
+                        {"text": prompt},
+                        {
+                            "inlineData": {
+                               "mimeType": mime_type,
+                               "data": base64_data
+                            }
+                        }
+                    ]
+                }
+            ]
+        }
+        
+        candidate_models = ["gemini-2.0-flash", "gemini-1.5-flash"]
+        response = None
+        
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            for model in candidate_models:
+                url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={gemini_key}"
+                headers = {"Content-Type": "application/json"}
+                try:
+                    r = await client.post(url, headers=headers, json=payload)
+                    if r.status_code == 200:
+                        response = r
+                        break
+                except Exception as ex:
+                    print(f"⚠️ Erro ao tentar modelo {model} para alergias: {str(ex)}")
+        
+        if not response:
+            raise HTTPException(status_code=502, detail="Erro da API do Gemini (falha na leitura de alergias).")
+            
+        generated_text = "Nenhuma alergia relatada"
+        try:
+            resp_json = response.json()
+            candidates = resp_json.get("candidates", [])
+            if candidates:
+                parts = candidates[0].get("content", {}).get("parts", [])
+                if parts:
+                    generated_text = parts[0].get("text", "").strip()
+        except Exception as parse_ex:
+            print(f"⚠️ Erro ao parsear resposta do Gemini para alergias: {parse_ex}")
+            
+        return JSONResponse(content={
+            "success": True,
+            "allergies": generated_text
+        })
+    except Exception as e:
+        print(f"🔥 Erro no OCR de alergias: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/cliente/{user_id}/upload-insurance-card")
+async def upload_insurance_card(user_id: str, file: UploadFile = File(...), db: Session = Depends(get_db)):
+    try:
+        import base64
+        import os
+        
+        user_uuid = uuid.UUID(user_id)
+        user = db.query(User).filter(User.id == user_uuid).first()
+        if not user:
+            raise HTTPException(status_code=404, detail="Usuario nao encontrado")
+            
+        contents = await file.read()
+        filename = file.filename.lower()
+        mime_type = file.content_type or "image/jpeg"
+        if filename.endswith('.png'):
+            mime_type = 'image/png'
+        elif filename.endswith('.jpg') or filename.endswith('.jpeg'):
+            mime_type = 'image/jpeg'
+        elif filename.endswith('.pdf'):
+            mime_type = 'application/pdf'
+            
+        # Converte para Data URI (base64) para persistência 100% serverless
+        b64_str = base64.b64encode(contents).decode("utf-8")
+        card_url = f"data:{mime_type};base64,{b64_str}"
+        
+        # Salva o arquivo localmente como backup se não estiver na Vercel
+        if not IS_VERCEL:
+            try:
+                ext = os.path.splitext(filename)[1]
+                upload_dir = "static/uploads"
+                os.makedirs(upload_dir, exist_ok=True)
+                unique_filename = f"card_{user_id}_{uuid.uuid4().hex}{ext}"
+                filepath = os.path.join(upload_dir, unique_filename)
+                with open(filepath, "wb") as f:
+                    f.write(contents)
+            except Exception as backup_ex:
+                print(f"⚠️ Erro ao salvar backup local: {backup_ex}")
+            
+        gemini_key = os.getenv("GEMINI_API_KEY")
+        insurance_name = ""
+        
+        if gemini_key:
+            base64_data = base64.b64encode(contents).decode("utf-8")
+            prompt = (
+                "Voce e um assistente administrativo de home care especialista em ler carteirinhas de planos de saude. "
+                "Analise o arquivo enviado. Ele contem a frente ou verso de um cartao de convenio/plano de saude. "
+                "Extraia o nome da operadora/empresa do plano de saude (ex: Unimed, Amil, SulAmerica, Bradesco, Cassi, Golden Cross, etc.). "
+                "Se encontrar o numero da carteirinha ou matricula, extraia-o tambem e monte no seguinte padrao: 'Nome do Plano (Nº Numero)'. "
+                "Retorne apenas essa informacao em formato de texto simples, sem markdown ou justificativas. "
+                "Se nao conseguir ler nada plausivel, retorne apenas 'Convenio'."
+            )
+            
+            payload = {
+                "contents": [
+                    {
+                        "parts": [
+                            {"text": prompt},
+                            {
+                                "inlineData": {
+                                   "mimeType": mime_type,
+                                   "data": base64_data
+                                }
+                            }
+                        ]
+                    }
+                ]
+            }
+            
+            candidate_models = ["gemini-2.0-flash", "gemini-1.5-flash"]
+            response = None
+            
+            async with httpx.AsyncClient(timeout=30.0) as client:
+                for model in candidate_models:
+                    url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={gemini_key}"
+                    headers = {"Content-Type": "application/json"}
+                    try:
+                        r = await client.post(url, headers=headers, json=payload)
+                        if r.status_code == 200:
+                            response = r
+                            break
+                    except Exception as ex:
+                        print(f"⚠️ Erro ao tentar modelo {model} para carteirinha: {str(ex)}")
+            
+            if response:
+                try:
+                    resp_json = response.json()
+                    candidates = resp_json.get("candidates", [])
+                    if candidates:
+                        parts = candidates[0].get("content", {}).get("parts", [])
+                        if parts:
+                            insurance_name = parts[0].get("text", "").strip()
+                except Exception as parse_ex:
+                    print(f"⚠️ Erro ao parsear resposta do Gemini para carteirinha: {parse_ex}")
+                
+        if not insurance_name:
+            insurance_name = "Convenio"
+            
+        # Atualiza no banco
+        user.health_insurance = insurance_name
+        user.health_insurance_card = card_url
+        db.commit()
+        
+        return JSONResponse(content={
+            "success": True,
+            "health_insurance": insurance_name,
+            "health_insurance_card": card_url
+        })
+    except Exception as e:
+        print(f"🔥 Erro no upload da carteirinha do convenio: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+# ===== ENDPOINT PARA SERVIR ARQUIVOS DE UPLOAD (compatível com Vercel /tmp) =====
+@app.get("/api/files/uploads/{filename}")
+async def serve_uploaded_file(filename: str):
+    """Serve arquivos de upload — usa /tmp/ na Vercel, static/uploads/ local."""
+    import os
+    if IS_VERCEL:
+        filepath = os.path.join("/tmp/uploads", filename)
+    else:
+        filepath = os.path.join("static/uploads", filename)
+    if not os.path.exists(filepath):
+        raise HTTPException(status_code=404, detail="Arquivo nao encontrado")
+    
+    # Determina o media_type pelo extensão do arquivo
+    media_type = "application/octet-stream"
+    lower_name = filename.lower()
+    if lower_name.endswith('.pdf'):
+        media_type = 'application/pdf'
+    elif lower_name.endswith('.png'):
+        media_type = 'image/png'
+    elif lower_name.endswith('.jpg') or lower_name.endswith('.jpeg'):
+        media_type = 'image/jpeg'
+    elif lower_name.endswith('.gif'):
+        media_type = 'image/gif'
+    elif lower_name.endswith('.webp'):
+        media_type = 'image/webp'
+    
+    # PDF: Content-Disposition inline para abrir no navegador (não forçar download)
+    headers = {}
+    if lower_name.endswith('.pdf'):
+        headers['Content-Disposition'] = 'inline; filename="' + filename + '"'
+    
+    return FileResponse(filepath, media_type=media_type, headers=headers)
+
+@app.post("/api/cliente/{user_id}/upload-identity-document")
+async def upload_identity_document(user_id: str, file: UploadFile = File(...), db: Session = Depends(get_db)):
+    try:
+        import base64
+        import os
+        
+        user_uuid = uuid.UUID(user_id)
+        user = db.query(User).filter(User.id == user_uuid).first()
+        if not user:
+            raise HTTPException(status_code=404, detail="Usuario nao encontrado")
+            
+        contents = await file.read()
+        filename = file.filename.lower()
+        
+        mime_type = file.content_type or "image/jpeg"
+        if filename.endswith('.png'):
+            mime_type = 'image/png'
+        elif filename.endswith('.jpg') or filename.endswith('.jpeg'):
+            mime_type = 'image/jpeg'
+        elif filename.endswith('.pdf'):
+            mime_type = 'application/pdf'
+            
+        # Converte para Data URI (base64) para persistência 100% serverless
+        b64_str = base64.b64encode(contents).decode("utf-8")
+        doc_url = f"data:{mime_type};base64,{b64_str}"
+        
+        # Salva o arquivo localmente como backup se não estiver na Vercel
+        if not IS_VERCEL:
+            try:
+                ext = os.path.splitext(filename)[1]
+                upload_dir = "static/uploads"
+                os.makedirs(upload_dir, exist_ok=True)
+                unique_filename = f"id_{user_id}_{uuid.uuid4().hex}{ext}"
+                filepath = os.path.join(upload_dir, unique_filename)
+                with open(filepath, "wb") as f:
+                    f.write(contents)
+            except Exception as backup_ex:
+                print(f"⚠️ Erro ao salvar backup local: {backup_ex}")
+            
+        gemini_key = os.getenv("GEMINI_API_KEY")
+        doc_info = ""
+        
+        if gemini_key:
+            base64_data = base64.b64encode(contents).decode("utf-8")
+            prompt = (
+                "Voce e um assistente administrativo especialista em ler documentos de identificacao. "
+                "Analise o arquivo enviado (pode ser imagem ou PDF). Ele contem um documento como RG, CPF, CNH ou outro. "
+                "Extraia o tipo de documento e o seu numero principal (por exemplo, se for CPF, extraia 'CPF: 123.456.789-00'. Se for RG, 'RG: 12.345.678-9'). "
+                "Retorne apenas essa informacao em formato de texto simples, bem curto (ex: 'CPF: 123.456.789-00' ou 'RG: 12.345.678-9'). "
+                "Retorne apenas o texto cru, sem explicacoes, sem markdown."
+            )
+            
+            payload = {
+                "contents": [
+                    {
+                        "parts": [
+                            {"text": prompt},
+                            {
+                                "inlineData": {
+                                   "mimeType": mime_type,
+                                   "data": base64_data
+                                }
+                            }
+                        ]
+                    }
+                ]
+            }
+            
+            candidate_models = ["gemini-2.0-flash", "gemini-1.5-flash"]
+            response = None
+            
+            async with httpx.AsyncClient(timeout=30.0) as client:
+                for model in candidate_models:
+                    url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={gemini_key}"
+                    headers = {"Content-Type": "application/json"}
+                    try:
+                        r = await client.post(url, headers=headers, json=payload)
+                        if r.status_code == 200:
+                            response = r
+                            break
+                    except Exception as ex:
+                        print(f"⚠️ Erro ao tentar modelo {model} para documento: {str(ex)}")
+            
+            if response:
+                try:
+                    resp_json = response.json()
+                    candidates = resp_json.get("candidates", [])
+                    if candidates:
+                        parts = candidates[0].get("content", {}).get("parts", [])
+                        if parts:
+                            doc_info = parts[0].get("text", "").strip()
+                except Exception as parse_ex:
+                    print(f"⚠️ Erro ao parsear resposta do Gemini para documento: {parse_ex}")
+                
+        if not doc_info:
+            doc_info = "Documento"
+            
+        user.identity_document = doc_info
+        user.identity_document_file = doc_url
+        db.commit()
+        
+        return JSONResponse(content={
+            "success": True,
+            "identity_document": doc_info,
+            "identity_document_file": doc_url
+        })
+    except Exception as e:
+        print(f"🔥 Erro no upload do documento de identificacao: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/chat")
+async def chat_assistant(req: ChatRequest, db: Session = Depends(get_db)):
+    try:
+        user_id = req.user_id
+        message = req.message
+        history = req.history or []
+        
+        try:
+            user_uuid = uuid.UUID(user_id)
+        except ValueError:
+            raise HTTPException(status_code=400, detail="ID de usuário inválido")
+            
+        user = db.query(User).filter(User.id == user_uuid).first()
+        if not user:
+            raise HTTPException(status_code=404, detail="Usuário não encontrado")
+            
+        medications = db.query(Medication).filter(
+            Medication.user_id == user_uuid, 
+            Medication.is_active == True
+        ).all()
+        
+        # Busca schedules de hoje para informar ao Maximus
+        from datetime import date
+        today_date = date.today()
+        today_schedules = db.query(MedicationSchedule).filter(
+            MedicationSchedule.user_id == user_uuid,
+            MedicationSchedule.scheduled_date == today_date
+        ).all()
+        
+        schedules_by_med = {}
+        for s in today_schedules:
+            if s.medication_id not in schedules_by_med:
+                schedules_by_med[s.medication_id] = []
+            schedules_by_med[s.medication_id].append({
+                "time": s.scheduled_time.strftime("%H:%M") if s.scheduled_time else "",
+                "status": s.status,
+                "confirmed_at": s.confirmed_at
+            })
+            
+        # 1. Carrega a chave
+        gemini_key = os.getenv("GEMINI_API_KEY")
+        if not gemini_key:
+            raise HTTPException(
+                status_code=500, 
+                detail="GEMINI_API_KEY nao configurada no servidor."
+            )
+            
+        # 2. Monta as instruções do sistema com contexto do paciente
+        sys_instruction = (
+            "Você é o 'Maximus', o assistente médico e de cuidado pessoal inteligente do sistema CR$ HOME CARE AI.\n"
+            "Seu objetivo é ajudar o paciente ou seu cuidador respondendo perguntas sobre medicamentos, orientações de uso, saúde e bem-estar.\n"
+            "Aja como um(a) cuidador(a) real, de forma extremamente humana, empática e carinhosa. "
+            "Quando for consultado sobre o que tomar no dia ou o status dos remédios, e houver medicamentos que já foram tomados hoje (status 'Tomado'), informe isso com carinho e parabenize o paciente por se cuidar tão bem.\n\n"
+            "CONTEXTO DO PACIENTE:\n"
+            f"- Nome: {user.full_name}\n"
+            f"- Idade: {user.age or 'Não informada'} anos\n"
+            f"- Documento de Identificação: {user.identity_document or 'Não informado'}\n"
+            f"- Alergias conhecidas: {user.allergies or 'Nenhuma informada'}\n"
+            f"- Condições médicas: {user.conditions or 'Nenhuma informada'}\n"
+            f"- Tipo sanguíneo: {user.blood_type or 'Não informado'}\n"
+            f"- Plano de saúde: {user.health_insurance or 'Não informado'}\n\n"
+            "MEDICAMENTOS ATIVOS CADASTRADOS:\n"
+        )
+        if medications:
+            for med in medications:
+                time_str = med.time.strftime('%H:%M') if med.time else 'Não informado'
+                sys_instruction += f"- {med.name}: Dosagem '{med.dosage}', Horário '{time_str}', Contínuo? {'Sim' if med.is_continuous else 'Não'}, Término? {med.end_date or 'Uso contínuo'}"
+                
+                # Anexa o status das doses de hoje
+                med_scheds = schedules_by_med.get(med.id, [])
+                if med_scheds:
+                    scheds_desc = []
+                    for ms in med_scheds:
+                        status_pt = "Pendente"
+                        if ms["status"] == "taken":
+                            status_pt = f"Tomado (confirmado às {ms['confirmed_at'].strftime('%H:%M') if ms['confirmed_at'] else ''})"
+                        elif ms["status"] == "skipped":
+                            status_pt = "Pulado"
+                        elif ms["status"] == "cancelled":
+                            status_pt = "Cancelado"
+                        scheds_desc.append(f"{ms['time']} ({status_pt})")
+                    sys_instruction += f" | Status das doses de hoje: {', '.join(scheds_desc)}"
+                sys_instruction += "\n"
+        else:
+            sys_instruction += "- Nenhum medicamento ativo cadastrado no momento.\n"
+            
+        sys_instruction += (
+            "\nREGRAS DE COMPORTAMENTO:\n"
+            "1. Aja de forma muito atenciosa, empática, acolhedora e fale sempre em português do Brasil.\n"
+            "2. Se o paciente perguntar sobre os remédios dele do dia, faça questão de mencionar carinhosamente quais ele já tomou hoje (por exemplo: 'Que maravilha, você já tomou o seu [Nome] das [Horário] hoje! Estão restando apenas os seguintes...').\n"
+            "3. Dê respostas curtas, práticas e objetivas. Evite textos longos ou excessivamente técnicos.\n"
+            "4. Use formatação em Markdown (negrito, listas, etc.) para facilitar a leitura.\n"
+            "5. IMPORTANTE: Você é um assistente de IA. Sempre recomende que o paciente consulte o médico ou responsável em caso de dúvidas graves, dor intensa ou reações adversas incomuns.\n"
+            "6. Use o histórico de conversas fornecido para manter o contexto.\n"
+            "7. IMPORTANTE: Ao agendar uma consulta, conduza a conversa passo a passo. Solicite primeiro o nome do Médico(a), aguarde a resposta; depois solicite a Especialidade, aguarde; depois solicite a data, aguarde; depois o horário, aguarde; e finalmente solicite as observações. APENAS quando todas essas informações tiverem sido passadas pelo usuário, você deve apresentar o resumo e anexar obrigatoriamente na última linha a tag: ||JSON_APPOINTMENT:{\"doctor_name\":\"...\", \"specialty\":\"...\", \"appointment_date\":\"YYYY-MM-DD\", \"appointment_time\":\"HH:MM\", \"notes\":\"...\"}||. Não envie esta tag nas perguntas intermediárias da conversa."
+        )
+        
+        # 3. Prepara contents para a API (histórico + mensagem atual)
+        contents = []
+        for h in history:
+            # Garante que está no formato correto para a API
+            if "role" in h and "parts" in h:
+                parts = []
+                for p in h["parts"]:
+                    if isinstance(p, dict) and "text" in p:
+                        parts.append(p)
+                    elif isinstance(p, str):
+                        parts.append({"text": p})
+                contents.append({"role": h["role"], "parts": parts})
+                
+        # Adiciona a mensagem atual do usuário
+        contents.append({"role": "user", "parts": [{"text": message}]})
+        
+        payload = {
+            "contents": contents,
+            "systemInstruction": {
+                "parts": [
+                    {"text": sys_instruction}
+                ]
+            }
+        }
+        
+        candidate_models = ["gemini-3.1-flash-lite", "gemini-3.5-flash", "gemini-2.0-flash"]
+        response = None
+        errors = []
+        chosen_model = ""
+        
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            for model in candidate_models:
+                url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={gemini_key}"
+                headers = {"Content-Type": "application/json"}
+                try:
+                    r = await client.post(url, headers=headers, json=payload)
+                    if r.status_code == 200:
+                        response = r
+                        chosen_model = model
+                        break
+                    else:
+                        errors.append(f"{model}: {r.status_code} - {r.text[:200]}")
+                except Exception as ex:
+                    errors.append(f"{model}: {str(ex)}")
+                    
+        if not response:
+            all_errors_str = " | ".join(errors)
+            raise HTTPException(status_code=502, detail=f"Erro da API do Gemini (Todos os modelos falharam). Detalhes: {all_errors_str}")
+            
+        resp_json = response.json()
+        
+        try:
+            generated_text = resp_json["candidates"][0]["content"]["parts"][0]["text"].strip()
+        except Exception as parse_error:
+            raise HTTPException(status_code=500, detail="Erro ao parsear resposta do Gemini.")
+            
+        return JSONResponse(content={
+            "success": True,
+            "response": generated_text,
+            "model": chosen_model
+        })
+        
+    except HTTPException as http_ex:
+        raise http_ex
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/forgot-password")
+async def forgot_password(req: ForgotPasswordRequest, db: Session = Depends(get_db)):
+    try:
+        contact = req.contact.strip()
+        user = db.query(User).filter(
+            or_(
+                User.email == contact,
+                User.phone == contact,
+                User.full_name.ilike(f"%{contact}%")
+            )
+        ).first()
+        
+        if not user:
+            raise HTTPException(status_code=404, detail="Usuário não encontrado.")
+            
+        temp_pass = "redefinida123"
+        user.password_hash = sha256(temp_pass.encode()).hexdigest()
+        db.commit()
+        
+        return {
+            "status": "sucesso",
+            "detail": f"Senha do usuário {user.full_name} redefinida temporariamente para: {temp_pass}"
+        }
+    except HTTPException as http_ex:
+        raise http_ex
+    except Exception as e:
         import traceback
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=str(e))
@@ -1900,6 +3468,9 @@ def verificar_medicamentos_sincrono():
     
     db = SessionLocal()
     try:
+        # Executa também a verificação de relatórios diários
+        verificar_e_enviar_relatorios(db)
+        
         agora = datetime.now()
         hora_atual = agora.strftime("%H:%M")
         
