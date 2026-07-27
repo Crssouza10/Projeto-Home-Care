@@ -493,9 +493,9 @@ async def global_exception_handler(request: Request, exc: Exception):
 # --- FRONTEND ---
 @app.get("/", response_class=HTMLResponse)
 async def serve_landing():
-    html_file = Path(__file__).parent / "landing.html"
+    html_file = Path(__file__).parent / "index.html"
     if not html_file.exists():
-        return HTMLResponse(content="<h1>Erro: landing.html não encontrado</h1>", status_code=500)
+        return HTMLResponse(content="<h1>Erro: index.html não encontrado</h1>", status_code=500)
     return HTMLResponse(content=html_file.read_text(encoding="utf-8"))
 
 @app.get("/dashboard", response_class=HTMLResponse)

@@ -950,8 +950,6 @@ footer p { font-size:0.9rem; line-height:1.6 }
           <li><span class="check">✓</span> Até 2 pessoas cuidadas</li>
           <li><span class="check">✓</span> Registro básico de saúde</li>
           <li><span class="check">✓</span> App mobile</li>
-          <li><span class="muted">—</span> <span class="muted">IA de monitoramento</span></li>
-          <li><span class="muted">—</span> <span class="muted">Relatórios para médico</span></li>
         </ul>
         <a href="#" class="btn btn-outline pricing-cta">Testar grátis</a>
       </div>
@@ -970,7 +968,6 @@ footer p { font-size:0.9rem; line-height:1.6 }
           <li><span class="check">✓</span> Registro completo de saúde</li>
           <li><span class="check">✓</span> App mobile + notificações</li>
           <li><span class="check">✓</span> IA de monitoramento</li>
-          <li><span class="muted">—</span> <span class="muted">Relatórios para médico</span></li>
         </ul>
         <a href="#" class="btn btn-primary pricing-cta">Assinar Básico</a>
       </div>
@@ -1158,7 +1155,7 @@ footer p { font-size:0.9rem; line-height:1.6 }
   <p>
     Home Care Inteligente — Tecnologia e cuidado para sua família.<br>
     &copy; 2025 Cuidadoso. Todos os direitos reservados.
-    <br><span style="font-size: 0.8rem; color: rgba(255,255,255,0.45);">Versão: V1.5 em 27/07/2026</span>
+    <br><span style="font-size: 0.8rem; color: rgba(255,255,255,0.45);">Versão: V1.6 em 27/07/2026</span>
     <br><br>
     <a href="/privacidade.html" style="color:rgba(255,255,255,.6);text-decoration:none;margin:0 12px">Política de Privacidade</a>
     <a href="/termos-de-uso.html" style="color:rgba(255,255,255,.6);text-decoration:none;margin:0 12px">Termos de Uso</a>
@@ -1295,9 +1292,7 @@ const plansData = {
             'Lembretes de medicamentos',
             'Até 2 pessoas cuidadas',
             'Registro básico de saúde',
-            'App mobile',
-            'IA de monitoramento (indisponível)',
-            'Relatórios para médico (indisponível)'
+            'App mobile'
         ],
         btnText: 'Testar grátis'
     },
@@ -1312,8 +1307,7 @@ const plansData = {
             'Até 5 pessoas cuidadas',
             'Registro completo de saúde',
             'App mobile + notificações',
-            'IA de monitoramento',
-            'Relatórios para médico (indisponível)'
+            'IA de monitoramento'
         ],
         btnText: 'Assinar Básico'
     },
@@ -1405,7 +1399,9 @@ function togglePassword() {
 }
 
 // Helper: API base URL (backend principal)
-const API_BASE = 'https://projeto-home-care.vercel.app';
+const API_BASE = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
+    ? window.location.origin
+    : 'https://projeto-home-care.vercel.app';
 
 // Helper to get local or server redirect URL
 function getRedirectUrl() {
