@@ -1156,6 +1156,7 @@ document.getElementById('login-password').addEventListener('keydown', e => { if 
 document.getElementById('reg-password').addEventListener('keydown', e => { if (e.key==='Enter') doRegister(); });
 
 // Auto-login from landing page (cross-domain via URL param)
+// + Initialize: só esconde app-screen se NÃO houver auto-login ou sessão
 (function() {
     const params = new URLSearchParams(window.location.search);
     const userParam = params.get('user');
@@ -1172,7 +1173,7 @@ document.getElementById('reg-password').addEventListener('keydown', e => { if (e
                 // Limpa URL sem recarregar
                 window.history.replaceState({}, document.title, window.location.pathname);
                 loadAll();
-                return;
+                return; // auto-login OK — app-screen já visível
             }
         } catch(e) { /* ignora erro de parse */ }
     }
@@ -1189,13 +1190,14 @@ document.getElementById('reg-password').addEventListener('keydown', e => { if (e
                 document.getElementById('user-name-display').textContent = user.full_name;
                 document.getElementById('user-avatar').textContent = (user.full_name || 'U')[0].toUpperCase();
                 loadAll();
+                return;
             }
         } catch(e) { /* ignora erro de parse */ }
     }
-})();
 
-// Initialize
-document.getElementById('app-screen').style.display = 'none';
+    // Sem auto-login e sem sessão: esconde app, mostra tela de login
+    document.getElementById('app-screen').style.display = 'none';
+})();
 </script>
 
 </body>
