@@ -594,9 +594,10 @@ async function doLogin() {
         }
         const data = await resp.json();
         state.user = data.user;  // API retorna {status, user: {...}}
+        sessionStorage.setItem('hc_user', JSON.stringify(data.user)); // Salva sessão localmente
         document.getElementById('login-screen').style.display = 'none';
         document.getElementById('app-screen').style.display = 'block';
-        document.getElementById('user-name-display').textContent = data.user.full_name || username;
+        document.getElementById('user-name-display').textContent = data.user.full_name || email;
         document.getElementById('user-avatar').textContent = (data.user.full_name||'U')[0].toUpperCase();
         await loadAll();
     } catch(e) {
@@ -634,6 +635,7 @@ async function doRegister() {
 
 function doLogout() {
     state = { user:null, medications:[], appointments:[], responsibles:[], emergencyContacts:[], clinicalInfo:null };
+    sessionStorage.removeItem('hc_user'); // Limpa sessão do sessionStorage
     document.getElementById('app-screen').style.display = 'none';
     document.getElementById('login-screen').style.display = 'flex';
     document.querySelector('#login-screen .login-card:first-child').style.display = 'block';
@@ -1161,6 +1163,7 @@ document.getElementById('reg-password').addEventListener('keydown', e => { if (e
             const user = JSON.parse(decodeURIComponent(userParam));
             if (user && user.id && user.full_name) {
                 state.user = user;
+                sessionStorage.setItem('hc_user', JSON.stringify(user)); // Salva para persistir na atualização de página
                 document.getElementById('login-screen').style.display = 'none';
                 document.getElementById('app-screen').style.display = 'block';
                 document.getElementById('user-name-display').textContent = user.full_name;
@@ -1169,6 +1172,22 @@ document.getElementById('reg-password').addEventListener('keydown', e => { if (e
                 window.history.replaceState({}, document.title, window.location.pathname);
                 loadAll();
                 return;
+            }
+        } catch(e) { /* ignora erro de parse */ }
+    }
+
+    // Fallback: Verifica se já existe login ativo na sessão (para atualização de página)
+    const storedUser = sessionStorage.getItem('hc_user');
+    if (storedUser) {
+        try {
+            const user = JSON.parse(storedUser);
+            if (user && user.id && user.full_name) {
+                state.user = user;
+                document.getElementById('login-screen').style.display = 'none';
+                document.getElementById('app-screen').style.display = 'block';
+                document.getElementById('user-name-display').textContent = user.full_name;
+                document.getElementById('user-avatar').textContent = (user.full_name || 'U')[0].toUpperCase();
+                loadAll();
             }
         } catch(e) { /* ignora erro de parse */ }
     }

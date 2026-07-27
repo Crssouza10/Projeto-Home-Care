@@ -644,9 +644,9 @@ async function doLogin() {
         const data = await resp.json();
         if (!resp.ok) throw new Error(data.detail || 'Erro ao fazer login');
 
-        // Salva sessão e redireciona
+        // Salva sessão e redireciona (incluindo user param para cross-domain auto-login)
         sessionStorage.setItem('hc_user', JSON.stringify(data.user));
-        window.location.href = '/ia';
+        window.location.href = '/ia?user=' + encodeURIComponent(JSON.stringify(data.user));
     } catch(e) {
         errEl.textContent = e.message;
         errEl.style.display = 'block';
