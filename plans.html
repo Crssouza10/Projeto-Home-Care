@@ -1,0 +1,750 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Planos — CR$ HOME CARE AI</title>
+    <meta name="description" content="Escolha o melhor plano para cuidar de quem você ama. Assinatura mensal, trimestral ou anual.">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-deep: #0A1128;
+            --bg-card: #0f1d3d;
+            --bg-card-hover: #15264f;
+            --cyan: #00D4FF;
+            --cyan-dim: rgba(0,212,255,0.10);
+            --cyan-glow: rgba(0,212,255,0.25);
+            --blue: #0052FF;
+            --blue-dim: rgba(0,82,255,0.12);
+            --white: #ffffff;
+            --gray: #b0bcc8;
+            --gray-light: #8a9bb5;
+            --border: rgba(0,212,255,0.12);
+            --border-active: rgba(0,212,255,0.45);
+            --radius: 18px;
+            --radius-sm: 12px;
+            --green: #00E676;
+            --orange: #FF9100;
+            --red: #FF5252;
+        }
+
+        * { margin:0; padding:0; box-sizing:border-box; }
+
+        html { scroll-behavior: smooth; }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: var(--bg-deep);
+            color: var(--white);
+            min-height: 100vh;
+            line-height: 1.5;
+        }
+
+        .container {
+            max-width: 520px;
+            margin: 0 auto;
+            padding: 20px 16px 40px;
+        }
+
+        /* ----- HEADER ----- */
+        .header {
+            text-align: center;
+            padding: 32px 0 16px;
+        }
+        .header .logo {
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            font-family: 'Outfit', sans-serif;
+            font-size: 1.3rem;
+            font-weight: 700;
+            color: var(--cyan);
+            text-decoration: none;
+        }
+        .header .logo-icon {
+            width: 38px;
+            height: 38px;
+            border: 2px solid var(--cyan);
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2rem;
+            background: var(--cyan-dim);
+        }
+        .header h1 {
+            font-family: 'Outfit', sans-serif;
+            font-size: 1.7rem;
+            font-weight: 800;
+            margin-top: 12px;
+            color: var(--white);
+        }
+        .header p {
+            font-size: 1.05rem;
+            color: var(--gray);
+            margin-top: 6px;
+        }
+
+        /* ----- STATUS BADGE ----- */
+        .status-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 10px 18px;
+            border-radius: 50px;
+            font-size: 0.95rem;
+            font-weight: 600;
+            margin-bottom: 20px;
+        }
+        .status-badge.active {
+            background: rgba(0,230,118,0.12);
+            color: var(--green);
+            border: 1px solid rgba(0,230,118,0.3);
+        }
+        .status-badge.pending {
+            background: rgba(255,145,0,0.12);
+            color: var(--orange);
+            border: 1px solid rgba(255,145,0,0.3);
+        }
+        .status-badge.expired {
+            background: rgba(255,82,82,0.12);
+            color: var(--red);
+            border: 1px solid rgba(255,82,82,0.3);
+        }
+
+        /* ----- PLAN CARDS ----- */
+        .plans-grid {
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+            margin-top: 8px;
+        }
+
+        .plan-card {
+            background: var(--bg-card);
+            border: 2px solid var(--border);
+            border-radius: var(--radius);
+            padding: 24px 20px;
+            cursor: pointer;
+            transition: all 0.25s ease;
+            position: relative;
+            overflow: hidden;
+        }
+        .plan-card:hover,
+        .plan-card.selected {
+            border-color: var(--border-active);
+            background: var(--bg-card-hover);
+            box-shadow: 0 0 30px var(--cyan-dim);
+            transform: translateY(-2px);
+        }
+        .plan-card.selected {
+            border-color: var(--cyan);
+            box-shadow: 0 0 40px var(--cyan-glow);
+        }
+        .plan-card .popular-badge {
+            position: absolute;
+            top: 12px;
+            right: 12px;
+            background: var(--cyan);
+            color: var(--bg-deep);
+            font-size: 0.75rem;
+            font-weight: 700;
+            padding: 4px 10px;
+            border-radius: 50px;
+            text-transform: uppercase;
+        }
+        .plan-card .plan-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 10px;
+        }
+        .plan-card .plan-name {
+            font-family: 'Outfit', sans-serif;
+            font-size: 1.25rem;
+            font-weight: 700;
+            color: var(--white);
+        }
+        .plan-card .plan-price {
+            text-align: right;
+        }
+        .plan-card .plan-price .amount {
+            font-family: 'Outfit', sans-serif;
+            font-size: 1.6rem;
+            font-weight: 800;
+            color: var(--cyan);
+        }
+        .plan-card .plan-price .period {
+            font-size: 0.8rem;
+            color: var(--gray-light);
+        }
+        .plan-card .plan-price .per-month {
+            font-size: 0.8rem;
+            color: var(--gray-light);
+            margin-top: 2px;
+        }
+        .plan-card .plan-desc {
+            font-size: 0.9rem;
+            color: var(--gray);
+            line-height: 1.5;
+        }
+        .plan-card .plan-features {
+            margin-top: 14px;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+        .plan-card .plan-feature {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.88rem;
+            color: var(--gray-light);
+        }
+        .plan-card .plan-feature .check {
+            color: var(--green);
+            font-size: 1rem;
+        }
+
+        /* ----- SUBSCRIBE BUTTON ----- */
+        .email-section {
+            margin-top: 20px;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            padding: 20px;
+        }
+        .email-section label {
+            display: block;
+            font-size: 0.95rem;
+            font-weight: 600;
+            color: var(--gray);
+            margin-bottom: 8px;
+        }
+        .email-section input {
+            width: 100%;
+            padding: 14px 16px;
+            font-size: 1.1rem;
+            font-family: 'Inter', sans-serif;
+            background: var(--bg-deep);
+            border: 2px solid var(--border);
+            border-radius: var(--radius-sm);
+            color: var(--white);
+            outline: none;
+            transition: border-color 0.2s;
+        }
+        .email-section input:focus {
+            border-color: var(--cyan);
+        }
+        .email-section input::placeholder {
+            color: var(--gray-light);
+            opacity: 0.6;
+        }
+
+        .btn-subscribe {
+            display: block;
+            width: 100%;
+            padding: 16px;
+            margin-top: 16px;
+            font-size: 1.15rem;
+            font-weight: 700;
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(135deg, var(--cyan), var(--blue));
+            color: var(--white);
+            border: none;
+            border-radius: var(--radius-sm);
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-align: center;
+            text-decoration: none;
+            box-shadow: 0 4px 20px rgba(0,212,255,0.25);
+            min-height: 56px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+        .btn-subscribe:hover {
+            box-shadow: 0 6px 30px rgba(0,212,255,0.4);
+            transform: translateY(-2px);
+        }
+        .btn-subscribe:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        /* ----- SUBSCRIPTION INFO ----- */
+        .subscription-info {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 24px 20px;
+            margin-top: 20px;
+        }
+        .subscription-info h3 {
+            font-family: 'Outfit', sans-serif;
+            font-size: 1.1rem;
+            color: var(--white);
+            margin-bottom: 14px;
+        }
+        .subscription-info .info-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 10px 0;
+            border-bottom: 1px solid var(--border);
+            font-size: 0.95rem;
+        }
+        .subscription-info .info-row:last-child {
+            border-bottom: none;
+        }
+        .subscription-info .info-label {
+            color: var(--gray-light);
+        }
+        .subscription-info .info-value {
+            color: var(--white);
+            font-weight: 600;
+        }
+        .btn-cancel {
+            display: block;
+            width: 100%;
+            padding: 14px;
+            margin-top: 16px;
+            font-size: 1rem;
+            font-weight: 600;
+            font-family: 'Inter', sans-serif;
+            background: transparent;
+            color: var(--red);
+            border: 1px solid rgba(255,82,82,0.3);
+            border-radius: var(--radius-sm);
+            cursor: pointer;
+            min-height: 52px;
+            transition: all 0.2s;
+        }
+        .btn-cancel:hover {
+            background: rgba(255,82,82,0.08);
+            border-color: rgba(255,82,82,0.6);
+        }
+
+        /* ----- SPINNER ----- */
+        .spinner {
+            width: 22px;
+            height: 22px;
+            border: 3px solid rgba(255,255,255,0.3);
+            border-top-color: var(--white);
+            border-radius: 50%;
+            animation: spin 0.6s linear infinite;
+            display: none;
+        }
+        .loading .spinner { display: inline-block; }
+        .loading .btn-text { display: none; }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* ----- ALERT ----- */
+        .alert {
+            padding: 14px 18px;
+            border-radius: var(--radius-sm);
+            font-size: 0.95rem;
+            margin-top: 14px;
+            display: none;
+        }
+        .alert.error {
+            display: block;
+            background: rgba(255,82,82,0.12);
+            border: 1px solid rgba(255,82,82,0.3);
+            color: var(--red);
+        }
+        .alert.success {
+            display: block;
+            background: rgba(0,230,118,0.12);
+            border: 1px solid rgba(0,230,118,0.3);
+            color: var(--green);
+        }
+
+        /* ----- NO SUBSCRIPTION ----- */
+        .no-subscription {
+            text-align: center;
+            padding: 24px 0 8px;
+        }
+        .no-subscription .icon {
+            font-size: 3rem;
+            margin-bottom: 12px;
+        }
+        .no-subscription h2 {
+            font-family: 'Outfit', sans-serif;
+            font-size: 1.3rem;
+            color: var(--white);
+            margin-bottom: 6px;
+        }
+        .no-subscription p {
+            font-size: 0.95rem;
+            color: var(--gray);
+        }
+
+        /* ----- BACK LINK ----- */
+        .back-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            color: var(--gray-light);
+            text-decoration: none;
+            font-size: 0.9rem;
+            margin-bottom: 12px;
+            transition: color 0.2s;
+        }
+        .back-link:hover {
+            color: var(--cyan);
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <a href="/dashboard-cliente" class="back-link">← Voltar para o painel</a>
+
+    <div class="header">
+        <div class="logo">
+            <div class="logo-icon">⬡</div>
+            CR$ HOME CARE AI
+        </div>
+        <h1>Planos e Assinatura</h1>
+        <p>Escolha o melhor plano para cuidar de quem você ama</p>
+    </div>
+
+    <!-- Status da assinatura atual -->
+    <div id="subscriptionStatus" style="display:none;">
+        <div style="text-align:center;">
+            <span id="statusBadge" class="status-badge">Carregando...</span>
+        </div>
+        <div class="subscription-info" id="subscriptionDetails"></div>
+    </div>
+
+    <!-- Sem assinatura - mostrar planos -->
+    <div id="noSubscription" style="display:none;">
+        <div class="no-subscription">
+            <div class="icon">💊</div>
+            <h2>Comece a cuidar melhor</h2>
+            <p>Assine um plano e tenha acesso completo ao CR$ HOME CARE AI</p>
+        </div>
+
+        <div class="plans-grid" id="plansGrid">
+            <!-- Preenchido via JavaScript -->
+        </div>
+
+        <div class="email-section" id="emailSection" style="display:none;">
+            <label for="payerEmail">Seu e-mail para receber os comprovantes:</label>
+            <input
+                type="email"
+                id="payerEmail"
+                placeholder="seu@email.com"
+                autocomplete="email"
+            >
+            <div id="alertBox" class="alert"></div>
+            <button class="btn-subscribe" id="btnSubscribe" onclick="iniciarAssinatura()">
+                <span class="btn-text">Assinar Plano</span>
+                <span class="spinner"></span>
+            </button>
+        </div>
+    </div>
+</div>
+
+<script>
+// ===== ESTADO =====
+const API_URL = window.location.origin;
+let selectedPlanId = null;
+let userData = null;  // será carregado do localStorage/session
+
+// ===== INICIALIZAÇÃO =====
+document.addEventListener('DOMContentLoaded', () => {
+    carregarStatusAssinatura();
+});
+
+// ===== CARREGAR STATUS =====
+async function carregarStatusAssinatura() {
+    // Tenta pegar user_id do localStorage (salvo no login)
+    const storedUser = localStorage.getItem('homecare_user');
+    if (storedUser) {
+        try {
+            userData = JSON.parse(storedUser);
+        } catch(e) {}
+    }
+
+    if (!userData || !userData.id) {
+        // Sem usuário logado — mostra planos mesmo assim
+        document.getElementById('noSubscription').style.display = 'block';
+        carregarPlanos();
+        return;
+    }
+
+    try {
+        const resp = await fetch(`${API_URL}/api/subscription/${userData.id}`);
+        const data = await resp.json();
+
+        if (data.has_active) {
+            mostrarAssinaturaAtiva(data.subscription);
+        } else {
+            document.getElementById('noSubscription').style.display = 'block';
+            carregarPlanos();
+        }
+    } catch(e) {
+        console.error('Erro ao carregar status:', e);
+        document.getElementById('noSubscription').style.display = 'block';
+        carregarPlanos();
+    }
+}
+
+// ===== MOSTRAR ASSINATURA ATIVA =====
+function mostrarAssinaturaAtiva(sub) {
+    document.getElementById('subscriptionStatus').style.display = 'block';
+    document.getElementById('noSubscription').style.display = 'none';
+
+    const badge = document.getElementById('statusBadge');
+    const detalhes = document.getElementById('subscriptionDetails');
+
+    if (sub.status === 'active') {
+        badge.className = 'status-badge active';
+        badge.innerHTML = '✅ Sua assinatura está ativa';
+    } else if (sub.status === 'pending') {
+        badge.className = 'status-badge pending';
+        badge.innerHTML = '⏳ Aguardando confirmação do pagamento';
+    } else {
+        badge.className = 'status-badge expired';
+        badge.innerHTML = '⚠️ Assinatura inativa';
+    }
+
+    const priceFormatted = sub.plan_price 
+        ? `R$${(sub.plan_price/100).toFixed(2).replace('.',',')}`
+        : '—';
+
+    detalhes.innerHTML = `
+        <h3>📋 Detalhes da Assinatura</h3>
+        <div class="info-row">
+            <span class="info-label">Plano</span>
+            <span class="info-value">${sub.plan_name || '—'}</span>
+        </div>
+        <div class="info-row">
+            <span class="info-label">Valor</span>
+            <span class="info-value">${priceFormatted}${sub.plan_duration_months ? `/${sub.plan_duration_months === 1 ? 'mês' : sub.plan_duration_months + ' meses'}` : ''}</span>
+        </div>
+        <div class="info-row">
+            <span class="info-label">Início</span>
+            <span class="info-value">${formatarData(sub.start_date)}</span>
+        </div>
+        <div class="info-row">
+            <span class="info-label">Próxima cobrança</span>
+            <span class="info-value">${formatarData(sub.next_payment_date)}</span>
+        </div>
+        <div class="info-row">
+            <span class="info-label">Renovação automática</span>
+            <span class="info-value">${sub.auto_renew ? 'Sim' : 'Não'}</span>
+        </div>
+        ${sub.status === 'active' ? `
+            <button class="btn-cancel" onclick="cancelarAssinatura()">
+                Cancelar Assinatura
+            </button>
+        ` : ''}
+    `;
+}
+
+function formatarData(dataStr) {
+    if (!dataStr) return '—';
+    try {
+        const d = new Date(dataStr);
+        return d.toLocaleDateString('pt-BR', { day:'2-digit', month:'2-digit', year:'numeric' });
+    } catch(e) { return '—'; }
+}
+
+// ===== CARREGAR PLANOS =====
+async function carregarPlanos() {
+    const grid = document.getElementById('plansGrid');
+    grid.innerHTML = '<p style="color:var(--gray);text-align:center;padding:20px;">Carregando planos...</p>';
+
+    try {
+        const resp = await fetch(`${API_URL}/api/plans`);
+        const data = await resp.json();
+
+        if (data.status !== 'sucesso' || !data.planos) {
+            grid.innerHTML = '<p style="color:var(--red);text-align:center;padding:20px;">Erro ao carregar planos</p>';
+            return;
+        }
+
+        // Identifica qual plano é o "popular" (trimestral = melhor custo-benefício intermediário)
+        const planos = data.planos;
+        const popularIndex = planos.length === 3 ? 1 : 0;  // Trimestral é o do meio
+
+        grid.innerHTML = planos.map((plano, i) => {
+            const popular = i === popularIndex;
+            const features = getFeatures(plano.duration_months);
+            return `
+                <div class="plan-card ${popular ? 'selected' : ''}" 
+                     onclick="selecionarPlano('${plano.id}', this)"
+                     data-plan-id="${plano.id}">
+                    ${popular ? '<span class="popular-badge">Mais Popular</span>' : ''}
+                    <div class="plan-header">
+                        <span class="plan-name">${plano.name}</span>
+                        <div class="plan-price">
+                            <div class="amount">${plano.price_formatted}</div>
+                            <div class="period">/${plano.duration_label}</div>
+                            ${plano.duration_months > 1 ? 
+                                `<div class="per-month">${calcularPorMes(plano.price, plano.duration_months)}/mês</div>` 
+                                : ''}
+                        </div>
+                    </div>
+                    <p class="plan-desc">${plano.description}</p>
+                    <div class="plan-features">
+                        ${features.map(f => `
+                            <div class="plan-feature">
+                                <span class="check">✓</span>
+                                <span>${f}</span>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+            `;
+        }).join('');
+
+        // Seleciona o popular por padrão
+        const popularCard = grid.querySelector('[data-plan-id]');
+        if (popularCard) {
+            const popularId = grid.querySelector('.popular-badge')?.parentElement?.dataset?.planId 
+                || grid.querySelector('.selected')?.dataset?.planId;
+            if (popularId) {
+                selectedPlanId = popularId;
+                document.getElementById('emailSection').style.display = 'block';
+            }
+        }
+    } catch(e) {
+        console.error('Erro:', e);
+        grid.innerHTML = '<p style="color:var(--red);text-align:center;padding:20px;">Erro ao conectar com servidor</p>';
+    }
+}
+
+function calcularPorMes(precoCentavos, meses) {
+    const porMes = precoCentavos / meses / 100;
+    return `R$${porMes.toFixed(2).replace('.',',')}`;
+}
+
+function getFeatures(meses) {
+    const base = [
+        'Lembretes de medicamentos',
+        'Calendário de consultas',
+        'Notificações para familiares',
+        'Leitura de receitas por foto (OCR)',
+        'Comando por voz',
+    ];
+    if (meses >= 3) {
+        base.push('Suporte prioritário via WhatsApp');
+    }
+    if (meses >= 12) {
+        base.push('Relatórios mensais de saúde');
+    }
+    return base;
+}
+
+// ===== SELECIONAR PLANO =====
+function selecionarPlano(planId, cardEl) {
+    // Remove selected de todos
+    document.querySelectorAll('.plan-card').forEach(c => c.classList.remove('selected'));
+    // Seleciona o clicado
+    cardEl.classList.add('selected');
+    selectedPlanId = planId;
+    document.getElementById('emailSection').style.display = 'block';
+}
+
+// ===== INICIAR ASSINATURA =====
+async function iniciarAssinatura() {
+    const btn = document.getElementById('btnSubscribe');
+    const alertBox = document.getElementById('alertBox');
+    const emailInput = document.getElementById('payerEmail');
+    const email = emailInput.value.trim();
+
+    // Validações
+    if (!email) {
+        alertBox.className = 'alert error';
+        alertBox.textContent = 'Informe seu e-mail para continuar';
+        emailInput.focus();
+        return;
+    }
+    if (!email.includes('@') || !email.includes('.')) {
+        alertBox.className = 'alert error';
+        alertBox.textContent = 'Informe um e-mail válido';
+        emailInput.focus();
+        return;
+    }
+    if (!selectedPlanId) {
+        alertBox.className = 'alert error';
+        alertBox.textContent = 'Selecione um plano acima';
+        return;
+    }
+
+    alertBox.className = 'alert';
+    alertBox.textContent = '';
+    btn.classList.add('loading');
+    btn.disabled = true;
+
+    try {
+        const resp = await fetch(`${API_URL}/api/subscribe`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                plan_id: selectedPlanId,
+                payer_email: email
+            })
+        });
+
+        const data = await resp.json();
+
+        if (resp.ok && data.checkout_url) {
+            // Sucesso — redireciona para checkout do Mercado Pago
+            window.location.href = data.checkout_url;
+        } else {
+            alertBox.className = 'alert error';
+            alertBox.textContent = data.detail || 'Erro ao criar assinatura. Tente novamente.';
+            btn.classList.remove('loading');
+            btn.disabled = false;
+        }
+    } catch(e) {
+        console.error('Erro:', e);
+        alertBox.className = 'alert error';
+        alertBox.textContent = 'Erro de conexão. Verifique sua internet e tente novamente.';
+        btn.classList.remove('loading');
+        btn.disabled = false;
+    }
+}
+
+// ===== CANCELAR ASSINATURA =====
+async function cancelarAssinatura() {
+    if (!confirm('Tem certeza que deseja cancelar sua assinatura?\n\nVocê perderá o acesso aos recursos premium ao final do período pago.')) {
+        return;
+    }
+
+    if (!userData || !userData.id) {
+        alert('Usuário não identificado. Faça login novamente.');
+        return;
+    }
+
+    try {
+        const resp = await fetch(`${API_URL}/api/subscription/${userData.id}/cancel`, {
+            method: 'POST'
+        });
+
+        const data = await resp.json();
+
+        if (resp.ok) {
+            alert('Assinatura cancelada com sucesso.');
+            location.reload();
+        } else {
+            alert(data.detail || 'Erro ao cancelar. Tente novamente.');
+        }
+    } catch(e) {
+        alert('Erro de conexão ao cancelar.');
+    }
+}
+</script>
+
+</body>
+</html>

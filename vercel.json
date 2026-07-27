@@ -52,6 +52,22 @@
       "dest": "/home_care_ia.html"
     },
     {
+      "src": "/manual-do-produto.html",
+      "dest": "/manual-do-produto.html"
+    },
+    {
+      "src": "/privacidade.html",
+      "dest": "/privacidade.html"
+    },
+    {
+      "src": "/termos-de-uso.html",
+      "dest": "/termos-de-uso.html"
+    },
+    {
+      "src": "/plans.html",
+      "dest": "/plans.html"
+    },
+    {
       "src": "/index.html",
       "dest": "/index.html"
     },
