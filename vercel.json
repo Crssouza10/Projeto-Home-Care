@@ -48,6 +48,10 @@
       "dest": "/dashboard_cliente.html"
     },
     {
+      "src": "/ia",
+      "dest": "/home_care_ia.html"
+    },
+    {
       "src": "/index.html",
       "dest": "/index.html"
     },
