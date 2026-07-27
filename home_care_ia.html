@@ -1152,6 +1152,28 @@ document.querySelectorAll('.modal-overlay').forEach(overlay => {
 document.getElementById('login-password').addEventListener('keydown', e => { if (e.key==='Enter') doLogin(); });
 document.getElementById('reg-password').addEventListener('keydown', e => { if (e.key==='Enter') doRegister(); });
 
+// Auto-login from landing page (cross-domain via URL param)
+(function() {
+    const params = new URLSearchParams(window.location.search);
+    const userParam = params.get('user');
+    if (userParam) {
+        try {
+            const user = JSON.parse(decodeURIComponent(userParam));
+            if (user && user.id && user.full_name) {
+                state.user = user;
+                document.getElementById('login-screen').style.display = 'none';
+                document.getElementById('app-screen').style.display = 'block';
+                document.getElementById('user-name-display').textContent = user.full_name;
+                document.getElementById('user-avatar').textContent = (user.full_name || 'U')[0].toUpperCase();
+                // Limpa URL sem recarregar
+                window.history.replaceState({}, document.title, window.location.pathname);
+                loadAll();
+                return;
+            }
+        } catch(e) { /* ignora erro de parse */ }
+    }
+})();
+
 // Initialize
 document.getElementById('app-screen').style.display = 'none';
 </script>
