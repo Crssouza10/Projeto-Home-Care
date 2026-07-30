@@ -964,7 +964,7 @@ footer p { font-size:0.9rem; line-height:1.6 }
         <ul class="pricing-features">
           <li><span class="check">✓</span> 1 usuário responsável</li>
           <li><span class="check">✓</span> Lembretes inteligentes</li>
-          <li><span class="check">✓</span> Até 5 pessoas cuidadas</li>
+          <li><span class="check">✓</span> Até 3 pessoas cuidadas</li>
           <li><span class="check">✓</span> Registro completo de saúde</li>
           <li><span class="check">✓</span> App mobile + notificações</li>
           <li><span class="check">✓</span> IA de monitoramento</li>
@@ -979,9 +979,9 @@ footer p { font-size:0.9rem; line-height:1.6 }
         <div class="pricing-price">R$79<span>,90</span></div>
         <div class="pricing-period">por mês</div>
         <ul class="pricing-features">
-          <li><span class="check">✓</span> 2 usuários responsáveis</li>
+          <li><span class="check">✓</span> 1 usuário responsável</li>
           <li><span class="check">✓</span> Lembretes inteligentes + IA</li>
-          <li><span class="check">✓</span> Até 10 pessoas cuidadas</li>
+          <li><span class="check">✓</span> Até 5 pessoas cuidadas</li>
           <li><span class="check">✓</span> Registro completo de saúde</li>
           <li><span class="check">✓</span> App mobile premium</li>
           <li><span class="check">✓</span> IA preditiva avançada</li>
@@ -1111,7 +1111,7 @@ footer p { font-size:0.9rem; line-height:1.6 }
       </div>
       <div class="faq-card">
         <h4>👥 Posso cadastrar mais de uma pessoa para cuidar?</h4>
-        <p>Sim! No plano Básico você pode cadastrar até 5 pessoas cuidadas, e no plano Pró até 10. Cada uma com seu perfil, medicamentos e rotina independentes.</p>
+        <p>Sim! No plano Básico você pode cadastrar até 3 pessoas cuidadas, e no plano Pró até 5. Cada uma com seu perfil, medicamentos e rotina independentes.</p>
       </div>
       <div class="faq-card">
         <h4>🤖 Como a inteligência artificial ajuda no cuidado?</h4>
@@ -1155,7 +1155,7 @@ footer p { font-size:0.9rem; line-height:1.6 }
   <p>
     Home Care Inteligente — Tecnologia e cuidado para sua família.<br>
     &copy; 2025 Cuidadoso. Todos os direitos reservados.
-    <br><span style="font-size: 0.8rem; color: rgba(255,255,255,0.45);">Versão: V1.6 em 27/07/2026</span>
+    <br><span style="font-size: 0.8rem; color: rgba(255,255,255,0.45);">Versão: V1.3 em 29/07/2026</span>
     <br><br>
     <a href="/privacidade.html" style="color:rgba(255,255,255,.6);text-decoration:none;margin:0 12px">Política de Privacidade</a>
     <a href="/termos-de-uso.html" style="color:rgba(255,255,255,.6);text-decoration:none;margin:0 12px">Termos de Uso</a>
@@ -1304,10 +1304,11 @@ const plansData = {
         features: [
             '1 usuário responsável',
             'Lembretes inteligentes',
-            'Até 5 pessoas cuidadas',
+            'Até 3 pessoas cuidadas',
             'Registro completo de saúde',
             'App mobile + notificações',
-            'IA de monitoramento'
+            'IA de monitoramento',
+            'Relatórios para médico (indisponível)'
         ],
         btnText: 'Assinar Básico'
     },
@@ -1317,9 +1318,9 @@ const plansData = {
         price: 'R$ 79,90/mês',
         desc: 'Cuidado profissional completo',
         features: [
-            '2 usuários responsáveis',
+            '1 usuário responsável',
             'Lembretes inteligentes + IA',
-            'Até 10 pessoas cuidadas',
+            'Até 5 pessoas cuidadas',
             'Registro completo de saúde',
             'App mobile premium',
             'IA preditiva avançada',
@@ -1334,6 +1335,9 @@ function openLogin(planKey) {
     const modalBox = document.getElementById('modal-box');
     const planDetailsCol = document.getElementById('plan-details-col');
     const planBadge = document.getElementById('plan-badge');
+
+    // Guarda o plano selecionado para uso no registro
+    window._selectedPlan = planKey || 'trial';
 
     // Reset views
     showLoginView();
@@ -1492,9 +1496,12 @@ async function handleRegister(e) {
     const errorBox = document.getElementById('register-error');
     const btn = document.getElementById('register-btn');
 
+    // Pega o plano selecionado (definido em openLogin)
+    const planKey = window._selectedPlan || 'trial';
+
     errorBox.style.display = 'none';
     btn.disabled = true;
-    btn.innerHTML = '⏳ Criando conta...';
+    btn.innerHTML = '⏳ Processando...';
 
     // Fallback para protocolo file://
     if (window.location.protocol === 'file:') {
@@ -1510,32 +1517,53 @@ async function handleRegister(e) {
     }
 
     try {
-        const response = await fetch(API_BASE + '/api/users', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                full_name: name,
-                email: email,
-                phone: phone || null,
-                password: password
-            })
-        });
-
-        const data = await response.json();
-        if (response.ok) {
-            alert('✅ Conta criada com sucesso!\n\nFaça login agora com suas credenciais.');
-            showLoginView();
-            document.getElementById('username').value = email;
-            document.getElementById('password').focus();
+        if (planKey === 'trial') {
+            // Cadastro gratuito — fluxo normal
+            const response = await fetch(API_BASE + '/api/users', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ full_name: name, email: email, phone: phone || null, password: password })
+            });
+            const data = await response.json();
+            if (response.ok) {
+                alert('✅ Conta criada com sucesso!\\n\\nFaça login agora com suas credenciais.');
+                showLoginView();
+                document.getElementById('username').value = email;
+                document.getElementById('password').focus();
+            } else {
+                throw new Error(data.detail || 'Erro ao criar conta.');
+            }
         } else {
-            throw new Error(data.detail || 'Erro ao criar conta.');
+            // Planos Básico e Pro — redireciona para Mercado Pago
+            btn.innerHTML = '⏳ Redirecionando para pagamento...';
+            const response = await fetch(API_BASE + '/api/register-subscribe', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    full_name: name,
+                    email: email,
+                    phone: phone || null,
+                    password: password,
+                    plan: planKey
+                })
+            });
+            const data = await response.json();
+            if (response.ok && data.checkout_url) {
+                // Salva preference_id no sessionStorage para callback
+                sessionStorage.setItem('pending_preference_id', data.preference_id);
+                sessionStorage.setItem('pending_email', email);
+                // Redireciona para checkout do Mercado Pago
+                window.location.href = data.checkout_url;
+            } else {
+                throw new Error(data.detail || 'Erro ao iniciar pagamento. Tente novamente.');
+            }
         }
     } catch (error) {
         errorBox.textContent = '❌ ' + error.message;
         errorBox.style.display = 'block';
     } finally {
         btn.disabled = false;
-        btn.innerHTML = '✅ Finalizar Cadastro';
+        btn.innerHTML = planKey === 'trial' ? '✅ Finalizar Cadastro' : '💳 Ir para Pagamento';
     }
 }
 

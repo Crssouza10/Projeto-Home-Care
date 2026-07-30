@@ -253,7 +253,7 @@
             <div class="icon">🏥</div>
             <h1>Home Care IA</h1>
             <p>Cuidado domiciliar inteligente</p>
-            <p style="font-size: 10px; color: var(--text-muted); margin-top: 4px;">Versão V1.5 - 27/07/2026</p>
+            <p style="font-size: 10px; color: var(--text-muted); margin-top: 4px;">Versão V1.3 - 29/07/2026</p>
         </div>
         <div class="form-group">
             <label>Nome ou Telefone</label>
@@ -402,14 +402,14 @@
                         <div style="text-align:right;">
                             <div style="font-size:13px;color:var(--text-muted);">Limites do plano:</div>
                             <div style="font-size:14px;font-weight:600;margin-top:4px;" id="plan-limits-display">
-                                👤 1 Responsável · 👥 5 pessoas cuidadas
+                                👤 1 Responsável · 👥 3 pessoas cuidadas
                             </div>
                         </div>
                     </div>
                     <div style="margin-top:16px;padding-top:16px;border-top:1px solid var(--border);">
                         <p style="font-size:13px;color:var(--text-muted);margin-bottom:8px;">
                             Precisa de mais? <a href="#" style="color:var(--accent);font-weight:600;" onclick="upgradePlan()">Faça upgrade para o Plano Pro</a>
-                            e gerencie até 10 pessoas cuidadas.
+                            e gerencie até 5 pessoas cuidadas.
                         </p>
                     </div>
                 </div>
@@ -1098,11 +1098,11 @@ function renderClinicalInfo() {
     if (isPro) {
         planCard.style.borderColor = 'rgba(0,200,83,0.4)';
         planNameEl.innerHTML = '<span class="badge" style="background:rgba(0,200,83,0.15);color:var(--success);">⭐ Plano Pro</span>';
-        limitsEl.innerHTML = '👤 2 Responsáveis · 👥 10 pessoas cuidadas';
+        limitsEl.innerHTML = '👤 1 Responsável · 👥 5 pessoas cuidadas';
     } else {
         planCard.style.borderColor = 'rgba(0,212,255,0.3)';
         planNameEl.innerHTML = '<span class="badge badge-info">🏠 Plano Básico</span>';
-        limitsEl.innerHTML = '👤 1 Responsável · 👥 5 pessoas cuidadas';
+        limitsEl.innerHTML = '👤 1 Responsável · 👥 3 pessoas cuidadas';
     }
 }
 
@@ -1131,7 +1131,7 @@ function upgradePlan() {
         return;
     }
     // Redireciona para o checkout ou abre modal de upgrade
-    if (confirm('Deseja fazer upgrade para o Plano Pro?\n\n⭐ 2 Responsáveis\n👥 Até 10 pessoas cuidadas\n🔊 OCR de receitas\n🎤 Reconhecimento de voz\n🔔 Áudio dos lembretes\n\nPor apenas R$49,90/mês')) {
+    if (confirm('Deseja fazer upgrade para o Plano Pro?\n\n⭐ 1 Responsável\n👥 Até 5 pessoas cuidadas\n🔊 OCR de receitas\n🎤 Reconhecimento de voz\n🔔 Áudio dos lembretes\n\nPor apenas R$49,90/mês')) {
         // Por enquanto, atualiza localmente e mostra mensagem
         state.user.plan = 'pro';
         toast('Upgrade solicitado! Entre em contato para ativar. ⭐', 'success');

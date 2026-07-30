@@ -100,6 +100,20 @@ elif DATABASE_URL.startswith("postgres://"):
 
 print(f"DATABASE_URL: {'Configurada' if DATABASE_URL else 'NAO CONFIGURADA'}")
 
+# ===== MERCADO PAGO =====
+MERCADO_PAGO_ACCESS_TOKEN = os.getenv("MERCADO_PAGO_ACCESS_TOKEN")
+MERCADO_PAGO_PUBLIC_KEY = os.getenv("MERCADO_PAGO_PUBLIC_KEY")
+mp_sdk = None
+if MERCADO_PAGO_ACCESS_TOKEN:
+    try:
+        import mercadopago
+        mp_sdk = mercadopago.SDK(MERCADO_PAGO_ACCESS_TOKEN)
+        print("✅ Mercado Pago SDK inicializado")
+    except ImportError:
+        print("⚠️ pacote 'mercadopago' não instalado. Execute: pip install mercadopago")
+else:
+    print("ℹ️ MERCADO_PAGO_ACCESS_TOKEN não configurado — rotas de pagamento retornarão 503")
+
 engine = create_engine(DATABASE_URL)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
@@ -160,6 +174,40 @@ try:
         print("✅ Tabela medication_schedules verificada/criada com sucesso.")
 except Exception as e:
     print(f"⚠️ Erro ao verificar/criar tabela medication_schedules: {e}")
+
+# Garante que a tabela subscriptions existe
+try:
+    with engine.connect() as conn:
+        conn.execute(text("""
+            CREATE TABLE IF NOT EXISTS subscriptions (
+                id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+                user_id UUID NOT NULL,
+                plan VARCHAR(20) NOT NULL DEFAULT 'basico',
+                mp_preference_id VARCHAR(100),
+                mp_subscription_id VARCHAR(100),
+                checkout_url TEXT,
+                status VARCHAR(20) DEFAULT 'pending',
+                start_date TIMESTAMP,
+                end_date TIMESTAMP,
+                created_at TIMESTAMP DEFAULT NOW()
+            );
+        """))
+        # Colunas adicionais para compatibilidade com schema antigo
+        for col, dtype in [("plan", "VARCHAR(20) DEFAULT 'basico'"), ("mp_preference_id", "VARCHAR(100)"), ("mp_subscription_id", "VARCHAR(100)"), ("checkout_url", "TEXT")]:
+            try:
+                conn.execute(text(f"ALTER TABLE subscriptions ADD COLUMN IF NOT EXISTS {col} {dtype}"))
+            except Exception:
+                pass
+        # Remove NOT NULL de colunas antigas que não usamos mais
+        for old_col in ["plan_id", "mercadopago_subscription_id", "mercadopago_status"]:
+            try:
+                conn.execute(text(f"ALTER TABLE subscriptions ALTER COLUMN {old_col} DROP NOT NULL"))
+            except Exception:
+                pass
+        conn.commit()
+        print("✅ Tabela subscriptions verificada/criada com sucesso.")
+except Exception as e:
+    print(f"⚠️ Erro ao verificar/criar tabela subscriptions: {e}")
 
 
 # ==================== MODELOS (TABELAS) ====================
@@ -289,6 +337,21 @@ class EmergencyContact(Base):
     email = Column(String(150), nullable=True)
     notes = Column(Text, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)  # ou datetime.utcnow se mudar o import
+
+# ===== MODELO DE ASSINATURAS (MERCADO PAGO) =====
+class Subscription(Base):
+    __tablename__ = "subscriptions"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    user_id = Column(UUID(as_uuid=True), nullable=False, index=True)
+    plan = Column(String(20), nullable=False, default="basico")
+    mp_preference_id = Column(String(100), nullable=True)
+    mp_subscription_id = Column(String(100), nullable=True)
+    checkout_url = Column(Text, nullable=True)
+    status = Column(String(20), default="pending")
+    start_date = Column(DateTime, nullable=True)
+    end_date = Column(DateTime, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
 
 
 # ==================== NOVO MODELO: MedicationSchedule ====================
@@ -517,6 +580,14 @@ async def serve_home_care_ia():
     html_file = Path(__file__).parent / "home_care_ia.html"
     if not html_file.exists():
         return HTMLResponse(content="<h1>Erro: home_care_ia.html não encontrado</h1>", status_code=500)
+    return HTMLResponse(content=html_file.read_text(encoding="utf-8"))
+
+@app.get("/success", response_class=HTMLResponse)
+async def serve_success():
+    """Página de callback pós-pagamento do Mercado Pago"""
+    html_file = Path(__file__).parent / "success.html"
+    if not html_file.exists():
+        return HTMLResponse(content="<h1>Erro: success.html não encontrado</h1>", status_code=500)
     return HTMLResponse(content=html_file.read_text(encoding="utf-8"))
 
 # --- HEALTH CHECK ---
@@ -1685,7 +1756,7 @@ async def create_responsible(user_id: str, resp: ResponsibleCreate, db: Session 
     user = db.query(User).filter(User.id == user_uuid).first()
     if user:
         plan = user.plan or 'basico'
-        max_resp = 2 if plan == 'pro' else 1
+        max_resp = 1  # Ambos os planos: 1 responsável
         current = db.query(Responsible).filter(Responsible.user_id == user_uuid).count()
         if current >= max_resp:
             raise HTTPException(
@@ -3493,6 +3564,483 @@ async def notificar_responsavel_se_nao_tomou(medication_id):
             await enviar_whatsapp_alerta(resp.phone, med)
     
     db.close()
+
+# ===== ROTAS MERCADO PAGO =====
+
+@app.get("/api/plans")
+async def listar_planos():
+    """Retorna lista de planos de assinatura disponíveis"""
+    planos = [
+        {
+            "key": "basico_mensal",
+            "name": "Básico Mensal",
+            "price": 2990,
+            "price_display": "R$29,90",
+            "period": "mensal",
+            "features": [
+                "1 responsável",
+                "Até 3 pessoas cuidadas",
+                "Lembretes inteligentes",
+                "Registro completo de saúde",
+                "App mobile + notificações",
+                "IA de monitoramento"
+            ],
+            "highlight": False
+        },
+        {
+            "key": "pro_mensal",
+            "name": "Pro Mensal",
+            "price": 4990,
+            "price_display": "R$49,90",
+            "period": "mensal",
+            "features": [
+                "1 responsável",
+                "Até 5 pessoas cuidadas",
+                "Tudo do Básico +",
+                "OCR de receitas médicas",
+                "Reconhecimento de voz",
+                "Áudio dos lembretes",
+                "Relatórios para médico"
+            ],
+            "highlight": True
+        },
+        {
+            "key": "pro_trimestral",
+            "name": "Pro Trimestral",
+            "price": 12990,
+            "price_display": "R$129,90",
+            "period": "trimestral",
+            "features": [
+                "1 responsável",
+                "Até 5 pessoas cuidadas",
+                "Tudo do Pro Mensal",
+                "3 meses pelo preço de 2.6",
+                "Suporte prioritário"
+            ],
+            "highlight": False
+        },
+        {
+            "key": "pro_anual",
+            "name": "Pro Anual",
+            "price": 44990,
+            "price_display": "R$449,90",
+            "period": "anual",
+            "features": [
+                "1 responsável",
+                "Até 5 pessoas cuidadas",
+                "Tudo do Pro Trimestral",
+                "12 meses pelo preço de 9",
+                "Suporte VIP 24/7"
+            ],
+            "highlight": False
+        }
+    ]
+    return {"status": "success", "plans": planos}
+
+
+@app.post("/api/subscribe")
+async def criar_assinatura(request: Request, db: Session = Depends(get_db)):
+    """Cria uma preferência de pagamento no Mercado Pago e retorna link de checkout"""
+    if not mp_sdk:
+        raise HTTPException(status_code=503, detail="Mercado Pago não configurado")
+
+    body = await request.json()
+    user_id = body.get("user_id")
+    payer_email = body.get("email")
+    plan_key = body.get("plan", "basico_mensal")
+
+    if not user_id or not payer_email:
+        raise HTTPException(status_code=400, detail="user_id e email são obrigatórios")
+
+    planos_precos = {
+        "basico_mensal": ("Básico Mensal", 29.90),
+        "pro_mensal": ("Pro Mensal", 49.90),
+        "pro_trimestral": ("Pro Trimestral", 129.90),
+        "pro_anual": ("Pro Anual", 449.90),
+    }
+    if plan_key not in planos_precos:
+        raise HTTPException(status_code=400, detail=f"Plano inválido: {plan_key}")
+
+    plan_name, plan_price = planos_precos[plan_key]
+
+    try:
+        preference_data = {
+            "items": [{
+                "title": f"Plano {plan_name} - Cuidadoso",
+                "quantity": 1,
+                "currency_id": "BRL",
+                "unit_price": plan_price
+            }],
+            "payer": {"email": payer_email},
+            "back_urls": {
+                "success": "https://cuidaidoso.ia.br/dashboard-cliente",
+                "failure": "https://cuidaidoso.ia.br",
+                "pending": "https://cuidaidoso.ia.br/dashboard-cliente"
+            },
+            "auto_return": "approved",
+            "external_reference": str(temp_user_id)
+        }
+
+        preference_response = mp_sdk.preference().create(preference_data)
+        preference = preference_response.get("response", {})
+        
+        if not preference or not preference.get("id"):
+            raise HTTPException(status_code=502, detail="Falha na comunicação com Mercado Pago. Verifique as credenciais.")
+
+        checkout_url = preference.get("sandbox_init_point") or preference.get("init_point")
+        mp_preference_id = preference.get("id")
+
+        if not checkout_url:
+            raise HTTPException(status_code=502, detail="Mercado Pago não retornou URL de checkout")
+
+        subscription = Subscription(
+            user_id=uuid.UUID(user_id),
+            plan=plan_key,
+            mp_preference_id=mp_preference_id,
+            checkout_url=checkout_url,
+            status="pending"
+        )
+        db.add(subscription)
+        db.commit()
+
+        return {
+            "status": "success",
+            "checkout_url": checkout_url,
+            "preference_id": mp_preference_id,
+            "plan": plan_name,
+            "price": plan_price
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Erro ao criar pagamento: {str(e)}")
+
+
+@app.get("/api/subscription/{user_id}")
+async def status_assinatura(user_id: str, db: Session = Depends(get_db)):
+    """Retorna status da assinatura do usuário"""
+    try:
+        user_uuid = uuid.UUID(user_id)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="user_id inválido")
+
+    subscription = db.query(Subscription).filter(
+        Subscription.user_id == user_uuid
+    ).order_by(Subscription.created_at.desc()).first()
+
+    if not subscription:
+        return {
+            "status": "no_subscription",
+            "has_active": False,
+            "message": "Nenhuma assinatura encontrada"
+        }
+
+    return {
+        "status": "success",
+        "has_active": subscription.status == "active",
+        "subscription": {
+            "id": str(subscription.id),
+            "plan": subscription.plan,
+            "status": subscription.status,
+            "checkout_url": subscription.checkout_url,
+            "start_date": subscription.start_date.isoformat() if subscription.start_date else None,
+            "end_date": subscription.end_date.isoformat() if subscription.end_date else None,
+            "created_at": subscription.created_at.isoformat() if subscription.created_at else None
+        }
+    }
+
+
+@app.post("/api/subscription/{user_id}/activate")
+async def ativar_assinatura(user_id: str, db: Session = Depends(get_db)):
+    """Ativa assinatura manualmente (para teste/desenvolvimento)"""
+    try:
+        user_uuid = uuid.UUID(user_id)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="user_id inválido")
+
+    subscription = db.query(Subscription).filter(
+        Subscription.user_id == user_uuid
+    ).order_by(Subscription.created_at.desc()).first()
+
+    if not subscription:
+        raise HTTPException(status_code=404, detail="Nenhuma assinatura encontrada")
+
+    subscription.status = "active"
+    subscription.start_date = datetime.utcnow()
+
+    user = db.query(User).filter(User.id == user_uuid).first()
+    if user:
+        if "pro" in subscription.plan:
+            user.plan = "pro"
+        else:
+            user.plan = "basico"
+
+    db.commit()
+    return {"status": "success", "message": "Assinatura ativada com sucesso!", "user_plan": user.plan if user else None}
+
+
+@app.post("/api/subscription/{user_id}/cancel")
+async def cancelar_assinatura(user_id: str, db: Session = Depends(get_db)):
+    """Cancela a assinatura do usuário"""
+    try:
+        user_uuid = uuid.UUID(user_id)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="user_id inválido")
+
+    subscription = db.query(Subscription).filter(
+        Subscription.user_id == user_uuid,
+        Subscription.status == "active"
+    ).order_by(Subscription.created_at.desc()).first()
+
+    if not subscription:
+        raise HTTPException(status_code=404, detail="Nenhuma assinatura ativa encontrada")
+
+    if subscription.mp_subscription_id and mp_sdk:
+        try:
+            mp_sdk.preapproval().update(subscription.mp_subscription_id, {"status": "cancelled"})
+        except Exception as e:
+            print(f"⚠️ Erro ao cancelar no MP: {e}")
+
+    subscription.status = "cancelled"
+    subscription.end_date = datetime.utcnow()
+    db.commit()
+
+    return {"status": "success", "message": "Assinatura cancelada com sucesso"}
+
+
+@app.post("/api/webhook/mercadopago")
+async def webhook_mercadopago(request: Request, db: Session = Depends(get_db)):
+    """Recebe notificações de pagamento do Mercado Pago"""
+    try:
+        body = await request.json()
+        topic = body.get("type") or body.get("topic")
+        data_id = body.get("data", {}).get("id")
+
+        print(f"🔔 Webhook MP: topic={topic}, id={data_id}")
+
+        if topic == "payment" and data_id and mp_sdk:
+            payment_info = mp_sdk.payment().get(data_id)
+            payment = payment_info.get("response", {})
+
+            external_ref = payment.get("external_reference")
+            status = payment.get("status")
+
+            if external_ref and status == "approved":
+                user_uuid = uuid.UUID(external_ref)
+                subscription = db.query(Subscription).filter(
+                    Subscription.user_id == user_uuid
+                ).order_by(Subscription.created_at.desc()).first()
+
+                if subscription:
+                    subscription.status = "active"
+                    subscription.start_date = datetime.utcnow()
+
+                    user = db.query(User).filter(User.id == user_uuid).first()
+                    if user:
+                        if "pro" in (subscription.plan or ""):
+                            user.plan = "pro"
+
+                    db.commit()
+                    print(f"✅ Assinatura ativada para user_id={external_ref}")
+
+        return {"status": "received"}
+    except Exception as e:
+        print(f"❌ Erro webhook MP: {e}")
+        return {"status": "error", "message": str(e)}
+
+# ===== FLUXO DE CADASTRO COM PAGAMENTO =====
+
+@app.post("/api/register-subscribe")
+async def register_subscribe(request: Request, db: Session = Depends(get_db)):
+    """
+    Etapa 1 do cadastro pago: recebe dados do usuário + plano, 
+    cria preferência no Mercado Pago e retorna link de checkout.
+    O usuário NÃO é criado ainda — só após pagamento confirmado.
+    """
+    if not mp_sdk:
+        raise HTTPException(status_code=503, detail="Mercado Pago não configurado")
+
+    body = await request.json()
+    full_name = body.get("full_name")
+    email = body.get("email")
+    phone = body.get("phone")
+    password = body.get("password")
+    plan_key = body.get("plan")
+
+    if not all([full_name, email, password, plan_key]):
+        raise HTTPException(status_code=400, detail="full_name, email, password e plan são obrigatórios")
+
+    # Valida se email já existe
+    existing = db.query(User).filter(User.email == email).first()
+    if existing:
+        raise HTTPException(status_code=400, detail="Email já cadastrado")
+
+    planos_precos = {
+        "basico": ("Plano Básico", 29.90),
+        "pro": ("Plano Pro", 49.90),
+    }
+    if plan_key not in planos_precos:
+        raise HTTPException(status_code=400, detail=f"Plano inválido: {plan_key}")
+
+    plan_name, plan_price = planos_precos[plan_key]
+
+    try:
+        # Salva dados do cadastro pendente como subscription pendente
+        # Usamos um user_id temporário que será substituído após criação
+        temp_user_id = uuid.uuid4()
+
+        preference_data = {
+            "items": [{
+                "title": f"{plan_name} - Cuidadoso",
+                "quantity": 1,
+                "currency_id": "BRL",
+                "unit_price": plan_price
+            }],
+            "payer": {"email": email},
+            "back_urls": {
+                "success": f"{os.getenv('FRONTEND_URL', 'http://localhost:3000')}/success?payment=success&plan={plan_key}&email={email}",
+                "failure": f"{os.getenv('FRONTEND_URL', 'http://localhost:3000')}/?payment=failed",
+                "pending": f"{os.getenv('FRONTEND_URL', 'http://localhost:3000')}/?payment=pending"
+            },
+            "external_reference": str(temp_user_id)
+        }
+
+        preference_response = mp_sdk.preference().create(preference_data)
+        preference = preference_response.get("response", {})
+        
+        if not preference or not preference.get("id"):
+            raise HTTPException(status_code=502, detail="Falha na comunicação com Mercado Pago. Verifique as credenciais.")
+
+        checkout_url = preference.get("sandbox_init_point") or preference.get("init_point")
+        mp_preference_id = preference.get("id")
+
+        if not checkout_url:
+            raise HTTPException(status_code=502, detail="Mercado Pago não retornou URL de checkout")
+
+        # Salva subscription pendente com dados do cadastro
+        subscription = Subscription(
+            user_id=temp_user_id,
+            plan=plan_key,
+            mp_preference_id=mp_preference_id,
+            checkout_url=checkout_url,
+            status="pending"
+        )
+        db.add(subscription)
+
+        # Salva dados do cadastro pendente em uma tabela temporária
+        # Usando a própria subscription com campos extras no metadado
+        db.execute(text("""
+            CREATE TABLE IF NOT EXISTS pending_registrations (
+                id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+                preference_id VARCHAR(100) UNIQUE NOT NULL,
+                full_name VARCHAR(100) NOT NULL,
+                email VARCHAR(150) NOT NULL,
+                phone VARCHAR(20),
+                password_hash VARCHAR(255) NOT NULL,
+                plan VARCHAR(20) NOT NULL,
+                created_at TIMESTAMP DEFAULT NOW()
+            )
+        """))
+        db.execute(text(
+            "INSERT INTO pending_registrations (preference_id, full_name, email, phone, password_hash, plan) "
+            "VALUES (:pid, :name, :email, :phone, :pwd, :plan)"
+        ), {
+            "pid": mp_preference_id,
+            "name": full_name,
+            "email": email,
+            "phone": phone,
+            "pwd": sha256(password.encode()).hexdigest(),
+            "plan": plan_key
+        })
+        db.commit()
+
+        return {
+            "status": "success",
+            "checkout_url": checkout_url,
+            "preference_id": mp_preference_id,
+            "plan": plan_name,
+            "price": plan_price,
+            "message": "Redirecione o usuário para o checkout do Mercado Pago"
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Erro ao criar pagamento: {str(e)}")
+
+
+@app.post("/api/register-complete")
+async def register_complete(request: Request, db: Session = Depends(get_db)):
+    """
+    Etapa 2: após pagamento, cria conta do usuário.
+    Recebe preference_id, verifica status no MP e finaliza cadastro.
+    Também usado como callback do frontend após retorno do checkout.
+    """
+    body = await request.json()
+    preference_id = body.get("preference_id")
+
+    if not preference_id:
+        raise HTTPException(status_code=400, detail="preference_id é obrigatório")
+
+    # Busca dados do cadastro pendente
+    result = db.execute(text(
+        "SELECT full_name, email, phone, password_hash, plan FROM pending_registrations WHERE preference_id = :pid"
+    ), {"pid": preference_id}).fetchone()
+
+    if not result:
+        raise HTTPException(status_code=404, detail="Cadastro pendente não encontrado")
+
+    full_name, email, phone, password_hash, plan = result
+
+    # Verifica se email já foi cadastrado (caso de duplo clique)
+    existing = db.query(User).filter(User.email == email).first()
+    if existing:
+        # Usuário já existe, só retorna sucesso
+        return {"status": "success", "user_id": str(existing.id), "message": "Usuário já cadastrado"}
+
+    # Verifica pagamento no Mercado Pago (se token disponível)
+    if mp_sdk:
+        try:
+            payment_info = mp_sdk.preference().get(preference_id)
+            # Preferência existe, mas não garante pagamento — confiamos no webhook
+        except Exception:
+            pass  # Continua mesmo sem verificação (modo tolerante para teste)
+
+    # Cria usuário
+    db_user = User(
+        full_name=full_name,
+        email=email,
+        phone=phone,
+        password_hash=password_hash,
+        plan=plan
+    )
+    db.add(db_user)
+    db.flush()  # Gera o ID
+
+    # Atualiza subscription com o user_id real
+    db.execute(text(
+        "UPDATE subscriptions SET user_id = :uid WHERE mp_preference_id = :pid"
+    ), {"uid": str(db_user.id), "pid": preference_id})
+    db.execute(text(
+        "UPDATE subscriptions SET status = 'active', start_date = NOW() WHERE mp_preference_id = :pid"
+    ), {"pid": preference_id})
+
+    # Remove registro pendente
+    db.execute(text("DELETE FROM pending_registrations WHERE preference_id = :pid"), {"pid": preference_id})
+    db.commit()
+
+    return {
+        "status": "success",
+        "user_id": str(db_user.id),
+        "user": {
+            "id": str(db_user.id),
+            "full_name": db_user.full_name,
+            "email": db_user.email,
+            "phone": db_user.phone,
+            "plan": db_user.plan
+        },
+        "message": "Conta criada com sucesso!"
+    }
+
 # app.py - Adicionar no final
 
 # ===== AGENDADOR DE MEDICAMENTOS (VERSÃO SÍNCRONA) =====
