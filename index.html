@@ -1403,16 +1403,14 @@ function togglePassword() {
 }
 
 // Helper: API base URL (backend principal)
-const API_BASE = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
-    ? window.location.origin
-    : 'https://projeto-home-care.vercel.app';
+const API_BASE = window.location.origin;
 
 // Helper to get local or server redirect URL
 function getRedirectUrl() {
     if (window.location.protocol === 'file:') {
         return '../dashboard_cliente.html';
     }
-    return API_BASE + '/dashboard-cliente';
+    return window.location.origin + '/dashboard-cliente';
 }
 
 // Authentication check
