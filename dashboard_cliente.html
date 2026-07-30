@@ -1722,6 +1722,10 @@
                     <label class="form-label">Especialidade</label>
                     <input type="text" class="form-input" id="appt-specialty" placeholder="Ex: Cardiologista">
                 </div>
+                <div class="form-group">
+                    <label class="form-label">Local da Consulta</label>
+                    <input type="text" class="form-input" id="appt-location" placeholder="Ex: Hospital Sírio-Libanês, Sala 302">
+                </div>
                 <div class="form-row">
                     <div class="form-group">
                         <label class="form-label">Data *</label>
@@ -2450,19 +2454,24 @@
             const isBasic = plan === 'basico' || plan === 'basic' || currentUser.full_name.toLowerCase().includes('basica');
             
             if (trialBadge && upgradeBadge) {
-                // Sempre exibe o contador de dias para contas de teste / grátis / básicas
-                let daysLeft = 14;
-                if (currentUser.created_at) {
-                    try {
-                        const createdDate = new Date(currentUser.created_at);
-                        const diffTime = Math.abs(new Date() - createdDate);
-                        const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
-                        daysLeft = Math.max(0, 14 - diffDays);
-                    } catch(e) { console.error('Error parsing created_at:', e); }
+                if (isTrialOrFree) {
+                    // Exibe contador de dias apenas para contas trial/gratuitas
+                    let daysLeft = 14;
+                    if (currentUser.created_at) {
+                        try {
+                            const createdDate = new Date(currentUser.created_at);
+                            const diffTime = Math.abs(new Date() - createdDate);
+                            const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+                            daysLeft = Math.max(0, 14 - diffDays);
+                        } catch(e) { console.error('Error parsing created_at:', e); }
+                    }
+                    
+                    trialBadge.textContent = `⏳ ${daysLeft} dias restantes`;
+                    trialBadge.style.display = 'inline-block';
+                } else {
+                    // Contas básicas e pro: oculta badge de trial
+                    trialBadge.style.display = 'none';
                 }
-                
-                trialBadge.textContent = `⏳ ${daysLeft} dias restantes`;
-                trialBadge.style.display = 'inline-block';
                 
                 upgradeBadge.textContent = `⭐ Fazer Upgrade`;
                 upgradeBadge.style.display = 'inline-block';
@@ -2849,8 +2858,9 @@
                                 <button class="card-icon-btn delete" onclick="deleteAppointment('${appt.id}')" title="Excluir">🗑</button>
                             </div>
                         </div>
-                        <div class="med-days">🗓 ${dateStr} â° ${appt.appointment_time || ''}</div>
-                        ${appt.notes ? `<div class="med-dosage">ðŸ“ ${appt.notes}</div>` : ''}
+                        <div class="med-days">🗓 ${dateStr} ⏰ ${appt.appointment_time || ''}</div>
+                        ${appt.location ? `<div class="med-dosage" style="display:flex;align-items:center;gap:6px;"><span>📍 ${appt.location}</span><a href="https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(appt.location)}" target="_blank" rel="noopener" title="Ver no Google Maps" style="text-decoration:none;font-size:1rem;">🗺️</a></div>` : ''}
+                        ${appt.notes ? `<div class="med-dosage">📝 ${appt.notes}</div>` : ''}
                         <div class="med-actions">
                             ${appt.status === 'confirmed' ? `
                                 <button class="btn-taken" disabled style="flex:1; cursor:default; background:linear-gradient(135deg, #10b981, #059669);">✅ Confirmado</button>
@@ -3843,8 +3853,9 @@
                                 <button class="card-icon-btn delete" onclick="deleteAppointment('${appt.id}')" title="Excluir">🗑</button>
                             </div>
                         </div>
-                        <div class="med-days">🗓 ${dateStrBR} â° ${appt.appointment_time || ''}</div>
-                        ${appt.notes ? `<div class="med-dosage">ðŸ“ ${appt.notes}</div>` : ''}
+                        <div class="med-days">🗓 ${dateStr} ⏰ ${appt.appointment_time || ''}</div>
+                        ${appt.location ? `<div class="med-dosage" style="display:flex;align-items:center;gap:6px;"><span>📍 ${appt.location}</span><a href="https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(appt.location)}" target="_blank" rel="noopener" title="Ver no Google Maps" style="text-decoration:none;font-size:1rem;">🗺️</a></div>` : ''}
+                        ${appt.notes ? `<div class="med-dosage">📝 ${appt.notes}</div>` : ''}
                         <div class="med-actions">
                             ${appt.status === 'confirmed' ? `
                                 <button class="btn-taken" disabled style="flex:1; cursor:default; background:linear-gradient(135deg, #10b981, #059669);">✅ Confirmado</button>
@@ -4081,8 +4092,9 @@
                                 <button class="card-icon-btn delete" onclick="deleteAppointment('${appt.id}')" title="Excluir">🗑</button>
                             </div>
                         </div>
-                        <div class="med-days">🗓 ${dateStr} â° ${appt.appointment_time || ''}</div>
-                        ${appt.notes ? `<div class="med-dosage">ðŸ“ ${appt.notes}</div>` : ''}
+                        <div class="med-days">🗓 ${dateStr} ⏰ ${appt.appointment_time || ''}</div>
+                        ${appt.location ? `<div class="med-dosage" style="display:flex;align-items:center;gap:6px;"><span>📍 ${appt.location}</span><a href="https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(appt.location)}" target="_blank" rel="noopener" title="Ver no Google Maps" style="text-decoration:none;font-size:1rem;">🗺️</a></div>` : ''}
+                        ${appt.notes ? `<div class="med-dosage">📝 ${appt.notes}</div>` : ''}
                         <div class="med-actions">
                             ${appt.status === 'confirmed' ? `
                                 <button class="btn-taken" disabled style="flex:1; cursor:default; background:linear-gradient(135deg, #10b981, #059669);">✅ Confirmado</button>
@@ -4458,8 +4470,9 @@
                                     <button class="card-icon-btn delete" onclick="deleteAppointment('${appt.id}')" title="Excluir">🗑</button>
                                 </div>
                             </div>
-                            <div class="med-days">🗓 ${dateStr} â° ${appt.appointment_time || ''}</div>
-                            ${appt.notes ? `<div class="med-dosage">ðŸ“ ${appt.notes}</div>` : ''}
+                            <div class="med-days">🗓 ${dateStr} ⏰ ${appt.appointment_time || ''}</div>
+                            ${appt.location ? `<div class="med-dosage" style="display:flex;align-items:center;gap:6px;"><span>📍 ${appt.location}</span><a href="https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(appt.location)}" target="_blank" rel="noopener" title="Ver no Google Maps" style="text-decoration:none;font-size:1rem;">🗺️</a></div>` : ''}
+                            ${appt.notes ? `<div class="med-dosage">📝 ${appt.notes}</div>` : ''}
                             <div class="med-actions">
                                 ${appt.status === 'confirmed' ? `
                                     <button class="btn-taken" disabled style="flex:1; cursor:default; background:linear-gradient(135deg, #10b981, #059669);">✅ Confirmado</button>
@@ -4662,7 +4675,7 @@
                             </div>
                             <div class="med-dosage">📱 ${c.phone || 'Sem telefone'}</div>
                             ${c.email ? `<div class="med-dosage">📧 ${c.email}</div>` : ''}
-                            ${c.notes ? `<div class="med-dosage">ðŸ“ ${c.notes}</div>` : ''}
+                            ${c.notes ? `<div class="med-dosage">📝 ${c.notes}</div>` : ''}
                             <div class="resp-actions">
                                 <button class="btn-whatsapp" onclick="window.open('https://wa.me/55${phoneClean}','_blank')">💬 WhatsApp</button>
                                 <button class="btn-call" onclick="window.location.href='tel:${phoneClean}'">📞 Ligar</button>
@@ -4751,6 +4764,7 @@
                 document.getElementById('appt-id').value = appt.id;
                 document.getElementById('appt-doctor').value = appt.doctor_name || '';
                 document.getElementById('appt-specialty').value = appt.specialty || '';
+                document.getElementById('appt-location').value = appt.location || '';
                 document.getElementById('appt-date').value = appt.appointment_date || '';
                 document.getElementById('appt-time').value = appt.appointment_time || '';
                 document.getElementById('appt-notes').value = appt.notes || '';
@@ -5039,6 +5053,7 @@
                 user_id: userId,
                 doctor_name: document.getElementById('appt-doctor').value,
                 specialty: document.getElementById('appt-specialty').value,
+                location: document.getElementById('appt-location').value,
                 appointment_date: document.getElementById('appt-date').value,
                 appointment_time: document.getElementById('appt-time').value,
                 notes: document.getElementById('appt-notes').value

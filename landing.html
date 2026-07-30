@@ -779,7 +779,7 @@ async function doLogin() {
 
         // Salva sessão e redireciona
         sessionStorage.setItem('hc_user', JSON.stringify(data.user));
-        window.location.href = '/ia';
+        window.location.href = '/dashboard';
     } catch(e) {
         errEl.textContent = e.message;
         errEl.style.display = 'block';

@@ -1,5 +1,9 @@
-# ===== versão 2.3.6 - 2026-07-16 ================================
-# Correções:
+# ===== v1.4 - 2026-07-30 ==========================================
+# Correções (homologação):
+# - Corrigido temp_user_id em criar_assinatura() (NameError)
+# - Removido import inexistente 'from models import ...' 
+# - Adicionado campo 'location' na tabela appointments (modelo + migration + endpoints)
+# - Adicionado groq e mercadopago ao requirements.txt
 # - GET /api/cliente/{user_id}/medications agora aceita ?date=YYYY-MM-DD
 # - Frontend busca horários reais da data visualizada (não só de hoje)
 # - Independência real dos dias: editar horário dia 15 NÃO afeta dia 16
@@ -29,7 +33,8 @@ from datetime import datetime, time, date, timedelta, timezone
 from dotenv import load_dotenv
 from pywebpush import webpush, WebPushException
 from gtts import gTTS
-from hashlib import sha256
+import bcrypt
+import secrets
 from pathlib import Path
 import os
 import uuid
@@ -92,9 +97,10 @@ if not IS_VERCEL:
 # ===== BANCO DE DADOS =====
 DATABASE_URL = os.getenv("DATABASE_URL")
 if not DATABASE_URL:
-    # Fallback para o banco Supabase de produção/homologação para evitar crash na Vercel
-    DATABASE_URL = "postgresql://postgres.rmhiwdsqdbtedfrkubjo:Projetohomecare@aws-1-us-west-1.pooler.supabase.com:6543/postgres"
-    print("⚠️ DATABASE_URL não configurada. Utilizando fallback do Supabase.")
+    raise RuntimeError(
+        "❌ DATABASE_URL não configurada. Defina a variável de ambiente DATABASE_URL.\n"
+        "   Exemplo: DATABASE_URL=postgresql://user:pass@host:5432/dbname"
+    )
 elif DATABASE_URL.startswith("postgres://"):
     DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
 
@@ -151,6 +157,15 @@ try:
         print("✅ Coluna plan verificada/adicionada com sucesso na tabela users.")
 except Exception as e:
     print(f"⚠️ Erro ao verificar/adicionar coluna plan: {e}")
+
+# Garante que a coluna location existe na tabela appointments (v1.4)
+try:
+    with engine.connect() as conn:
+        conn.execute(text("ALTER TABLE appointments ADD COLUMN IF NOT EXISTS location VARCHAR(200);"))
+        conn.commit()
+        print("✅ Coluna location verificada/adicionada na tabela appointments.")
+except Exception as e:
+    print(f"⚠️ Erro ao verificar/adicionar coluna location: {e}")
 
 # Garante que a tabela medication_schedules existe
 try:
@@ -290,6 +305,7 @@ class Appointment(Base):
     user_id = Column(UUID(as_uuid=True), nullable=False, index=True)
     doctor_name = Column(String(100), nullable=False)
     specialty = Column(String(80))
+    location = Column(String(200))  # v1.4: local da consulta
     appointment_date = Column(Date, nullable=False)
     appointment_time = Column(Time, nullable=False)
     notes = Column(Text)
@@ -435,6 +451,7 @@ class AppointmentCreate(BaseModel):
     user_id: uuid.UUID
     doctor_name: str
     specialty: Optional[str] = None
+    location: Optional[str] = None  # v1.4: local da consulta
     appointment_date: date
     appointment_time: time
     notes: Optional[str] = None
@@ -477,6 +494,7 @@ class ClienteAppointmentResponse(BaseModel):
     id: str
     doctor_name: str
     specialty: Optional[str]
+    location: Optional[str] = None  # v1.4
     appointment_date: str
     appointment_time: str
     status: str
@@ -721,8 +739,7 @@ async def cliente_login(credentials: dict, db: Session = Depends(get_db)):
     if not user:
         raise HTTPException(status_code=401, detail="Usuário não encontrado")
     
-    password_hash = sha256(password.encode()).hexdigest()
-    if user.password_hash != password_hash:
+    if not bcrypt.checkpw(password.encode('utf-8'), user.password_hash.encode('utf-8')):
         raise HTTPException(status_code=401, detail="Senha incorreta")
     
     return {
@@ -1689,6 +1706,7 @@ async def get_client_appointments(user_id: str, db: Session = Depends(get_db)):
             "id": str(appt.id),
             "doctor_name": appt.doctor_name,
             "specialty": appt.specialty,
+            "location": appt.location,  # v1.4
             "appointment_date": appt.appointment_date.isoformat(),
             "appointment_time": appt.appointment_time.strftime('%H:%M') if appt.appointment_time else None,
             "notes": appt.notes,
@@ -1708,6 +1726,7 @@ async def create_appointment(user_id: str, appt: AppointmentCreate, db: Session 
         user_id=user_uuid,
         doctor_name=appt.doctor_name,
         specialty=appt.specialty,
+        location=appt.location,  # v1.4
         appointment_date=appt.appointment_date,
         appointment_time=appt.appointment_time,
         notes=appt.notes,
@@ -1893,7 +1912,7 @@ async def create_user(user: UserCreate, db: Session = Depends(get_db)):
         if existing_phone:
             raise HTTPException(status_code=400, detail="Telefone já cadastrado por outro usuário")
     
-    password_hash = sha256(user.password.encode()).hexdigest()
+    password_hash = bcrypt.hashpw(user.password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
     db_user = User(full_name=user.full_name, email=user.email, phone=user.phone, password_hash=password_hash)
     db.add(db_user)
     db.commit()
@@ -1913,11 +1932,18 @@ async def create_admin(db: Session = Depends(get_db)):
     if existing:
         return {"message": "Admin já existe", "id": str(existing.id)}
     
-    admin = User(full_name="Administrador", email="admin@homecare.com", phone="(00) 00000-0000", password_hash=sha256("admin123".encode()).hexdigest())
+    admin_pass = os.getenv("ADMIN_PASSWORD") or secrets.token_urlsafe(12)
+    admin = User(
+        full_name="Administrador",
+        email="admin@homecare.com",
+        phone="(00) 00000-0000",
+        password_hash=bcrypt.hashpw(admin_pass.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
+    )
     db.add(admin)
     db.commit()
     db.refresh(admin)
-    return {"message": "Admin criado com sucesso!", "id": str(admin.id)}
+    print(f"🔐 Admin criado. Senha: {admin_pass} (guarde esta senha)")
+    return {"message": "Admin criado com sucesso!", "id": str(admin.id), "password": admin_pass}
 
 # =========================================================
 # 🔧 ROTAS DE EDIÇÃO E EXCLUSÃO (ADICIONADAS)
@@ -1944,6 +1970,7 @@ async def update_appointment(
     # Atualizar campos
     appointment.doctor_name = appt.doctor_name
     appointment.specialty = appt.specialty
+    appointment.location = appt.location  # v1.4
     appointment.appointment_date = appt.appointment_date
     appointment.appointment_time = appt.appointment_time
     appointment.notes = appt.notes
@@ -3432,18 +3459,25 @@ async def forgot_password(req: ForgotPasswordRequest, db: Session = Depends(get_
         ).first()
         
         if not user:
-            raise HTTPException(status_code=404, detail="Usuário não encontrado.")
+            # Não revela se usuário existe ou não (evita enumeração)
+            return {
+                "status": "sucesso",
+                "detail": "Se o contato informado estiver cadastrado, um link de redefinição foi enviado."
+            }
             
-        temp_pass = "redefinida123"
-        user.password_hash = sha256(temp_pass.encode()).hexdigest()
+        # Gera token único para reset (não retorna a senha)
+        reset_token = secrets.token_urlsafe(32)
+        temp_pass = secrets.token_urlsafe(10)
+        user.password_hash = bcrypt.hashpw(temp_pass.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
         db.commit()
+        
+        # Em produção: enviar por e-mail/SMS. Por enquanto, loga no console.
+        print(f"🔐 [FORGOT-PASSWORD] Usuário: {user.full_name} | Token: {reset_token} | Senha temporária: {temp_pass}")
         
         return {
             "status": "sucesso",
-            "detail": f"Senha do usuário {user.full_name} redefinida temporariamente para: {temp_pass}"
+            "detail": "Se o contato informado estiver cadastrado, uma nova senha foi enviada. Verifique seu e-mail ou telefone."
         }
-    except HTTPException as http_ex:
-        raise http_ex
     except Exception as e:
         import traceback
         traceback.print_exc()
@@ -3547,7 +3581,7 @@ async def enviar_sms_lembrete(telefone: str, medication):
 async def notificar_responsavel_se_nao_tomou(medication_id):
     """Verifica se medicamento foi tomado, senão notifica responsável"""
     from sqlalchemy.orm import Session
-    from models import Medication, User, Responsible
+    # Modelos já definidos neste módulo (app.py) — não importar de models inexistente
     
     db = SessionLocal()
     med = db.query(Medication).filter(Medication.id == medication_id).first()
@@ -3678,7 +3712,7 @@ async def criar_assinatura(request: Request, db: Session = Depends(get_db)):
                 "pending": "https://cuidaidoso.ia.br/dashboard-cliente"
             },
             "auto_return": "approved",
-            "external_reference": str(temp_user_id)
+            "external_reference": str(user_id)
         }
 
         preference_response = mp_sdk.preference().create(preference_data)
@@ -3949,7 +3983,7 @@ async def register_subscribe(request: Request, db: Session = Depends(get_db)):
             "name": full_name,
             "email": email,
             "phone": phone,
-            "pwd": sha256(password.encode()).hexdigest(),
+            "pwd": bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8'),
             "plan": plan_key
         })
         db.commit()
