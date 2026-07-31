@@ -3518,6 +3518,111 @@ from fastapi import HTTPException
 # (substituída por notify_responsible_async)
     
 # ============================================
+# 📦 ENDPOINT DE BACKUP DO BANCO DE DADOS
+# ============================================
+BACKUP_SECRET = os.getenv("BACKUP_SECRET", "cuidadoso-backup-2026")
+
+@app.get("/api/backup")
+async def backup_database(token: str = "", export_format: str = "sql"):
+    """
+    Realiza dump completo do banco de dados.
+    Usado pelo script de backup local e cron jobs.
+    
+    Modos:
+    - export_format=sql: devolve SQL (INSERT statements)
+    - export_format=json: devolve JSON com todas as tabelas
+    
+    Segurança: requer ?token= igual a BACKUP_SECRET
+    """
+    if token != BACKUP_SECRET:
+        raise HTTPException(status_code=403, detail="Token de backup inválido")
+    
+    db = SessionLocal()
+    try:
+        from sqlalchemy import inspect, text as sa_text, MetaData
+        from datetime import date as dt_date
+        
+        inspector = inspect(engine)
+        tables = inspector.get_table_names()
+        
+        if export_format == "json":
+            # Export JSON — todas as tabelas
+            result = {}
+            for table_name in tables:
+                rows = db.execute(sa_text(f"SELECT * FROM {table_name}")).fetchall()
+                columns = [col["name"] for col in inspector.get_columns(table_name)]
+                result[table_name] = [
+                    {col: (str(val) if isinstance(val, (uuid.UUID, dt_date, datetime)) else val)
+                     for col, val in zip(columns, row)}
+                    for row in rows
+                ]
+            db.close()
+            return {"status": "ok", "tables": list(tables), "data": result}
+        
+        else:
+            # Export SQL — INSERT statements
+            sql_lines = [
+                f"-- =========================================",
+                f"-- Cuidadoso — Database Backup",
+                f"-- Gerado em: {datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%S UTC')}",
+                f"-- Tabelas: {', '.join(tables)}",
+                f"-- =========================================",
+                "",
+                "BEGIN;",
+                ""
+            ]
+            
+            for table_name in tables:
+                columns_info = inspector.get_columns(table_name)
+                col_names = [col["name"] for col in columns_info]
+                rows = db.execute(sa_text(f"SELECT * FROM {table_name}")).fetchall()
+                
+                sql_lines.append(f"-- Tabela: {table_name} ({len(rows)} registros)")
+                
+                for row in rows:
+                    values = []
+                    for val in row:
+                        if val is None:
+                            values.append("NULL")
+                        elif isinstance(val, (int, float)):
+                            values.append(str(val))
+                        elif isinstance(val, bool):
+                            values.append("TRUE" if val else "FALSE")
+                        elif isinstance(val, (uuid.UUID,)):
+                            values.append(f"'{str(val)}'")
+                        elif isinstance(val, (datetime, dt_date)):
+                            values.append(f"'{val.isoformat()}'")
+                        elif isinstance(val, dict):
+                            import json
+                            values.append(f"'{json.dumps(val, ensure_ascii=False).replace(chr(39), chr(39)+chr(39))}'")
+                        else:
+                            escaped = str(val).replace("'", "''").replace("\\", "\\\\")
+                            values.append(f"'{escaped}'")
+                    
+                    col_list = ", ".join(f'"{c}"' for c in col_names)
+                    val_list = ", ".join(values)
+                    sql_lines.append(f'INSERT INTO "{table_name}" ({col_list}) VALUES ({val_list});')
+                
+                sql_lines.append("")
+            
+            sql_lines.append("COMMIT;")
+            sql_text = "\n".join(sql_lines)
+            
+            db.close()
+            
+            return Response(
+                content=sql_text,
+                media_type="application/sql",
+                headers={
+                    "Content-Disposition": f"attachment; filename=cuidadoso_backup_{datetime.now().strftime('%Y%m%d_%H%M')}.sql"
+                }
+            )
+    except Exception as e:
+        db.close()
+        raise HTTPException(status_code=500, detail=f"Erro no backup: {str(e)}")
+
+
+# ============================================
 # 🚀 CONFIGURAÇÃO PARA VERCEL
 # ============================================
 import os

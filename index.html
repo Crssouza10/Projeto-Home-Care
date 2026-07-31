@@ -1331,6 +1331,13 @@ const plansData = {
 };
 
 function openLogin(planKey) {
+    // Se usuário já está logado, redireciona direto para o dashboard com o plano selecionado
+    if (localStorage.getItem('is_logged_in') === 'true') {
+        const plan = planKey || 'trial';
+        window.location.href = getRedirectUrl() + '?plan=' + plan;
+        return;
+    }
+
     const modal = document.getElementById('login-modal');
     const modalBox = document.getElementById('modal-box');
     const planDetailsCol = document.getElementById('plan-details-col');
@@ -1413,10 +1420,8 @@ function getRedirectUrl() {
     return window.location.origin + '/dashboard-cliente';
 }
 
-// Authentication check
-if (localStorage.getItem('is_logged_in') === 'true') {
-    window.location.href = getRedirectUrl();
-}
+// Authentication check — agora dentro do openLogin(), somente quando usuário clica em um plano
+// (removido o redirecionamento automático que impedia a visualização da landing page)
 
 async function handleLogin(e) {
     e.preventDefault();
