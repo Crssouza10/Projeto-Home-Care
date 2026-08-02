@@ -1,4 +1,4 @@
-# ===== v1.4 - 2026-07-30 ==========================================
+# ===== v1.5 - 2026-08-02 ==========================================
 # Correções (homologação):
 # - Corrigido temp_user_id em criar_assinatura() (NameError)
 # - Removido import inexistente 'from models import ...' 
@@ -31,6 +31,14 @@ from pydantic import BaseModel, EmailStr, ConfigDict
 from typing import Optional, List
 from datetime import datetime, time, date, timedelta, timezone
 from dotenv import load_dotenv
+
+# ⏰ Fuso horário de Brasília (UTC-3) - evita bugs de data em servidores UTC
+TZ_BRASILIA = timezone(timedelta(hours=-3))
+
+def hoje_brasilia():
+    """Retorna a data de hoje no fuso horário de Brasília (UTC-3)."""
+    return datetime.now(TZ_BRASILIA).date()
+
 from pywebpush import webpush, WebPushException
 from gtts import gTTS
 import bcrypt
@@ -1211,7 +1219,7 @@ def distribute_time(user_id, preferred_time_str: str, db: Session, current_med_i
             Medication.user_id == user_id,
             Medication.time == check_time,
             # Medicamento ativo: sem end_date OU end_date >= hoje
-            (Medication.end_date == None) | (Medication.end_date >= date.today().strftime("%Y-%m-%d"))
+            (Medication.end_date == None) | (Medication.end_date >= hoje_brasilia().strftime("%Y-%m-%d"))
         )
         if current_med_id:
             query = query.filter(Medication.id != current_med_id)
@@ -1226,7 +1234,7 @@ def distribute_time(user_id, preferred_time_str: str, db: Session, current_med_i
             return result_str
         
         # Avança 30 minutos
-        dummy_dt = datetime.combine(date.today(), check_time) + timedelta(minutes=30)
+        dummy_dt = datetime.combine(hoje_brasilia(), check_time) + timedelta(minutes=30)
         check_time = dummy_dt.time()
         
         # Se passou das 23:45, volta para o início da manhã seguinte
@@ -1246,7 +1254,7 @@ async def create_medication(user_id: str, med: MedicationCreate, db: Session = D
         raise HTTPException(status_code=400, detail="ID de usuário inválido")
     
     # 1. Determinar a data de início com base no start_date recebido (ou hoje se nulo)
-    start_dt = date.today()
+    start_dt = hoje_brasilia()
     if getattr(med, 'start_date', None):
         try:
             start_dt = datetime.strptime(med.start_date, "%Y-%m-%d").date()
@@ -1364,7 +1372,7 @@ async def count_future_schedules(med_id: str, db: Session = Depends(get_db)):
     except ValueError:
         raise HTTPException(status_code=400, detail="ID inválido")
     
-    today = date.today()
+    today = hoje_brasilia()
     
     total = db.query(MedicationSchedule).filter(
         MedicationSchedule.medication_id == med_uuid
@@ -1693,7 +1701,7 @@ async def get_client_appointments(user_id: str, db: Session = Depends(get_db)):
     except ValueError:
         raise HTTPException(status_code=400, detail="ID de usuário inválido")
     
-    cutoff_date = date.today() - timedelta(days=7)
+    cutoff_date = hoje_brasilia() - timedelta(days=7)
     
     appointments = db.query(Appointment).filter(
         Appointment.user_id == user_uuid,
@@ -1863,7 +1871,7 @@ async def listar_clientes_admin(db: Session = Depends(get_db)):
     ).all()
     
     resultado = []
-    today = date.today()
+    today = hoje_brasilia()
     
     for cliente in clientes:
         meds_count = db.query(Medication).filter(
@@ -2073,7 +2081,7 @@ async def update_medication(
     # isso afeta a recorrência futura. Mantemos a atualização.
     medication.days_of_week = med.days_of_week
     
-    start_dt = medication.created_at.date() if medication.created_at else date.today()
+    start_dt = medication.created_at.date() if medication.created_at else hoje_brasilia()
     if getattr(med, 'start_date', None):
         try:
             start_dt = datetime.strptime(med.start_date, "%Y-%m-%d").date()
@@ -2100,7 +2108,7 @@ async def update_medication(
     medication.responsible_notified = False
     
     # ⚙️ ATUALIZA APENAS O SCHEDULE DE HOJE (os dias não se relacionam)
-    today = date.today()
+    today = hoje_brasilia()
     sched = db.query(MedicationSchedule).filter(
         MedicationSchedule.medication_id == medication.id,
         MedicationSchedule.scheduled_date == today
@@ -2170,7 +2178,7 @@ async def get_review_needed_medications(user_id: str = None, db: Session = Depen
                     "start_date": med.start_date,
                     "continuous_months": med.continuous_months,
                     "review_date": review_dt.isoformat(),
-                    "days_overdue": (date.today() - review_dt).days,
+                    "days_overdue": (hoje_brasilia() - review_dt).days,
                     "is_review_needed": True,
                 })
         except (ValueError, TypeError):
@@ -2196,7 +2204,7 @@ async def delete_medication(med_id: str, scope: str = "all", db: Session = Depen
     if not medication:
         raise HTTPException(status_code=404, detail="Medicação não encontrada")
     
-    today = date.today()
+    today = hoje_brasilia()
     
     if scope == "today":
         # Cancela apenas os schedules de HOJE
@@ -3303,7 +3311,7 @@ async def chat_assistant(req: ChatRequest, db: Session = Depends(get_db)):
         
         # Busca schedules de hoje para informar ao Maximus
         from datetime import date
-        today_date = date.today()
+        today_date = hoje_brasilia()
         today_schedules = db.query(MedicationSchedule).filter(
             MedicationSchedule.user_id == user_uuid,
             MedicationSchedule.scheduled_date == today_date
@@ -3374,7 +3382,7 @@ async def chat_assistant(req: ChatRequest, db: Session = Depends(get_db)):
             "4. Use formatação em Markdown (negrito, listas, etc.) para facilitar a leitura.\n"
             "5. IMPORTANTE: Você é um assistente de IA. Sempre recomende que o paciente consulte o médico ou responsável em caso de dúvidas graves, dor intensa ou reações adversas incomuns.\n"
             "6. Use o histórico de conversas fornecido para manter o contexto.\n"
-            "7. IMPORTANTE: Ao agendar uma consulta, conduza a conversa passo a passo. Solicite primeiro o nome do Médico(a), aguarde a resposta; depois solicite a Especialidade, aguarde; depois solicite a data, aguarde; depois o horário, aguarde; e finalmente solicite as observações. APENAS quando todas essas informações tiverem sido passadas pelo usuário, você deve apresentar o resumo e anexar obrigatoriamente na última linha a tag: ||JSON_APPOINTMENT:{\"doctor_name\":\"...\", \"specialty\":\"...\", \"appointment_date\":\"YYYY-MM-DD\", \"appointment_time\":\"HH:MM\", \"notes\":\"...\"}||. Não envie esta tag nas perguntas intermediárias da conversa."
+            "7. IMPORTANTE: Ao agendar uma consulta, conduza a conversa passo a passo. Solicite primeiro o nome do Médico(a), aguarde a resposta; depois solicite a Especialidade, aguarde; depois solicite o Local da Consulta (endereço, hospital ou clínica), aguarde; depois solicite a data, aguarde; depois o horário, aguarde; e finalmente solicite as observações. APENAS quando todas essas informações tiverem sido passadas pelo usuário, você deve apresentar o resumo incluindo OBRIGATORIAMENTE o Local da Consulta e anexar na última linha a tag: ||JSON_APPOINTMENT:{\"doctor_name\":\"...\", \"specialty\":\"...\", \"location\":\"...\", \"appointment_date\":\"YYYY-MM-DD\", \"appointment_time\":\"HH:MM\", \"notes\":\"...\"}||. Não envie esta tag nas perguntas intermediárias da conversa.\n"
         )
         
         # 3. Prepara contents para a API (histórico + mensagem atual)
