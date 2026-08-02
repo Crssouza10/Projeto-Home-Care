@@ -3949,11 +3949,16 @@
             
             // 🔮 CORREÇÃO: Se visualizando data FUTURA, reseta status para "pending"
             // (as ações de tomar/não-tomar pertencem ao dia atual, não ao futuro)
+            // Mas preserva 'cancelled' — schedules cancelados permanecem cancelados
             if (viewingSpecificDate) {
                 const todayStr = getLocalDateStr();
                 if (viewingSpecificDate > todayStr) {
-                    console.log(`🔮 Data futura (${viewingSpecificDate}) — resetando taken_status para pending`);
-                    medsOnDay.forEach(m => { m.taken_status = 'pending'; });
+                    console.log(`🔮 Data futura (${viewingSpecificDate}) — resetando taken_status para pending (exceto cancelled)`);
+                    medsOnDay.forEach(m => { 
+                        if (m.taken_status !== 'cancelled') {
+                            m.taken_status = 'pending'; 
+                        }
+                    });
                 }
             }
             
@@ -5268,12 +5273,13 @@
 
         async function doDeleteMedication(id, scope) {
             console.log(`🚀 [DIAGNÓSTICO] doDeleteMedication iniciado. ID: ${id}, Escopo: ${scope}`);
+            console.log(`📅 [DIAGNÓSTICO] viewingSpecificDate = ${viewingSpecificDate}`);
             try {
                 showToast('⏳ Excluindo...');
                 let url = `${API_URL}/api/medications/${id}?scope=${scope}`;
-                // Se estiver visualizando uma data específica e scope=today, usar essa data
-                if (scope === 'today' && typeof viewingSpecificDate !== 'undefined' && viewingSpecificDate) {
+                if (scope === 'today' && viewingSpecificDate) {
                     url += `&date=${viewingSpecificDate}`;
+                    console.log(`📅 [DIAGNÓSTICO] Usando data específica: ${viewingSpecificDate}`);
                 }
                 console.log('📡 [DIAGNÓSTICO] Enviando DELETE para:', url);
                 const response = await fetch(url, { 
