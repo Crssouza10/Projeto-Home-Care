@@ -2188,10 +2188,10 @@ async def get_review_needed_medications(user_id: str = None, db: Session = Depen
 
 
 @app.delete("/api/medications/{med_id}")
-async def delete_medication(med_id: str, scope: str = "all", db: Session = Depends(get_db)):
+async def delete_medication(med_id: str, scope: str = "all", date: str = None, db: Session = Depends(get_db)):
     """
     Excluir medicamento com opções de escopo (Requisito 7):
-    - scope=today: Cancela apenas schedules de hoje
+    - scope=today: Cancela apenas schedules de hoje (ou da data fornecida via ?date=)
     - scope=future: Cancela schedules de hoje em diante, preserva passado
     - scope=all: Soft delete total (comportamento padrão)
     """
@@ -2204,19 +2204,26 @@ async def delete_medication(med_id: str, scope: str = "all", db: Session = Depen
     if not medication:
         raise HTTPException(status_code=404, detail="Medicação não encontrada")
     
-    today = hoje_brasilia()
+    # Se uma data específica foi fornecida para scope=today, usá-la
+    if scope == "today" and date:
+        try:
+            target_date = datetime.strptime(date, "%Y-%m-%d").date()
+        except ValueError:
+            raise HTTPException(status_code=400, detail="Data inválida. Use o formato YYYY-MM-DD.")
+    else:
+        target_date = hoje_brasilia()
     
     if scope == "today":
-        # Cancela apenas os schedules de HOJE
+        # Cancela apenas os schedules da data alvo
         updated = db.query(MedicationSchedule).filter(
             MedicationSchedule.medication_id == med_uuid,
-            MedicationSchedule.scheduled_date == today,
+            MedicationSchedule.scheduled_date == target_date,
             MedicationSchedule.status == "pending"
         ).update({"status": "cancelled"})
         db.commit()
         return {
             "status": "sucesso",
-            "mensagem": f"{updated} dose(s) de hoje cancelada(s). Próximas doses mantidas.",
+            "mensagem": f"{updated} dose(s) do dia {target_date.strftime('%d/%m/%Y')} cancelada(s).",
             "scope": "today",
             "cancelados": updated,
         }
@@ -2225,19 +2232,19 @@ async def delete_medication(med_id: str, scope: str = "all", db: Session = Depen
         # Cancela schedules de hoje em diante, preserva os passados
         updated = db.query(MedicationSchedule).filter(
             MedicationSchedule.medication_id == med_uuid,
-            MedicationSchedule.scheduled_date >= today,
+            MedicationSchedule.scheduled_date >= target_date,
             MedicationSchedule.status == "pending"
         ).update({"status": "cancelled"})
         
         # Atualiza end_date do medicamento para ontem
-        medication.end_date = (today - timedelta(days=1)).strftime("%Y-%m-%d")
+        medication.end_date = (target_date - timedelta(days=1)).strftime("%Y-%m-%d")
         
         db.commit()
         
         # Conta quantos schedules passados permanecem
         past_count = db.query(MedicationSchedule).filter(
             MedicationSchedule.medication_id == med_uuid,
-            MedicationSchedule.scheduled_date < today,
+            MedicationSchedule.scheduled_date < target_date,
         ).count()
         
         return {

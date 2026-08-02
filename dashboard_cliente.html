@@ -5256,8 +5256,12 @@
         async function doDeleteMedication(id, scope) {
             console.log(`🚀 [DIAGNÓSTICO] doDeleteMedication iniciado. ID: ${id}, Escopo: ${scope}`);
             try {
-                showToast('â³ Excluindo...');
-                const url = `${API_URL}/api/medications/${id}?scope=${scope}`;
+                showToast('⏳ Excluindo...');
+                let url = `${API_URL}/api/medications/${id}?scope=${scope}`;
+                // Se estiver visualizando uma data específica e scope=today, usar essa data
+                if (scope === 'today' && typeof viewingSpecificDate !== 'undefined' && viewingSpecificDate) {
+                    url += `&date=${viewingSpecificDate}`;
+                }
                 console.log('📡 [DIAGNÓSTICO] Enviando DELETE para:', url);
                 const response = await fetch(url, { 
                     method: 'DELETE' 
