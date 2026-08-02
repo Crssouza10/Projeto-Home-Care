@@ -2090,8 +2090,8 @@
                 <button class="delete-option-btn today-option" onclick="confirmDeleteMed('today')">
                     <span class="option-icon">🗓️</span>
                     <div class="option-info">
-                        <div class="option-title">Só hoje</div>
-                        <div class="option-desc">Cancela apenas a dose de hoje. Próximas doses continuam.</div>
+                        <div class="option-title" id="delete-today-label">Só hoje</div>
+                        <div class="option-desc" id="delete-today-desc">Cancela apenas a dose de hoje. Próximas doses continuam.</div>
                     </div>
                     <span class="option-count" id="delete-count-today">1 dose</span>
                 </button>
@@ -5231,6 +5231,19 @@
                 document.getElementById('delete-med-name').textContent = medName;
                 document.getElementById('delete-count-future').textContent = 
                     `${counts.futuros_pendentes} dose(s) futura(s)`;
+                
+                // Adapta o texto "Só hoje" conforme a data visualizada no calendário
+                const todayStr = getLocalDateStr();
+                const todayLabel = document.getElementById('delete-today-label');
+                const todayDesc = document.getElementById('delete-today-desc');
+                if (typeof viewingSpecificDate !== 'undefined' && viewingSpecificDate && viewingSpecificDate !== todayStr) {
+                    const [y, m, d] = viewingSpecificDate.split('-');
+                    todayLabel.textContent = `Neste dia (${d}/${m})`;
+                    todayDesc.textContent = `Cancela apenas a dose do dia ${d}/${m}/${y}.`;
+                } else {
+                    todayLabel.textContent = 'Só hoje';
+                    todayDesc.textContent = 'Cancela apenas a dose de hoje. Próximas doses continuam.';
+                }
                 
                 console.log('🔓 [DIAGNÓSTICO] Abrindo modal modal-delete-medication...');
                 openModal('modal-delete-medication');
