@@ -1,4 +1,4 @@
-# ===== v1.5 - 2026-08-02 ==========================================
+# ===== v1.5.1 - 2026-08-03 ==========================================
 # Correções (homologação):
 # - Corrigido temp_user_id em criar_assinatura() (NameError)
 # - Removido import inexistente 'from models import ...' 
@@ -757,7 +757,8 @@ async def cliente_login(credentials: dict, db: Session = Depends(get_db)):
             "full_name": user.full_name,
             "email": user.email,
             "phone": user.phone,
-            "plan": user.plan or "basico"
+            "plan": user.plan or "basico",
+            "created_at": user.created_at.strftime("%Y-%m-%dT%H:%M:%S") if user.created_at else None
         }
     }
 
@@ -2204,8 +2205,8 @@ async def delete_medication(med_id: str, scope: str = "all", date: str = None, d
     if not medication:
         raise HTTPException(status_code=404, detail="Medicação não encontrada")
     
-    # Se uma data específica foi fornecida para scope=today, usá-la
-    if scope == "today" and date:
+    # Se uma data específica foi fornecida, usá-la (válido para today e future)
+    if date:
         try:
             target_date = datetime.strptime(date, "%Y-%m-%d").date()
         except ValueError:

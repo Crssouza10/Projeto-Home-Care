@@ -5277,7 +5277,7 @@
             try {
                 showToast('⏳ Excluindo...');
                 let url = `${API_URL}/api/medications/${id}?scope=${scope}`;
-                if (scope === 'today' && viewingSpecificDate) {
+                if (viewingSpecificDate) {
                     url += `&date=${viewingSpecificDate}`;
                     console.log(`📅 [DIAGNÓSTICO] Usando data específica: ${viewingSpecificDate}`);
                 }
