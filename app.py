@@ -2235,7 +2235,7 @@ async def delete_medication(med_id: str, scope: str = "all", date: str = None, d
                 ).count()
                 datas = db.query(MedicationSchedule.scheduled_date).filter(
                     MedicationSchedule.medication_id == med_uuid
-                ).order_by(MedicationSchedule.scheduled_date).limit(5).all()
+                ).order_by(MedicationSchedule.scheduled_date).all()
                 datas_str = [d[0].strftime("%d/%m/%Y") for d in datas] if datas else []
                 diagnostico = f"Schedule NÃO existe para {target_date}. Total schedules: {total}. Datas: {datas_str}"
         
