@@ -2222,11 +2222,34 @@ async def delete_medication(med_id: str, scope: str = "all", date: str = None, d
             MedicationSchedule.status == "pending"
         ).update({"status": "cancelled"})
         db.commit()
+        
+        # Diagnóstico: se nada foi cancelado, verificar o que existe
+        diagnostico = None
+        if updated == 0:
+            existente = db.query(MedicationSchedule).filter(
+                MedicationSchedule.medication_id == med_uuid,
+                MedicationSchedule.scheduled_date == target_date
+            ).first()
+            if existente:
+                diagnostico = f"Schedule existe mas status='{existente.status}' (não 'pending')"
+            else:
+                # Verificar schedules próximos
+                total = db.query(MedicationSchedule).filter(
+                    MedicationSchedule.medication_id == med_uuid
+                ).count()
+                datas = db.query(MedicationSchedule.scheduled_date).filter(
+                    MedicationSchedule.medication_id == med_uuid
+                ).order_by(MedicationSchedule.scheduled_date).limit(5).all()
+                datas_str = [d[0].strftime("%d/%m/%Y") for d in datas] if datas else []
+                diagnostico = f"Schedule NÃO existe para {target_date}. Total schedules: {total}. Datas: {datas_str}"
+        
         return {
             "status": "sucesso",
             "mensagem": f"{updated} dose(s) do dia {target_date.strftime('%d/%m/%Y')} cancelada(s).",
             "scope": "today",
             "cancelados": updated,
+            "target_date": target_date.strftime("%Y-%m-%d"),
+            "diagnostico": diagnostico,
         }
     
     elif scope == "future":
