@@ -1,4 +1,4 @@
-# ===== v1.5.1 - 2026-08-03 ==========================================
+# ===== v1.5.2 - 2026-08-03 ==========================================
 # Correções (homologação):
 # - Corrigido temp_user_id em criar_assinatura() (NameError)
 # - Removido import inexistente 'from models import ...' 
