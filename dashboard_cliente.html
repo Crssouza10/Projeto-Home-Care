@@ -3375,7 +3375,8 @@
                 if (response.ok) {
                     const data = await response.json();
                     if (data.status === "mock") {
-                        showToast("ℹ Simulado: E-mail impresso no log do servidor (SMTP ausente)");
+                        const anexosMsg = data.anexos === 0 ? ' (sem anexos — usuário não tem documentos cadastrados)' : '';
+                        showToast("ℹ️ Simulado: E-mail impresso no log do servidor (SMTP ausente)" + anexosMsg);
                     } else {
                         showToast("✅ Documentos enviados com sucesso!");
                     }

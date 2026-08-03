@@ -889,19 +889,20 @@ async def send_documents_email(user_id: str, payload: dict, db: Session = Depend
         anexou_id = anexar_base64(user.identity_document_file, "documento_identidade")
         anexou_card = anexar_base64(user.health_insurance_card, "carteirinha_plano")
         
-        if not anexou_id and not anexou_card:
-            raise HTTPException(status_code=400, detail="O usuário não possui nenhum documento cadastrado para envio.")
-            
         if is_mock:
-            # Em modo de desenvolvimento/mock
+            # Em modo de desenvolvimento/mock, permite envio mesmo sem documentos
             print(f"📨 [SMTP MOCK] Envio de e-mail simulado com sucesso!")
             print(f"   Destinatário: {destinatario}")
             print(f"   Assunto: {msg['Subject']}")
-            print(f"   Anexos: {', '.join(attachments_info)}")
+            print(f"   Anexos: {', '.join(attachments_info) if attachments_info else 'nenhum (usuário sem documentos)'}")
             return {
                 "status": "mock",
-                "message": "Simulação de envio concluída com sucesso! (SMTP não configurado no .env)"
+                "message": "Simulação de envio concluída com sucesso! (SMTP não configurado no .env)",
+                "anexos": len(attachments_info)
             }
+        
+        if not anexou_id and not anexou_card:
+            raise HTTPException(status_code=400, detail="O usuário não possui nenhum documento cadastrado para envio.")
             
         # Envio SMTP real
         import smtplib
