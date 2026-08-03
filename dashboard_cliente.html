@@ -3365,8 +3365,10 @@
             }
             
             try {
-                showToast("â³ Enviando documentos...");
-                const response = await fetch(`${API_URL}/api/cliente/${userId}/send-documents-email`, {
+                showToast("⏳ Enviando documentos...");
+                // Usa URL direta do Railway para evitar redirect 301 do Cloudflare
+                const directUrl = `https://projeto-home-care-production-d622.up.railway.app/api/cliente/${userId}/send-documents-email`;
+                const response = await fetch(directUrl, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ email: emailDest })
