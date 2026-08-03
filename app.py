@@ -684,25 +684,21 @@ async def get_medication_history(user_id: str, date: str, db: Session = Depends(
                 status = sched.status
                 med_time = sched.scheduled_time
                 confirmed_at = sched.confirmed_at
-            else:
-                # Fallback seguro para o caso de não haver schedule criado para essa data
-                status = "pending"
-                med_time = med.time
-                confirmed_at = None
-            
-            resultado.append({
-                "id": med_id,
-                "name": med.name,
-                "dosage": med.dosage,
-                "time": med_time.strftime("%H:%M") if med_time else None,
-                "days_of_week": med.days_of_week or [],
-                "taken_status": status,
-                "taken_time": confirmed_at.strftime("%H:%M") if confirmed_at else None,
-                "created_at": med.created_at.strftime("%Y-%m-%d") if med.created_at else None,
-                "end_date": med.end_date,
-                "is_history": True,
-                "box_image": med.box_image
-            })
+                
+                resultado.append({
+                    "id": med_id,
+                    "name": med.name,
+                    "dosage": med.dosage,
+                    "time": med_time.strftime("%H:%M") if med_time else None,
+                    "days_of_week": med.days_of_week or [],
+                    "taken_status": status,
+                    "taken_time": confirmed_at.strftime("%H:%M") if confirmed_at else None,
+                    "created_at": med.created_at.strftime("%Y-%m-%d") if med.created_at else None,
+                    "end_date": med.end_date,
+                    "is_history": True,
+                    "box_image": med.box_image
+                })
+            # else: sem schedule = não inclui na listagem (evita mostrar medicamento "fantasma")
         
         return resultado
         
