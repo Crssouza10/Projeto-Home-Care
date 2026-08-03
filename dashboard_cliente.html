@@ -5294,7 +5294,12 @@
                 
                 const result = await response.json();
                 console.log('✅ [DIAGNÓSTICO] Sucesso na exclusão:', result);
-                showToast('✅ ' + result.mensagem);
+                if (result.cancelados === 0 && result.diagnostico) {
+                    showToast('⚠️ ' + result.diagnostico);
+                    alert('⚠️ Diagnóstico:\n\n' + result.diagnostico + '\n\nData alvo: ' + (result.target_date || 'N/D'));
+                } else {
+                    showToast('✅ ' + result.mensagem);
+                }
                 await reloadAndRefresh();
             } catch (error) {
                 showToast('âŒ Erro ao excluir: ' + error.message);
