@@ -1,6 +1,6 @@
-# ===== v1.5.2 - 2026-08-03 ==========================================
-# Correções (homologação):
-# - Corrigido temp_user_id em criar_assinatura() (NameError)
+# ===== v1.5.3 - 2026-08-04 ==========================================
+# Correções:
+# - Substituído SMTP (bloqueado no Railway) por Gmail API REST (HTTPS/443)
 # - Removido import inexistente 'from models import ...' 
 # - Adicionado campo 'location' na tabela appointments (modelo + migration + endpoints)
 # - Adicionado groq e mercadopago ao requirements.txt
@@ -825,13 +825,13 @@ async def send_documents_email(user_id: str, payload: dict, db: Session = Depend
         if not destinatario:
             raise HTTPException(status_code=400, detail="E-mail destinatário é obrigatório")
             
-        # SMTP Config
-        smtp_server = os.getenv("SMTP_SERVER", "smtp.gmail.com")
-        smtp_port_str = os.getenv("SMTP_PORT", "465")
-        smtp_username = os.getenv("SMTP_USERNAME")
-        smtp_password = os.getenv("SMTP_PASSWORD")
+        # Gmail API Config (HTTPS/443 — funciona no Railway)
+        gmail_client_id = os.getenv("GMAIL_CLIENT_ID")
+        gmail_client_secret = os.getenv("GMAIL_CLIENT_SECRET")
+        gmail_refresh_token = os.getenv("GMAIL_REFRESH_TOKEN")
+        gmail_user = os.getenv("SMTP_USERNAME")  # email remetente (ex: crs.home.care.ai@gmail.com)
         
-        is_mock = not smtp_username or not smtp_password
+        is_mock = not gmail_refresh_token or not gmail_client_id or not gmail_client_secret
         
         # Cria a mensagem
         from email.mime.multipart import MIMEMultipart
@@ -841,7 +841,7 @@ async def send_documents_email(user_id: str, payload: dict, db: Session = Depend
         import base64
         
         msg = MIMEMultipart()
-        msg['From'] = smtp_username if smtp_username else "sistema@homecare.com.br"
+        msg['From'] = gmail_user if gmail_user else "sistema@homecare.com.br"
         msg['To'] = destinatario
         msg['Subject'] = f"📋 Documentos Médicos/Identificação - Paciente: {user.full_name}"
         
@@ -891,43 +891,55 @@ async def send_documents_email(user_id: str, payload: dict, db: Session = Depend
         
         if is_mock:
             # Em modo de desenvolvimento/mock, permite envio mesmo sem documentos
-            print(f"📨 [SMTP MOCK] Envio de e-mail simulado com sucesso!")
+            print(f"📨 [GMAIL MOCK] Envio de e-mail simulado com sucesso!")
             print(f"   Destinatário: {destinatario}")
             print(f"   Assunto: {msg['Subject']}")
             print(f"   Anexos: {', '.join(attachments_info) if attachments_info else 'nenhum (usuário sem documentos)'}")
             return {
                 "status": "mock",
-                "message": "Simulação de envio concluída com sucesso! (SMTP não configurado no .env)",
+                "message": "Simulação de envio concluída com sucesso! (Gmail OAuth não configurado no .env)",
                 "anexos": len(attachments_info)
             }
         
         if not anexou_id and not anexou_card:
             raise HTTPException(status_code=400, detail="O usuário não possui nenhum documento cadastrado para envio.")
             
-        # Envio SMTP real
-        import smtplib
+        # Envio via Gmail API (REST — porta HTTPS/443, funciona no Railway)
+        
         try:
-            port = int(smtp_port_str)
-            if port == 465:
-                # SSL
-                server = smtplib.SMTP_SSL(smtp_server, port)
-            else:
-                # STARTTLS
-                server = smtplib.SMTP(smtp_server, port)
-                server.starttls()
-                
-            server.login(smtp_username, smtp_password)
-            server.sendmail(msg['From'], destinatario, msg.as_string())
-            server.quit()
+            # 1. Obter access token via OAuth refresh
+            token_url = "https://oauth2.googleapis.com/token"
+            token_data = {
+                "client_id": gmail_client_id,
+                "client_secret": gmail_client_secret,
+                "refresh_token": gmail_refresh_token,
+                "grant_type": "refresh_token"
+            }
+            token_resp = requests.post(token_url, data=token_data, timeout=15)
+            token_resp.raise_for_status()
+            access_token = token_resp.json()["access_token"]
             
-            print(f"✅ E-mail de documentos enviado com sucesso para {destinatario}")
+            # 2. Codificar mensagem MIME em base64url
+            raw_msg = base64.urlsafe_b64encode(msg.as_bytes()).decode("utf-8")
+            
+            # 3. Enviar via Gmail API
+            gmail_url = "https://gmail.googleapis.com/gmail/v1/users/me/messages/send"
+            headers = {
+                "Authorization": f"Bearer {access_token}",
+                "Content-Type": "application/json"
+            }
+            gmail_resp = requests.post(gmail_url, headers=headers, 
+                                       json={"raw": raw_msg}, timeout=30)
+            gmail_resp.raise_for_status()
+            
+            print(f"✅ E-mail de documentos enviado com sucesso para {destinatario} (Gmail API)")
             return {
                 "status": "success",
                 "message": "E-mail enviado com sucesso!"
             }
-        except Exception as smtp_err:
-            print(f"❌ Erro na conexao SMTP: {smtp_err}")
-            raise HTTPException(status_code=502, detail=f"Erro ao conectar com servidor de e-mail SMTP: {str(smtp_err)}")
+        except Exception as gmail_err:
+            print(f"❌ Erro na Gmail API: {gmail_err}")
+            raise HTTPException(status_code=502, detail=f"Erro ao enviar e-mail via Gmail API: {str(gmail_err)}")
             
     except HTTPException as http_ex:
         raise http_ex
