@@ -1,5 +1,6 @@
-# ===== v1.5.3 - 2026-08-04 ==========================================
+# ===== v1.5.4 - 2026-08-05 ==========================================
 # Correções:
+# - Ajustado Service Worker (sw.js) e VAPID key para notificações push em background
 # - Substituído SMTP (bloqueado no Railway) por Gmail API REST (HTTPS/443)
 # - Removido import inexistente 'from models import ...' 
 # - Adicionado campo 'location' na tabela appointments (modelo + migration + endpoints)
@@ -2557,6 +2558,13 @@ def enviar_web_push(subscription_info: dict, message_text: str) -> bool:
     except Exception as e:
         print(f"❌ Falha genérica Web Push: {e}")
         return False
+
+@app.get("/api/push/public-key")
+async def get_push_public_key():
+    pub_key = os.getenv("VAPID_PUBLIC_KEY")
+    if not pub_key:
+        raise HTTPException(status_code=500, detail="VAPID_PUBLIC_KEY não configurada no .env")
+    return {"public_key": pub_key}
 
 # Rota ativa para salvar a inscrição de Web Push
 @app.post("/api/push/subscribe")

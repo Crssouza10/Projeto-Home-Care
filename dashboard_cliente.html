@@ -5601,8 +5601,6 @@
         }
 
         // ===== PUSH NOTIFICATIONS =====
-        const publicVapidKey = "BIzgm94atwuSIR4zWILE8bzmGEd5cpUFPG1KM4FkLkdEtfz4-D7avNa9QpUzZ81v3e74kFWtF_Uyh5b_ivc2rzs";
-
         function urlB64ToUint8Array(base64String) {
             const padding = '='.repeat((4 - base64String.length % 4) % 4);
             const base64 = (base64String + padding).replace(/\-/g, '+').replace(/_/g, '/');
@@ -5633,10 +5631,16 @@
                     return;
                 }
                 
+                // Buscar a chave pública real do backend dinamicamente
+                const keyRes = await fetch(`${API_URL}/api/push/public-key`);
+                if (!keyRes.ok) throw new Error('Falha ao obter chave pública VAPID do backend');
+                const keyData = await keyRes.json();
+                const activeVapidKey = keyData.public_key;
+
                 const registration = await navigator.serviceWorker.ready;
                 const subscription = await registration.pushManager.subscribe({
                     userVisibleOnly: true,
-                    applicationServerKey: urlB64ToUint8Array(publicVapidKey)
+                    applicationServerKey: urlB64ToUint8Array(activeVapidKey)
                 });
                 
                 await fetch(`${API_URL}/api/push/subscribe`, {
