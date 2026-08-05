@@ -2871,10 +2871,29 @@ async def check_reminders(db: Session = Depends(get_db)):
         for med in meds_due:
             user = db.query(User).filter(User.id == med.user_id).first()
             if user:
+                # Calcula se está acabando (faltando 5 ou menos dias para acabar)
+                msg_adicional = ""
+                if med.end_date:
+                    try:
+                        hoje = now.date()
+                        end_date_obj = datetime.strptime(med.end_date, "%Y-%m-%d").date()
+                        dias_restantes = (end_date_obj - hoje).days
+                        if 0 <= dias_restantes <= 5:
+                            dias_texto = f"{dias_restantes} dias" if dias_restantes > 1 else "1 dia"
+                            if dias_restantes == 0:
+                                msg_adicional = " ⚠️ ESTE REMÉDIO ACABA HOJE!"
+                            else:
+                                msg_adicional = f" ⚠️ ACABANDO: Restam apenas {dias_texto} de tratamento!"
+                    except Exception:
+                        pass
+
                 # 1. Envia WhatsApp
                 if user.phone:
                     print(f"📤 Enviando WhatsApp para {user.full_name} ({user.phone}) - Remédio: {med.name}")
-                    sucesso = enviar_whatsapp(user.phone, med.name, med.dosage)
+                    if msg_adicional:
+                        sucesso = enviar_whatsapp_custom(user.phone, f"Olá {user.full_name}, está na hora de tomar seu remédio {med.name} ({med.dosage}) agendado para às {med.time}.{msg_adicional}")
+                    else:
+                        sucesso = enviar_whatsapp(user.phone, med.name, med.dosage)
                     if sucesso:
                         sent_count += 1
                     else:
@@ -2892,7 +2911,7 @@ async def check_reminders(db: Session = Depends(get_db)):
                     }
                     payload = json.dumps({
                         "title": "💊 Hora do Medicamento!",
-                        "body": f"Olá {user.full_name}, está na hora de tomar seu remédio {med.name} ({med.dosage}) agendado para às {med.time}.",
+                        "body": f"Olá {user.full_name}, está na hora de tomar seu remédio {med.name} ({med.dosage}) agendado para às {med.time}.{msg_adicional}",
                         "icon": "/static/icons/icon-192x192.png",
                         "badge": "/static/icons/icon-72x72.png",
                         "data": {
