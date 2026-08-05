@@ -4113,8 +4113,8 @@ async def listar_planos():
         {
             "key": "basico_mensal",
             "name": "Básico Mensal",
-            "price": 2990,
-            "price_display": "R$29,90",
+            "price": 4990,
+            "price_display": "R$49,90",
             "period": "mensal",
             "features": [
                 "1 responsável",
@@ -4129,8 +4129,8 @@ async def listar_planos():
         {
             "key": "pro_mensal",
             "name": "Pro Mensal",
-            "price": 4990,
-            "price_display": "R$49,90",
+            "price": 8990,
+            "price_display": "R$89,90",
             "period": "mensal",
             "features": [
                 "1 responsável",
