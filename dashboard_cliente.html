@@ -1624,6 +1624,13 @@
                         </form>
                     </div>
                 </div>
+                <!-- Botão Falar com a Equipe -->
+                <div style="text-align: center; margin-top: 10px;">
+                    <button onclick="openSupportChat()" 
+                        style="background: linear-gradient(135deg, #00D4FF, #8B5CF6); color: #fff; border: none; border-radius: 25px; padding: 10px 24px; font-weight: 700; cursor: pointer; font-size: 0.9rem; box-shadow: 0 4px 12px rgba(0,212,255,0.3); transition: all 0.2s;">
+                        💬 Falar com a Equipe
+                    </button>
+                </div>
             </div>
             
             <!-- RIGHT: CALENDAR -->
@@ -1631,6 +1638,32 @@
                 <div class="section-title">🗓️ Calendário</div>
                 <div class="calendar-container" id="calendar"></div>
             </div>
+        </div>
+    </div>
+    
+    <!-- 🤖 MODAL FALAR COM A EQUIPE (Suporte via Chat IA) -->
+    <div class="modal" id="modal-support">
+        <div class="modal-content" style="max-width: 500px;">
+            <div class="modal-header">
+                <h3 class="modal-title">💬 Falar com a Equipe</h3>
+                <button class="modal-close" onclick="closeModal('modal-support')">&times;</button>
+            </div>
+            <div id="support-chat-messages" style="max-height: 300px; overflow-y: auto; padding: 12px; background: #0f172a; border-radius: 10px; margin-bottom: 12px; min-height: 80px;">
+                <div style="color: #8a9bb5; text-align: center; padding: 20px; font-size: 0.9rem;">
+                    👋 Olá! Sou o assistente virtual do Cuidadoso.<br>
+                    Como posso ajudar você hoje?
+                </div>
+            </div>
+            <div style="display: flex; gap: 8px;">
+                <input type="text" id="support-chat-input" placeholder="Digite sua dúvida..." 
+                    style="flex: 1; background: #1e293b; border: 1px solid rgba(255,255,255,0.1); border-radius: 10px; padding: 10px 14px; color: #fff; font-size: 0.9rem; outline: none;"
+                    onkeypress="if(event.key==='Enter')sendSupportMessage()">
+                <button onclick="sendSupportMessage()" 
+                    style="background: #00D4FF; color: #0f172a; border: none; border-radius: 10px; padding: 10px 16px; font-weight: 700; cursor: pointer; font-size: 0.9rem;">
+                    Enviar
+                </button>
+            </div>
+            <div id="support-protocol" style="display: none; margin-top: 10px; padding: 10px; background: rgba(16,185,129,0.15); border: 1px solid rgba(16,185,129,0.3); border-radius: 8px; text-align: center; font-size: 0.85rem; color: #10b981;"></div>
         </div>
     </div>
     
@@ -7707,6 +7740,102 @@
         ðŸ  CR$ Home Care AI v2.6.0 — build 2026-07-18 — envio de documentos médicos por e-mail
     </div>
 <!-- Cloudflare Web Analytics --><script type='module' src='https://static.cloudflareinsights.com/beacon.min.js' data-cf-beacon='{"token": "d1a9b25d409d47f693bbb1a7f0afbc97"}'></script><!-- End Cloudflare Web Analytics -->
+
+<!-- SUPORTE: Falar com a Equipe -->
+<script>
+let supportHistory = [];
+
+function openSupportChat() {
+    document.getElementById('modal-support').style.display = 'flex';
+    document.getElementById('support-chat-input').focus();
+}
+
+function sendSupportMessage() {
+    const input = document.getElementById('support-chat-input');
+    const msg = input.value.trim();
+    if (!msg) return;
+    
+    // Mostra mensagem do usuário
+    appendSupportMessage('user', msg);
+    input.value = '';
+    input.disabled = true;
+    
+    // Adiciona ao histórico
+    supportHistory.push({role: 'user', content: msg});
+    
+    // Mostra indicador de digitação
+    const typingId = appendSupportMessage('assistant', '✍️ Digitando...');
+    
+    // Chama API
+    const userId = state.user?.id || '';
+    const userName = state.user?.full_name || 'Usuário';
+    const userEmail = state.user?.email || '';
+    
+    fetch('/api/support/message', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({
+            user_id: userId,
+            message: msg,
+            user_name: userName,
+            user_email: userEmail,
+            history: supportHistory.slice(0, -1)
+        })
+    })
+    .then(r => r.json())
+    .then(data => {
+        // Remove indicador de digitação
+        const typingEl = document.getElementById(typingId);
+        if (typingEl) typingEl.remove();
+        
+        // Mostra resposta
+        const response = data.ia_response || 'Recebemos sua mensagem!';
+        appendSupportMessage('assistant', response);
+        supportHistory.push({role: 'assistant', content: response});
+        
+        // Mostra protocolo se existir
+        if (data.protocolo) {
+            const protoDiv = document.getElementById('support-protocol');
+            protoDiv.style.display = 'block';
+            protoDiv.innerHTML = '📋 Protocolo: <strong>' + data.protocolo + '</strong> — responderemos em até 2h';
+        }
+    })
+    .catch(err => {
+        const typingEl = document.getElementById(typingId);
+        if (typingEl) typingEl.remove();
+        appendSupportMessage('assistant', 'Desculpe, houve um erro. Tente novamente mais tarde.');
+        console.error('Erro suporte:', err);
+    })
+    .finally(() => {
+        input.disabled = false;
+        input.focus();
+    });
+}
+
+function appendSupportMessage(role, text) {
+    const container = document.getElementById('support-chat-messages');
+    // Remove mensagem inicial se existir
+    const initial = container.querySelector('div[style*="text-align: center"]');
+    if (initial && container.children.length === 1) initial.remove();
+    
+    const id = 'support-msg-' + Date.now();
+    const div = document.createElement('div');
+    div.id = id;
+    div.style.cssText = 'margin-bottom: 8px; padding: 8px 12px; border-radius: 10px; font-size: 0.85rem; max-width: 85%;';
+    
+    if (role === 'user') {
+        div.style.cssText += 'background: #00D4FF22; color: #cbd5e1; margin-left: auto; text-align: right;';
+        div.textContent = text;
+    } else {
+        div.style.cssText += 'background: #1e293b; color: #e2e8f0;';
+        div.innerHTML = text.replace(/\\n/g, '<br>');
+    }
+    
+    container.appendChild(div);
+    container.scrollTop = container.scrollHeight;
+    return id;
+}
+</script>
         </body>
         </html>
 

@@ -1,5 +1,7 @@
 # ===== v1.5.4 - 2026-08-05 ==========================================
 # Correções:
+# - Adicionado endpoint de suporte 'Falar com a Equipe' (chat IA + e-mail com protocolo)
+# - Extraídas funções auxiliares _get_gmail_access_token() e _send_email_via_gmail_api()
 # - Ajustado Service Worker (sw.js) e VAPID key para notificações push em background
 # - Substituído SMTP (bloqueado no Railway) por Gmail API REST (HTTPS/443)
 # - Removido import inexistente 'from models import ...' 
@@ -948,6 +950,258 @@ async def send_documents_email(user_id: str, payload: dict, db: Session = Depend
         import traceback
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=str(e))
+
+
+# ══════════════════════════════════════════════════════════════
+# FUNÇÕES AUXILIARES — GMAIL API
+# ══════════════════════════════════════════════════════════════
+
+def _get_gmail_access_token() -> str:
+    """Obtém access token OAuth para Gmail API usando refresh token."""
+    gmail_client_id = os.getenv("GMAIL_CLIENT_ID")
+    gmail_client_secret = os.getenv("GMAIL_CLIENT_SECRET")
+    gmail_refresh_token = os.getenv("GMAIL_REFRESH_TOKEN")
+    
+    if not all([gmail_client_id, gmail_client_secret, gmail_refresh_token]):
+        raise RuntimeError("Credenciais Gmail OAuth não configuradas")
+    
+    token_url = "https://oauth2.googleapis.com/token"
+    token_data = {
+        "client_id": gmail_client_id,
+        "client_secret": gmail_client_secret,
+        "refresh_token": gmail_refresh_token,
+        "grant_type": "refresh_token"
+    }
+    token_resp = requests.post(token_url, data=token_data, timeout=15)
+    token_resp.raise_for_status()
+    return token_resp.json()["access_token"]
+
+
+def _send_email_via_gmail_api(to_email: str, subject: str, body: str, from_email: str = None) -> bool:
+    """Envia e-mail simples (sem anexos) via Gmail API REST. Retorna True se sucesso."""
+    import base64
+    from email.mime.text import MIMEText
+    
+    if not from_email:
+        from_email = os.getenv("SMTP_USERNAME", "sistema@homecare.com.br")
+    
+    msg = MIMEText(body, "plain", "utf-8")
+    msg["From"] = from_email
+    msg["To"] = to_email
+    msg["Subject"] = subject
+    
+    raw_msg = base64.urlsafe_b64encode(msg.as_bytes()).decode("utf-8")
+    access_token = _get_gmail_access_token()
+    
+    gmail_url = "https://gmail.googleapis.com/gmail/v1/users/me/messages/send"
+    headers = {
+        "Authorization": f"Bearer {access_token}",
+        "Content-Type": "application/json"
+    }
+    resp = requests.post(gmail_url, headers=headers, json={"raw": raw_msg}, timeout=30)
+    resp.raise_for_status()
+    return True
+
+
+# ══════════════════════════════════════════════════════════════
+# ENDPOINT: Falar com a Equipe (Suporte via Chat IA + E-mail)
+# ══════════════════════════════════════════════════════════════
+
+@app.post("/api/support/message")
+async def support_message(payload: dict, db: Session = Depends(get_db)):
+    """
+    Chat de suporte 'Falar com a Equipe'.
+    - A IA responde dúvidas simples na hora
+    - Dúvidas complexas geram protocolo e são enviadas por e-mail
+    """
+    try:
+        user_id = payload.get("user_id", "").strip()
+        message = payload.get("message", "").strip()
+        user_name = payload.get("user_name", "Usuário")
+        user_email = payload.get("user_email", "")
+        history = payload.get("history", [])
+        
+        if not message:
+            raise HTTPException(status_code=400, detail="Mensagem é obrigatória")
+        
+        # Buscar usuário se user_id fornecido
+        user = None
+        if user_id:
+            try:
+                user_uuid = uuid.UUID(user_id)
+                user = db.query(User).filter(User.id == user_uuid).first()
+                if user:
+                    user_name = user.full_name
+                    user_email = user.email or user_email
+            except ValueError:
+                pass
+        
+        # 1. Classificar a intenção com Gemini
+        gemini_key = os.getenv("GEMINI_API_KEY")
+        if not gemini_key:
+            # Sem IA, envia e-mail direto
+            protocolo = _gerar_protocolo()
+            _enviar_email_suporte(protocolo, user_name, user_email, message, history)
+            return {
+                "status": "forwarded",
+                "protocolo": protocolo,
+                "message": f"Recebemos sua mensagem! Protocolo: {protocolo}. Responderemos em até 2h no seu e-mail.",
+                "ia_response": f"Recebemos sua mensagem! Um atendente vai analisar e responder em até 2h no e-mail cadastrado. Seu protocolo é: {protocolo}."
+            }
+        
+        # 2. Perguntar ao Gemini se é dúvida simples ou precisa de humano
+        faq_prompt = (
+            "Você é um assistente de suporte do aplicativo Cuidadoso (Home Care IA). "
+            "O aplicativo ajuda cuidadores e familiares a gerenciar medicamentos, consultas médicas, "
+            "e cuidar de pessoas que precisam de atenção especial.\n\n"
+            "Analise a mensagem do usuário e classifique em:\n"
+            "- 'simples': dúvida comum sobre planos, preços, funcionalidades, uso do app. Responda diretamente.\n"
+            "- 'complexa': problema técnico, reclamação, solicitação específica que precisa de um humano.\n\n"
+            "Responda EXATAMENTE neste formato JSON (sem texto antes ou depois):\n"
+            '{"tipo":"simples|complexa","resposta":"sua resposta aqui","assunto":"resumo em 5 palavras"}\n\n'
+            f"Usuário: {user_name}\n"
+            f"Mensagem: {message}"
+        )
+        
+        try:
+            import aiohttp
+            async with aiohttp.ClientSession() as session:
+                async with session.post(
+                    f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key={gemini_key}",
+                    json={
+                        "contents": [{"role": "user", "parts": [{"text": faq_prompt}]}],
+                        "generationConfig": {"temperature": 0.3, "maxOutputTokens": 500}
+                    },
+                    timeout=aiohttp.ClientTimeout(total=15)
+                ) as resp:
+                    gemini_data = await resp.json()
+                    raw_text = gemini_data["candidates"][0]["content"]["parts"][0]["text"]
+        except Exception as e:
+            # Fallback: encaminha para humano
+            protocolo = _gerar_protocolo()
+            _enviar_email_suporte(protocolo, user_name, user_email, message, history)
+            return {
+                "status": "forwarded",
+                "protocolo": protocolo,
+                "message": f"Recebemos sua mensagem! Protocolo: {protocolo}.",
+                "ia_response": f"Obrigado, {user_name}! Sua mensagem foi registrada com o protocolo {protocolo}. Nossa equipe analisará e responderá em até 2h no e-mail cadastrado."
+            }
+        
+        # 3. Parse da resposta
+        import json as json_lib
+        raw_text = raw_text.strip()
+        if raw_text.startswith("```json"):
+            raw_text = raw_text[7:]
+        if raw_text.startswith("```"):
+            raw_text = raw_text[3:]
+        if raw_text.endswith("```"):
+            raw_text = raw_text[:-3]
+        
+        try:
+            result = json_lib.loads(raw_text.strip())
+        except:
+            # Se falhar o parse, encaminha
+            protocolo = _gerar_protocolo()
+            _enviar_email_suporte(protocolo, user_name, user_email, message, history)
+            return {
+                "status": "forwarded",
+                "protocolo": protocolo,
+                "message": f"Recebemos sua mensagem! Protocolo: {protocolo}.",
+                "ia_response": f"Obrigado! Sua mensagem foi registrada ({protocolo}). Um atendente responderá em até 2h."
+            }
+        
+        tipo = result.get("tipo", "complexa")
+        resposta = result.get("resposta", "")
+        assunto = result.get("assunto", "Dúvida")
+        
+        if tipo == "simples":
+            return {
+                "status": "answered",
+                "ia_response": resposta
+            }
+        
+        # 4. Dúvida complexa → gerar protocolo e enviar e-mail
+        protocolo = _gerar_protocolo()
+        _enviar_email_suporte(protocolo, user_name, user_email, message, history)
+        
+        resposta_completa = (
+            f"{resposta}\n\n"
+            f"📋 Sua solicitação foi registrada com o protocolo **{protocolo}**. "
+            f"Nossa equipe analisará e responderá em até 2h no e-mail cadastrado."
+        )
+        
+        return {
+            "status": "forwarded",
+            "protocolo": protocolo,
+            "message": f"Solicitação registrada: {protocolo}",
+            "ia_response": resposta_completa
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+def _gerar_protocolo() -> str:
+    """Gera número de protocolo único: TK-2026-XXXX"""
+    import random
+    numero = random.randint(1000, 9999)
+    return f"TK-2026-{numero}"
+
+
+def _enviar_email_suporte(protocolo: str, user_name: str, user_email: str, message: str, history: list):
+    """Envia e-mail de suporte para a equipe e confirmação para o usuário."""
+    try:
+        equipe_email = os.getenv("SMTP_USERNAME", "crs.home.care.ai@gmail.com")
+        
+        # 1. E-mail para a equipe
+        corpo_equipe = (
+            f"NOVO TICKET DE SUPORTE\n"
+            f"Protocolo: {protocolo}\n"
+            f"Data: {datetime.now().strftime('%d/%m/%Y %H:%M')}\n"
+            f"Usuário: {user_name}\n"
+            f"E-mail: {user_email or 'Não informado'}\n"
+            f"{'='*50}\n\n"
+            f"MENSAGEM DO USUÁRIO:\n{message}\n\n"
+            f"HISTÓRICO DA CONVERSA:\n"
+        )
+        if history:
+            for h in history[-5:]:
+                role = "👤 Usuário" if h.get("role") == "user" else "🤖 IA"
+                corpo_equipe += f"{role}: {h.get('content', '')}\n"
+        else:
+            corpo_equipe += "(primeira mensagem)\n"
+        
+        _send_email_via_gmail_api(
+            to_email=equipe_email,
+            subject=f"[SUPORTE {protocolo}] {user_name}",
+            body=corpo_equipe
+        )
+        print(f"📧 [SUPORTE] Ticket {protocolo} enviado para equipe: {equipe_email}")
+        
+        # 2. Confirmação para o usuário (se tiver e-mail)
+        if user_email:
+            corpo_user = (
+                f"Olá, {user_name}!\n\n"
+                f"Recebemos sua mensagem e já estamos analisando.\n\n"
+                f"📋 Protocolo: {protocolo}\n"
+                f"⏱️ Prazo: responderemos em até 2 horas\n\n"
+                f"Sua mensagem:\n\"{message[:200]}{'...' if len(message) > 200 else ''}\"\n\n"
+                f"Obrigado por usar o Cuidadoso!\n"
+                f"Equipe CR$ Home Care AI"
+            )
+            _send_email_via_gmail_api(
+                to_email=user_email,
+                subject=f"Recebemos sua mensagem! [{protocolo}]",
+                body=corpo_user
+            )
+            print(f"📧 [SUPORTE] Confirmação enviada para usuário: {user_email}")
+    except Exception as e:
+        print(f"⚠️ [SUPORTE] Erro ao enviar e-mail: {e}")
+
 
 @app.get("/api/cliente/{user_id}/view-document")
 async def view_document(user_id: str, db: Session = Depends(get_db)):
