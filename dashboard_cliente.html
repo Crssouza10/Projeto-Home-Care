@@ -1511,7 +1511,7 @@
             </div>            
             
             <div class="header-stat" onclick="showTodayCommitments()">
-                <div class="header-stat-icon">🗓</div>
+                <div class="header-stat-icon">🗓</div>
                 <div>
                     <div class="header-stat-value" id="appts-commitments">0</div>
                     <div class="header-stat-label" id="appts-label-header">consulta(s)</div>
@@ -1535,7 +1535,7 @@
             <div class="section">
                 <!-- Antes estava apenas o texto, agora coloque o ID -->
                 <h3 id="agenda-header" style="font-size: 1.2rem; font-weight: 700; margin-bottom: 15px; color: #fff;">
-                    🗓 Minha agenda para hoje dia: 20/junho/2026
+                    🗓 Minha agenda para hoje dia: 20/junho/2026
                 </h3>
                 
                 <!-- 💊 MEDICAMENTOS -->
@@ -1550,14 +1550,14 @@
                             <span class="section-badge" id="tab-meds">0</span>
                         </div>
                     </div>
-                    <div id="medications-list"><div class="loading">â³ Carregando...</div></div>
+                    <div id="medications-list"><div class="loading">â³ Carregando...</div></div>
                 </div>
                 
-                <!-- 🗓 CONSULTAS -->
+                <!-- 🗓 CONSULTAS -->
                 <div id="screen-appointments" class="screen">
                     <div class="section-header-btn" style="display:flex; justify-content:space-between; align-items:center;" onclick="scrollToSection('appointments')">
                         <div style="display:flex; align-items:center; gap:12px;">
-                            <span class="section-icon">🗓</span>
+                            <span class="section-icon">🗓</span>
                             Consultas agendadas
                         </div>
                         <div style="display:flex; align-items:center; gap:8px;">
@@ -1565,17 +1565,17 @@
                             <span class="section-badge" id="tab-appts">0</span>
                         </div>
                     </div>
-                    <div id="appointments-list"><div class="loading">â³ Carregando...</div></div>
+                    <div id="appointments-list"><div class="loading">â³ Carregando...</div></div>
                 </div>
                 
-                <!-- 👨â€⚕ RESPONSÃVEIS -->
+                <!-- 👨â€⚕ RESPONSÃVEIS -->
                 <div id="screen-responsibles" class="screen" style="display: none !important;">
                     <div class="section-header-btn" onclick="scrollToSection('responsibles')">
-                        <span class="section-icon">👨â€⚕</span>
+                        <span class="section-icon">👨â€⚕</span>
                         Responsáveis
                         <span class="section-badge" id="tab-resp">0</span>
                     </div>
-                    <div id="responsibles-list"><div class="loading">â³ Carregando...</div></div>
+                    <div id="responsibles-list"><div class="loading">â³ Carregando...</div></div>
                 </div>
                 
                 <!-- 📞 CONTATOS DE EMERGÊNCIA -->
@@ -1585,7 +1585,7 @@
                         Contatos de Emergência
                         <span class="section-badge" id="tab-contacts">0</span>
                     </div>
-                    <div id="contacts-list"><div class="loading">â³ Carregando...</div></div>
+                    <div id="contacts-list"><div class="loading">â³ Carregando...</div></div>
                 </div>
 
                 <!-- 💬 CHAT IA (ASSISTENTE MAXIMUS) -->
@@ -1613,7 +1613,7 @@
                         <!-- Sugestões rápidas -->
                         <div class="chat-suggestions" style="display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 12px;">
                             <button onclick="sendQuickChatMessage('Como devo tomar meus remédios hoje?')" style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); color: #cbd5e1; padding: 6px 12px; border-radius: 20px; font-size: 0.8rem; cursor: pointer; transition: all 0.2s;">📋 Como tomar meus remédios hoje?</button>
-                            <button onclick="sendQuickChatMessage('Quais cuidados devo ter com efeitos colaterais?')" style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); color: #cbd5e1; padding: 6px 12px; border-radius: 20px; font-size: 0.8rem; cursor: pointer; transition: all 0.2s;">⚠ Efeitos colaterais</button>
+                            <button onclick="sendQuickChatMessage('Quais cuidados devo ter com efeitos colaterais?')" style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); color: #cbd5e1; padding: 6px 12px; border-radius: 20px; font-size: 0.8rem; cursor: pointer; transition: all 0.2s;">⚠ Efeitos colaterais</button>
                         </div>
                         
                         <!-- Input form -->
@@ -1649,7 +1649,7 @@
                 <span style="display: block; color: #8A9BB5; font-size: 0.8rem; margin-top: 4px;">A IA preenche os campos automaticamente</span>
             </div>
             <div id="ocr-loading" style="display: none; text-align: center; padding: 14px; color: #f59e0b; font-weight: 600;">
-                â³ Analisando receita com IA...
+                â³ Analisando receita com IA...
             </div>
             <div id="ocr-result" style="display: none; margin-bottom: 12px; padding: 10px; background: rgba(16,185,129,0.15); border: 1px solid rgba(16,185,129,0.3); border-radius: 10px; text-align: center; font-size: 0.9rem; color: #10b981;"></div>
             <input type="file" id="ocr-file-input" accept="image/*" capture="environment" style="display: none;" onchange="handleOCRUpload(event)">
@@ -1983,7 +1983,7 @@
                         <label class="form-label" style="margin-bottom:0;">Documento de Identificação</label>
                         <div style="display:flex; gap:6px;">
                             <button type="button" id="btn-delete-identity-document" class="btn-action" onclick="deleteIdentityDocument()" style="height: 32px; padding: 0 12px; font-size: 0.75rem; background: #ef4444; color: #FFFFFF; border: none; border-radius: 4px; font-weight: 600; cursor: pointer; display: none; align-items: center; justify-content: center; gap: 4px; box-sizing: border-box;">
-                                🗑 Excluir
+                                🗑 Excluir
                             </button>
                             <button type="button" class="btn-action" onclick="triggerIdentityDocumentUpload()" style="height: 32px; padding: 0 12px; font-size: 0.75rem; background: #10b981; color: #FFFFFF; border: none; border-radius: 4px; font-weight: 600; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 4px; box-sizing: border-box;">
                                 📤 Importar Documento
@@ -2001,7 +2001,7 @@
                         <label class="form-label" style="margin-bottom:0;">Plano de Saúde</label>
                         <div style="display:flex; gap:6px;">
                             <button type="button" id="btn-delete-insurance-card" class="btn-action" onclick="deleteInsuranceCard()" style="height: 32px; padding: 0 12px; font-size: 0.75rem; background: #ef4444; color: #FFFFFF; border: none; border-radius: 4px; font-weight: 600; cursor: pointer; display: none; align-items: center; justify-content: center; gap: 4px; box-sizing: border-box;">
-                                🗑 Excluir
+                                🗑 Excluir
                             </button>
                             <button type="button" class="btn-action" onclick="triggerInsuranceCardUpload()" style="height: 32px; padding: 0 12px; font-size: 0.75rem; background: #10b981; color: #FFFFFF; border: none; border-radius: 4px; font-weight: 600; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 4px; box-sizing: border-box;">
                                 📤 Importar Carteirinha
@@ -2017,7 +2017,7 @@
                 
                 <!-- Campos de Edição de Responsável -->
                 <div style="border-top: 1px solid rgba(0, 212, 255, 0.15); margin: 20px 0; padding-top: 15px;">
-                    <h4 style="color:#00D4FF; margin-bottom:12px; font-size:1.05rem;">👨â€⚕ Responsável pelos Alertas</h4>
+                    <h4 style="color:#00D4FF; margin-bottom:12px; font-size:1.05rem;">👨â€⚕ Responsável pelos Alertas</h4>
                     <div class="form-row" style="display:flex; gap:10px;">
                         <div class="form-group" style="flex:1;">
                             <label class="form-label">Nome</label>
@@ -2079,10 +2079,10 @@
     <div class="modal" id="modal-delete-medication">
         <div class="modal-content delete-modal-content">
             <div class="modal-header">
-                <h3 class="modal-title">🗑 Excluir Medicamento</h3>
+                <h3 class="modal-title">🗑 Excluir Medicamento</h3>
                 <button class="modal-close" onclick="closeModal('modal-delete-medication')">&times;</button>
             </div>
-            <span class="warning-icon">⚠</span>
+            <span class="warning-icon">⚠</span>
             <p style="color:#C5D0E0; margin-bottom:4px; font-size:1rem;">
                 Como deseja excluir <strong id="delete-med-name" style="color:#00D4FF;">este medicamento</strong>?
             </p>
@@ -2177,7 +2177,7 @@
             console.log('✅ API_URL configurada:', API_URL);
 
         // ============================================
-        // 🛡 VERIFICAÇÃO DE LOGIN IMEDIATA E BLOQUEANTE
+        // 🛡 VERIFICAÇÃO DE LOGIN IMEDIATA E BLOQUEANTE
         // ============================================
         const storedUserId = localStorage.getItem('userId');
         
@@ -2432,12 +2432,12 @@
             
             // ===== CARREGAR DADOS DO USUÃRIO =====
             // ============================================
-            //  VERIFICAÇÃO DE SEGURANÇA (COLE NO TOPO!)
+            //  VERIFICAÇÃO DE SEGURANÇA (COLE NO TOPO!)
             // ============================================
             const storedUser = localStorage.getItem('userId');
 
             if (!storedUser) {
-                console.log(' Usuário não encontrado! Redirecionando para Login...');
+                console.log(' Usuário não encontrado! Redirecionando para Login...');
                 // Redireciona imediatamente para a página de login
                 window.location.href = 'index.html'; 
             }
@@ -2564,7 +2564,7 @@
                 // Receber notificações push
                 navigator.serviceWorker.addEventListener('message', event => {
                     if (event.data.type === 'MEDICAMENTO') {
-                        new Notification('â° Hora do Medicamento!', {
+                        new Notification('â° Hora do Medicamento!', {
                             body: `${event.data.nome} - ${event.data.dosagem}`,
                             icon: '/icon-192x192.png',
                             vibrate: [200, 100, 200],
@@ -2611,7 +2611,7 @@
         });
         
         // ============================================
-        // 🗓 CONFIGURAÇÃO DO CALENDÃRIO (COM EVENTOS DIFER
+        // 🗓 CONFIGURAÇÃO DO CALENDÃRIO (COM EVENTOS DIFER
         // ============================================
         function setupDayChips() {
             document.querySelectorAll('.day-chip').forEach(chip => {
@@ -2855,14 +2855,14 @@
                     <div class="appt-card ${appt.status === 'confirmed' ? 'confirmed' : appt.status === 'cancelled' ? 'cancelled' : ''}">
                         <div class="med-card-header">
                             <div>
-                                <div class="med-name">👨â€⚕ ${appt.doctor_name || 'Médico'}</div>
+                                <div class="med-name">👨â€⚕ ${appt.doctor_name || 'Médico'}</div>
                                 <div class="med-dosage">${appt.specialty || 'Especialidade não informada'}</div>
                             </div>
                             <div class="card-actions-group">
                                 <!-- <button class="card-icon-btn insert" onclick="handleInsert()" title="Inserir">➕</button> -->
                                 <!-- <button class="card-icon-btn create" onclick="handleCreate()" title="Criar">✨</button> -->
-                                <button class="card-icon-btn edit" onclick="editAppt('${appt.id}')" title="Editar">âœ</button>
-                                <button class="card-icon-btn delete" onclick="deleteAppointment('${appt.id}')" title="Excluir">🗑</button>
+                                <button class="card-icon-btn edit" onclick="editAppt('${appt.id}')" title="Editar">âœ</button>
+                                <button class="card-icon-btn delete" onclick="deleteAppointment('${appt.id}')" title="Excluir">🗑</button>
                             </div>
                         </div>
                         <div class="med-days">🗓 ${dateStr} ⏰ ${appt.appointment_time || ''}</div>
@@ -3027,7 +3027,7 @@
                 clinicalData.identity_document_file = null;
                 document.getElementById('clinical-edit-identity-document-preview-container').style.display = 'none';
                 document.getElementById('btn-delete-identity-document').style.display = 'none';
-                showToast("🗑 Documento de identificação removido (clique em Salvar para confirmar).");
+                showToast("🗑 Documento de identificação removido (clique em Salvar para confirmar).");
             }
         };
 
@@ -3036,7 +3036,7 @@
                 clinicalData.health_insurance_card = null;
                 document.getElementById('clinical-edit-insurance-card-preview-container').style.display = 'none';
                 document.getElementById('btn-delete-insurance-card').style.display = 'none';
-                showToast("🗑 Carteirinha removida (clique em Salvar para confirmar).");
+                showToast("🗑 Carteirinha removida (clique em Salvar para confirmar).");
             }
         };
 
@@ -3236,7 +3236,7 @@
             };
             
             try {
-                showToast("â³ Salvando...");
+                showToast("â³ Salvando...");
                 
                 const savePromises = [];
 
@@ -3354,13 +3354,13 @@
             const emailInput = document.getElementById('clinical-send-email-dest');
             const emailDest = emailInput.value.trim();
             if (!emailDest) {
-                showToast("⚠ Digite o e-mail destinatário", true);
+                showToast("⚠ Digite o e-mail destinatário", true);
                 return;
             }
             
             // Validação simples de e-mail
             if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailDest)) {
-                showToast("⚠ Digite um e-mail válido", true);
+                showToast("⚠ Digite um e-mail válido", true);
                 return;
             }
             
@@ -3404,7 +3404,7 @@
             const file = event.target.files[0];
             if (!file) return;
             
-            showToast("â³ Lendo imagem com Inteligência Artificial...");
+            showToast("â³ Lendo imagem com Inteligência Artificial...");
             
             const formData = new FormData();
             formData.append('file', file);
@@ -3444,7 +3444,7 @@
             const file = event.target.files[0];
             if (!file) return;
             
-            showToast("â³ Importando documento de identificação...");
+            showToast("â³ Importando documento de identificação...");
             
             const formData = new FormData();
             formData.append('file', file);
@@ -3493,7 +3493,7 @@
             const file = event.target.files[0];
             if (!file) return;
             
-            showToast("â³ Importando carteirinha...");
+            showToast("â³ Importando carteirinha...");
             
             const formData = new FormData();
             formData.append('file', file);
@@ -3546,7 +3546,7 @@
                 const file = e.target.files[0];
                 if (!file) return;
                 
-                showToast("â³ Processando imagem da caixa...");
+                showToast("â³ Processando imagem da caixa...");
                 
                 const reader = new FileReader();
                 reader.onload = async () => {
@@ -3605,7 +3605,7 @@
         // =====================================================
         async function loadMedicationsHistory(dateStr) {
             const container = document.getElementById('medications-list');
-            container.innerHTML = '<div class="loading"> â³  Carregando histórico...</div>';
+            container.innerHTML = '<div class="loading"> â³  Carregando histórico...</div>';
             
             try {
                 if (!userId) return;
@@ -3649,7 +3649,7 @@
                                     <div class="med-time-badge">${med.time || '--:--'}</div>
                                     <div class="card-actions-group">
                                         <button class="card-icon-btn attach-image" onclick="triggerBoxImageUpload('${med.id}')" title="Anexar Caixa do Remédio" style="background:#FFFFFF; color:#f59e0b; border-color: rgba(245,158,11,0.2);">📷</button>
-                                        <button class="card-icon-btn calendar" onclick="showMedicationCalendar('${med.id}')" title="Ver Dias de Uso" style="background:#FFFFFF; color:#10b981; border-color: rgba(16,185,129,0.2);">🗓</button>
+                                        <button class="card-icon-btn calendar" onclick="showMedicationCalendar('${med.id}')" title="Ver Dias de Uso" style="background:#FFFFFF; color:#10b981; border-color: rgba(16,185,129,0.2);">🗓</button>
                                     </div>
                                 </div>
                                 <div class="med-card-body-flex" style="display: flex; justify-content: space-between; align-items: center; gap: 15px; margin-bottom: 12px;">
@@ -3659,13 +3659,13 @@
                                         <div class="med-days" style="margin-bottom: 0;"> 📆  ${diasText}</div>
                                         ${med.is_review_needed ? `
                                         <div class="med-review-alert" style="margin-top: 10px;">
-                                            <span class="review-icon">⚠</span>
+                                            <span class="review-icon">⚠</span>
                                             <span class="review-text">Revisão necessária — consulte seu médico</span>
                                         </div>` : ''}
                                     </div>
                                     ${med.box_image ? `
-                                        <div class="med-box-image" style="width: 140px; height: 80px; overflow: hidden; border-radius: 8px; border: 1px solid rgba(0,0,0,0.1); cursor: pointer;" onclick="viewFullBoxImage('${med.box_image}')">
-                                            <img src="${med.box_image}" style="width: 100%; height: 100%; object-fit: cover;" alt="Caixa do Remédio" />
+                                        <div class="med-box-image" style="width: 140px; height: 80px; overflow: hidden; border-radius: 8px; border: 1px solid rgba(0,0,0,0.1); cursor: pointer; background: rgba(255, 255, 255, 0.05);" onclick="viewFullBoxImage('${med.box_image}')">
+                                            <img src="${med.box_image}" style="width: 100%; height: 100%; object-fit: contain;" alt="Caixa do Remédio" />
                                         </div>
                                     ` : ''}
                                 </div>
@@ -3725,7 +3725,7 @@
             
             // ✅ ESTADO: PENDENTE (Histórico - não foi tomado)
             return `<button disabled style="width:100%; margin-top:10px; padding:14px; background:#9ca3af; color:white; border:none; border-radius:12px; font-weight:800; font-size:1.1rem; cursor:default;">
-        â°  Agendado (não confirmado)
+        â°  Agendado (não confirmado)
                 </button>`;
         }
                         
@@ -3853,14 +3853,14 @@
                     <div class="appt-card ${appt.status === 'confirmed' ? 'confirmed' : appt.status === 'cancelled' ? 'cancelled' : ''}">
                         <div class="med-card-header">
                             <div>
-                                <div class="med-name">👨â€⚕ ${appt.doctor_name || 'Médico'}</div>
+                                <div class="med-name">👨â€⚕ ${appt.doctor_name || 'Médico'}</div>
                                 <div class="med-dosage">${appt.specialty || 'Especialidade não informada'}</div>
                             </div>
                             <div class="card-actions-group">
                                 <!-- <button class="card-icon-btn insert" onclick="handleInsert()" title="Inserir">➕</button> -->
                                 <!-- <button class="card-icon-btn create" onclick="handleCreate()" title="Criar">✨</button> -->
-                                <button class="card-icon-btn edit" onclick="editAppt('${appt.id}')" title="Editar">âœ</button>
-                                <button class="card-icon-btn delete" onclick="deleteAppointment('${appt.id}')" title="Excluir">🗑</button>
+                                <button class="card-icon-btn edit" onclick="editAppt('${appt.id}')" title="Editar">âœ</button>
+                                <button class="card-icon-btn delete" onclick="deleteAppointment('${appt.id}')" title="Excluir">🗑</button>
                             </div>
                         </div>
                         <div class="med-days">🗓 ${dateStr} ⏰ ${appt.appointment_time || ''}</div>
@@ -3911,7 +3911,7 @@
                             sourceData.map(m => `${m.name}=${m.time}`));
                     }
                 } catch (e) {
-                    console.warn('⚠ Erro ao buscar horários da data específica:', e);
+                    console.warn('⚠ Erro ao buscar horários da data específica:', e);
                     // Continua com medicationsData em cache se falhar
                 }
             }
@@ -3930,7 +3930,7 @@
                 
                 // Verifica se está ativo
                 if (med.is_active === false) {
-                    console.log(`   â­ Inativo - pulando`);
+                    console.log(`   â­ Inativo - pulando`);
                     return false;
                 }
                 
@@ -4002,11 +4002,11 @@
                                 <div class="med-card-info" style="flex: 1;">
                                     <div class="med-name" style="margin-bottom: 4px;">${med.name || 'Sem nome'}</div>
                                     <div class="med-dosage" style="margin-bottom: 8px;">💉 ${med.dosage || ''}</div>
-                                    <div class="med-days" style="margin-bottom: 0;">🗓 ${diasText}</div>
+                                    <div class="med-days" style="margin-bottom: 0;">🗓 ${diasText}</div>
                                 </div>
                                 ${med.box_image ? `
-                                    <div class="med-box-image" style="width: 140px; height: 80px; overflow: hidden; border-radius: 8px; border: 1px solid rgba(0,0,0,0.1); cursor: pointer;" onclick="viewFullBoxImage('${med.box_image}')">
-                                        <img src="${med.box_image}" style="width: 100%; height: 100%; object-fit: cover;" alt="Caixa do Remédio" />
+                                    <div class="med-box-image" style="width: 140px; height: 80px; overflow: hidden; border-radius: 8px; border: 1px solid rgba(0,0,0,0.1); cursor: pointer; background: rgba(255, 255, 255, 0.05);" onclick="viewFullBoxImage('${med.box_image}')">
+                                        <img src="${med.box_image}" style="width: 100%; height: 100%; object-fit: contain;" alt="Caixa do Remédio" />
                                     </div>
                                 ` : ''}
                             </div>
@@ -4097,14 +4097,14 @@
                     <div class="appt-card ${appt.status === 'confirmed' ? 'confirmed' : appt.status === 'cancelled' ? 'cancelled' : ''}">
                         <div class="med-card-header">
                             <div>
-                                <div class="med-name">👨â€⚕ ${appt.doctor_name || 'Médico'}</div>
+                                <div class="med-name">👨â€⚕ ${appt.doctor_name || 'Médico'}</div>
                                 <div class="med-dosage">${appt.specialty || 'Especialidade não informada'}</div>
                             </div>
                             <div class="card-actions-group">
                                 <!-- <button class="card-icon-btn insert" onclick="handleInsert()" title="Inserir">➕</button> -->
                                 <!-- <button class="card-icon-btn create" onclick="handleCreate()" title="Criar">✨</button> -->
-                                <button class="card-icon-btn edit" onclick="editAppt('${appt.id}')" title="Editar">âœ</button>
-                                <button class="card-icon-btn delete" onclick="deleteAppointment('${appt.id}')" title="Excluir">🗑</button>
+                                <button class="card-icon-btn edit" onclick="editAppt('${appt.id}')" title="Editar">âœ</button>
+                                <button class="card-icon-btn delete" onclick="deleteAppointment('${appt.id}')" title="Excluir">🗑</button>
                             </div>
                         </div>
                         <div class="med-days">🗓 ${dateStr} ⏰ ${appt.appointment_time || ''}</div>
@@ -4239,7 +4239,7 @@
             let status = med.taken_status || 'pending';
             
             // ==========================================
-            // 0⃣ VERIFICA SE É O DIA CORRETO
+            // 0⃣ VERIFICA SE É O DIA CORRETO
             // ==========================================
             const targetDateStr = viewingSpecificDate || today; // Formato YYYY-MM-DD
             const [year, month, day] = targetDateStr.split('-').map(Number);
@@ -4258,7 +4258,7 @@
             console.log(`✅ ${med.name}: Dia ${currentDayOfWeek} está na lista`);
             
             // ==========================================
-            // 1⃣ ESTADO: REAGENDADO (Botão laranja)
+            // 1⃣ ESTADO: REAGENDADO (Botão laranja)
             // ==========================================
             if (status === 'rescheduled') {
                 const minutosMedicamento = parseInt(h) * 60 + parseInt(m);
@@ -4273,7 +4273,7 @@
             }
             
             // ==========================================
-            // 2⃣ ESTADO: TOMADO
+            // 2⃣ ESTADO: TOMADO
             // ==========================================
             if (status === 'taken') {
                 return `<button disabled style="width:100%; margin-top:10px; padding:14px; background:#10b981; color:white; border:none; border-radius:12px; font-weight:800; font-size:1.1rem; cursor:default;">
@@ -4282,7 +4282,7 @@
             }
             
             // ==========================================
-            // 2.5⃣ ESTADO: NÃO TOMOU (Vermelho)
+            // 2.5⃣ ESTADO: NÃO TOMOU (Vermelho)
             // ==========================================
             if (status === 'not_taken') {
                 return `<button disabled style="width:100%; margin-top:10px; padding:14px; background:#ef4444; color:white; border:none; border-radius:12px; font-weight:800; font-size:1.1rem; cursor:default;">
@@ -4322,7 +4322,7 @@
                 } 
                 else if (action === 'reschedule') {
                     // Ação: REAGENDAR
-                    const novoHorario = prompt("â° Qual o novo horário? (Ex: 20:00)", "20:00");
+                    const novoHorario = prompt("â° Qual o novo horário? (Ex: 20:00)", "20:00");
                     
                     if (!novoHorario) {
                         showToast('Reagendamento cancelado');
@@ -4360,7 +4360,7 @@
             const medsToUpdate = medicationsData.filter(med => !medicationStateCache[med.id]);
             
             if (medsToUpdate.length === 0) {
-                console.log('â­ Cache cobrindo todos os cards - sem necessidade de refresh');
+                console.log('â­ Cache cobrindo todos os cards - sem necessidade de refresh');
                 return;
             }
             
@@ -4378,7 +4378,7 @@
         // ===== MEDICAÇÕES =====
         async function loadMedications() {
             const container = document.getElementById('medications-list');
-            container.innerHTML = '<div class="loading">â³ Carregando...</div>';
+            container.innerHTML = '<div class="loading">â³ Carregando...</div>';
             try {
                 if (!userId) return;
                 const res = await fetch(`${API_URL}/api/cliente/${userId}/medications`);
@@ -4429,7 +4429,7 @@
                             <div class="med-days">📆 ${diasText}</div>
                             ${med.is_review_needed ? `
                             <div class="med-review-alert">
-                                <span class="review-icon">⚠</span>
+                                <span class="review-icon">⚠</span>
                                 <span class="review-text">Revisão necessária — consulte seu médico</span>
                             </div>` : ''}
                             <div class="med-actions-container med-card-${med.id}">
@@ -4448,7 +4448,7 @@
         // ===== CONSULTAS =====
         async function loadAppointments() {
             const container = document.getElementById('appointments-list');
-            container.innerHTML = '<div class="loading">â³ Carregando...</div>';
+            container.innerHTML = '<div class="loading">â³ Carregando...</div>';
             try {
                 if (!userId) return;
                 const res = await fetch(`${API_URL}/api/cliente/${userId}/appointments`);
@@ -4457,7 +4457,7 @@
                 if (!Array.isArray(appointmentsData) || appointmentsData.length === 0) {
                     container.innerHTML = `
                         <div class="empty-state">
-                            <span class="icon">🗓</span>
+                            <span class="icon">🗓</span>
                             <p>Nenhuma consulta agendada</p>
                             <div class="hint">
                                 <p>💡 Use o botão <strong style="color: #10b981;">➕ Inserir</strong> para agendar uma nova consulta.</p>
@@ -4475,14 +4475,14 @@
                         <div class="appt-card ${appt.status === 'confirmed' ? 'confirmed' : appt.status === 'cancelled' ? 'cancelled' : ''}">
                             <div class="med-card-header">
                                 <div>
-                                    <div class="med-name">👨â€⚕ ${appt.doctor_name || 'Médico'}</div>
+                                    <div class="med-name">👨â€⚕ ${appt.doctor_name || 'Médico'}</div>
                                     <div class="med-dosage">${appt.specialty || 'Especialidade não informada'}</div>
                                 </div>
                                 <div class="card-actions-group">
                                     <button class="card-icon-btn insert" onclick="handleInsert()" title="Inserir">➕</button>
                                     <button class="card-icon-btn create" onclick="handleCreate()" title="Criar">✨</button>
-                                    <button class="card-icon-btn edit" onclick="editAppt('${appt.id}')" title="Editar">âœ</button>
-                                    <button class="card-icon-btn delete" onclick="deleteAppointment('${appt.id}')" title="Excluir">🗑</button>
+                                    <button class="card-icon-btn edit" onclick="editAppt('${appt.id}')" title="Editar">âœ</button>
+                                    <button class="card-icon-btn delete" onclick="deleteAppointment('${appt.id}')" title="Excluir">🗑</button>
                                 </div>
                             </div>
                             <div class="med-days">🗓 ${dateStr} ⏰ ${appt.appointment_time || ''}</div>
@@ -4541,7 +4541,7 @@
                         const key24 = `alerta_consulta_${consulta.id}_24h`;
                         const expectedValue = `${consulta.appointment_date} ${consulta.appointment_time}`;
                         if (localStorage.getItem(key24) !== expectedValue) {
-                            console.log('â° ALERTA 24h: ' + consulta.doctor_name);
+                            console.log('â° ALERTA 24h: ' + consulta.doctor_name);
                             await enviarLembreteConsulta(consulta, '24horas');
                             localStorage.setItem(key24, expectedValue);
                         }
@@ -4552,7 +4552,7 @@
                         const key3 = `alerta_consulta_${consulta.id}_3h`;
                         const expectedValue = `${consulta.appointment_date} ${consulta.appointment_time}`;
                         if (localStorage.getItem(key3) !== expectedValue) {
-                            console.log('â° ALERTA 3h: ' + consulta.doctor_name);
+                            console.log('â° ALERTA 3h: ' + consulta.doctor_name);
                             await enviarLembreteConsulta(consulta, '3horas');
                             localStorage.setItem(key3, expectedValue);
                         }
@@ -4582,7 +4582,7 @@
         // ===== RESPONSÃVEIS =====
         async function loadResponsibles() {
             const container = document.getElementById('responsibles-list');
-            container.innerHTML = '<div class="loading">â³ Carregando...</div>';
+            container.innerHTML = '<div class="loading">â³ Carregando...</div>';
             try {
                 if (!userId) return;
                 const res = await fetch(`${API_URL}/api/cliente/${userId}/responsibles`);
@@ -4620,8 +4620,8 @@
                                 <div class="card-actions-group">
                                     <button class="card-icon-btn insert" onclick="handleInsert()" title="Inserir">➕</button>
                                     <button class="card-icon-btn create" onclick="handleCreate()" title="Criar">✨</button>
-                                    <button class="card-icon-btn edit" onclick="editResp('${resp.id}')" title="Editar">âœ</button>
-                                    <button class="card-icon-btn delete" onclick="deleteResponsible('${resp.id}')" title="Excluir">🗑</button>
+                                    <button class="card-icon-btn edit" onclick="editResp('${resp.id}')" title="Editar">âœ</button>
+                                    <button class="card-icon-btn delete" onclick="deleteResponsible('${resp.id}')" title="Excluir">🗑</button>
                                 </div>
                             </div>
                             <div class="med-dosage">📱 ${resp.phone || 'Sem telefone'}</div>
@@ -4648,7 +4648,7 @@
         // ===== CONTATOS =====
         async function loadContacts() {
             const container = document.getElementById('contacts-list');
-            container.innerHTML = '<div class="loading">â³ Carregando...</div>';
+            container.innerHTML = '<div class="loading">â³ Carregando...</div>';
             try {
                 if (!userId) return;
                 const res = await fetch(`${API_URL}/api/cliente/${userId}/emergency-contacts`);
@@ -4684,8 +4684,8 @@
                                 <div class="card-actions-group">
                                     <button class="card-icon-btn insert" onclick="handleInsert()" title="Inserir">➕</button>
                                     <button class="card-icon-btn create" onclick="handleCreate()" title="Criar">✨</button>
-                                    <button class="card-icon-btn edit" onclick="editContact('${c.id}')" title="Editar">âœ</button>
-                                    <button class="card-icon-btn delete" onclick="deleteContact('${c.id}')" title="Excluir">🗑</button>
+                                    <button class="card-icon-btn edit" onclick="editContact('${c.id}')" title="Editar">âœ</button>
+                                    <button class="card-icon-btn delete" onclick="deleteContact('${c.id}')" title="Excluir">🗑</button>
                                 </div>
                             </div>
                             <div class="med-dosage">📱 ${c.phone || 'Sem telefone'}</div>
@@ -4719,7 +4719,7 @@
             }
             
             if (med) {
-                title.textContent = 'âœ Editar Medicamento';
+                title.textContent = 'âœ Editar Medicamento';
                 document.getElementById('med-id').value = med.id;
                 document.getElementById('med-name').value = med.name || '';
                 document.getElementById('med-dosage').value = med.dosage || '';
@@ -4774,7 +4774,7 @@
             const submitBtn = form.querySelector('.btn-submit');
             
             if (appt) {
-                title.textContent = 'âœ Editar Consulta';
+                title.textContent = 'âœ Editar Consulta';
                 submitBtn.textContent = '💾 Atualizar Consulta';
                 document.getElementById('appt-id').value = appt.id;
                 document.getElementById('appt-doctor').value = appt.doctor_name || '';
@@ -4813,7 +4813,7 @@
             const form = document.getElementById('form-responsible');
             
             if (resp) {
-                title.textContent = 'âœ Editar Responsável';
+                title.textContent = 'âœ Editar Responsável';
                 document.getElementById('resp-id').value = resp.id;
                 document.getElementById('resp-name').value = resp.name || '';
                 document.getElementById('resp-relationship').value = resp.relationship || '';
@@ -4837,7 +4837,7 @@
             const form = document.getElementById('form-contact');
             
             if (contact) {
-                title.textContent = 'âœ Editar Contato';
+                title.textContent = 'âœ Editar Contato';
                 document.getElementById('contact-id').value = contact.id;
                 document.getElementById('contact-name').value = contact.name || '';
                 document.getElementById('contact-type').value = contact.type || '';
@@ -5002,10 +5002,10 @@
                 // Fallback para compatibilidade com edição (input hidden)
                 timeValue = document.getElementById('med-time')?.value;
             }
-            console.log('â° [DIAGNÓSTICO] Horário obtido:', timeValue);
+            console.log('â° [DIAGNÓSTICO] Horário obtido:', timeValue);
 
             if (!timeValue) {
-                alert('â° Selecione hora e minuto!');
+                alert('â° Selecione hora e minuto!');
                 btn.disabled = false;
                 btn.textContent = originalText;
                 return;
@@ -5217,7 +5217,7 @@
         let pendingDeleteMedName = '';
 
         async function deleteMedication(id) {
-            console.log('🗑 [DIAGNÓSTICO] deleteMedication chamado para ID:', id);
+            console.log('🗑 [DIAGNÓSTICO] deleteMedication chamado para ID:', id);
             // Busca contagem de schedules para exibir no modal
             try {
                 const countUrl = `${API_URL}/api/medications/${id}/schedules/count`;
@@ -5257,7 +5257,7 @@
                 openModal('modal-delete-medication');
             } catch (error) {
                 console.error('🔥 [DIAGNÓSTICO] Erro ao contar schedules:', error);
-                alert('⚠ Ocorreu um erro ao obter detalhes do medicamento:\n' + error.message + '\n\nTentando deleção direta...');
+                alert('⚠ Ocorreu um erro ao obter detalhes do medicamento:\n' + error.message + '\n\nTentando deleção direta...');
                 // Fallback: delete direto
                 if (!confirm('Deseja excluir este medicamento de forma direta?')) return;
                 await doDeleteMedication(id, 'all');
@@ -5268,7 +5268,7 @@
             console.log('🔘 [DIAGNÓSTICO] confirmDeleteMed clicado com escopo:', scope);
             closeModal('modal-delete-medication');
             if (!pendingDeleteMedId) {
-                console.warn('⚠ [DIAGNÓSTICO] pendingDeleteMedId está vazio!');
+                console.warn('⚠ [DIAGNÓSTICO] pendingDeleteMedId está vazio!');
                 return;
             }
             await doDeleteMedication(pendingDeleteMedId, scope);
@@ -5315,7 +5315,7 @@
             if (!confirm('Deseja excluir esta consulta?')) return;
             try {
                 // ✅ CORREÇÃO: URL correta para DELETE
-                console.log('🗑 Excluindo consulta ID:', id);
+                console.log('🗑 Excluindo consulta ID:', id);
                 const response = await fetch(`${API_URL}/api/appointments/${id}`, { method: 'DELETE' });
                 
                 // ✅ CORREÇÃO: Verificar resposta
@@ -5324,7 +5324,7 @@
                     throw new Error(errorData.detail || `Erro ${response.status}`);
                 }
                 
-                showToast('🗑 Consulta excluída');
+                showToast('🗑 Consulta excluída');
                 await reloadAndRefresh();
             } catch (error) {
                 showToast('âŒ Erro ao excluir: ' + error.message, true);
@@ -5340,7 +5340,7 @@
                     const errorData = await response.json().catch(() => ({}));
                     throw new Error(errorData.detail || 'Erro ao excluir');
                 }
-                showToast('🗑 Responsável excluído');
+                showToast('🗑 Responsável excluído');
                 await reloadAndRefresh();
             } catch (error) {
                 showToast('âŒ Erro ao excluir: ' + error.message, true);
@@ -5356,7 +5356,7 @@
                     const errorData = await response.json().catch(() => ({}));
                     throw new Error(errorData.detail || 'Erro ao excluir');
                 }
-                showToast('🗑 Contato excluído');
+                showToast('🗑 Contato excluído');
                 await reloadAndRefresh();
             } catch (error) {
                 showToast('âŒ Erro ao excluir: ' + error.message, true);
@@ -5373,7 +5373,7 @@
             } catch { alert('Erro'); }
         }
         
-        function markLater(id) { showToast('â° Lembrete!'); }
+        function markLater(id) { showToast('â° Lembrete!'); }
         
         async function confirmAppt(id) {
             try {
@@ -5460,7 +5460,7 @@
         function mostrarNotificacaoVisual(med) {
             // Notificação do sistema
             if ('Notification' in window && Notification.permission === 'granted') {
-                new Notification('â° Hora do Medicamento!', {
+                new Notification('â° Hora do Medicamento!', {
                     body: `${med.nome || med.medication} - ${med.dosagem || med.dosage}`,
                     icon: '/icon-192x192.png',
                     requireInteraction: true,
@@ -5477,7 +5477,7 @@
                 z-index: 10000; font-size: 18px; animation: slideIn 0.5s ease;
             `;
             alerta.innerHTML = `
-                <strong>â° LEMBRETE DE MEDICAMENTO</strong><br>
+                <strong>â° LEMBRETE DE MEDICAMENTO</strong><br>
                 ${med.nome || med.medication}<br>
                 <small>${med.dosagem || med.dosage}</small>
             `;
@@ -5528,7 +5528,7 @@
             }
             deferredPrompt.prompt();
             deferredPrompt.userChoice.then(choice => {
-                showToast(choice.outcome === 'accepted' ? '✅ App instalado!' : 'ℹ Cancelado');
+                showToast(choice.outcome === 'accepted' ? '✅ App instalado!' : 'ℹ Cancelado');
                 deferredPrompt = null;
                 if (installBtn) installBtn.style.display = 'none';
             });
@@ -5616,18 +5616,18 @@
             try {
                 const user = JSON.parse(localStorage.getItem('currentUser'));
                 if (!user?.id) {
-                    console.log('⚠ Usuário não encontrado para Push');
+                    console.log('⚠ Usuário não encontrado para Push');
                     return;
                 }
                 
                 if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
-                    console.log('⚠ Push não suportado neste navegador');
+                    console.log('⚠ Push não suportado neste navegador');
                     return;
                 }
 
                 const permission = await Notification.requestPermission();
                 if (permission !== 'granted') {
-                    console.log('⚠ Permissão de notificação negada');
+                    console.log('⚠ Permissão de notificação negada');
                     return;
                 }
                 
@@ -5675,7 +5675,7 @@
                         tocarAlertaMedicamento(nome, dosagem, tipo);
                     }
                 }).catch(e => {
-                    console.warn('⚠ Falha ao desbloquear áudio (ainda sem interação):', e);
+                    console.warn('⚠ Falha ao desbloquear áudio (ainda sem interação):', e);
                 });
             };
             document.addEventListener('click', unlockAudio, { passive: true });
@@ -5807,7 +5807,7 @@
                         <span style="background:rgba(0, 212, 255, 0.15); padding:4px 8px; border-radius:6px; font-size:0.8rem; color:#00D4FF; font-weight:600; border: 1px solid rgba(0,212,255,0.3);">Receita Escaneada</span>
                     </div>
                     <p style="color:#cbd5e1; margin:8px 0 4px;"> ${med.dosage} • ${med.frequency}</p>
-                    <p style="color:#94a3b8; font-size:0.85rem; margin:0 0 12px 0;">â° Horários: ${med.times ? med.times.join(', ') : 'Não definidos'} | 🗓️ Duração: ${med.duration_days ? med.duration_days + ' dias' : 'Uso contínuo'}</p>
+                    <p style="color:#94a3b8; font-size:0.85rem; margin:0 0 12px 0;">â° Horários: ${med.times ? med.times.join(', ') : 'Não definidos'} | 🗓️ Duração: ${med.duration_days ? med.duration_days + ' dias' : 'Uso contínuo'}</p>
                     <div style="display:flex; gap:8px;">
                         <button onclick="salvarRemedioReceita('${encodedMed}', this, '${med.tempId}')" 
                                 style="flex:1; padding:10px; background:#10b981; color:white; border:none; border-radius:8px; font-weight:600; cursor:pointer;">
@@ -5842,7 +5842,7 @@
             
             if (buttonEl) {
                 buttonEl.disabled = true;
-                buttonEl.textContent = 'â³ Salvando...';
+                buttonEl.textContent = 'â³ Salvando...';
             }
             
             try {
@@ -6316,7 +6316,7 @@
             msgEl.id = id;
             msgEl.className = 'chat-msg assistant typing';
             msgEl.style.cssText = 'align-self: flex-start; max-width: 85%; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); padding: 10px 14px; border-radius: 14px 14px 14px 2px; color: #8A9BB5; font-size: 0.95rem; font-style: italic;';
-            msgEl.innerHTML = `<strong>🤖 Maximus:</strong> â³ Escrevendo...`;
+            msgEl.innerHTML = `<strong>🤖 Maximus:</strong> â³ Escrevendo...`;
             
             logEl.appendChild(msgEl);
             logEl.scrollTop = logEl.scrollHeight;
@@ -6477,7 +6477,7 @@
 
 
         // ============================================
-        // â° VERIFICADOR PRINCIPAL - LÓGICA UNIFICADA
+        // â° VERIFICADOR PRINCIPAL - LÓGICA UNIFICADA
         // ============================================
         async function verificarMedicamentos() {
             try {
@@ -6488,14 +6488,14 @@
                 const currentUserId = localStorage.getItem('userId');
                 
                 if (!currentUserId) {
-                    console.log('⚠ Usuário não logado, pulando verificação');
+                    console.log('⚠ Usuário não logado, pulando verificação');
                     return;
                 }
 
                 // ✅ Não sobrescreve UI se estiver visualizando outro dia no calendário
                 const todayStr = getLocalDateStr();
                 if (viewingSpecificDate && viewingSpecificDate !== todayStr) {
-                    console.log('â³ Calendário em outra data, pulando atualização automática de hoje');
+                    console.log('â³ Calendário em outra data, pulando atualização automática de hoje');
                     return;
                 }
 
@@ -6535,7 +6535,7 @@
                     return;
                 }
 
-                console.log(`â° Verificando ${medicamentos.length} medicamentos às ${horaAtual}`);
+                console.log(`â° Verificando ${medicamentos.length} medicamentos às ${horaAtual}`);
 
                 for (const med of medicamentos) {
                     if (!med) continue; // Pula nulos/undefined
@@ -6615,7 +6615,7 @@
         }
 
         // ============================================
-        // 🎙 ASSISTENTE DE VOZ DOS MODAIS
+        // 🎙 ASSISTENTE DE VOZ DOS MODAIS
         // ============================================
         let activeVoiceRecognition = null;
 
@@ -6678,7 +6678,7 @@
             modal.innerHTML = `
                 <div style="position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.7);display:flex;align-items:center;justify-content:center;z-index:10000;animation:fadeIn 0.3s ease;">
                     <div style="background:white;padding:40px;border-radius:20px;max-width:500px;width:90%;text-align:center;box-shadow:0 10px 40px rgba(0,0,0,0.5);color:#333;">
-                        <h2 style="color:#ff6b6b;margin:0 0 20px 0;font-size:28px;">â° VOCÊ TOMOU O REMÉDIO?</h2>
+                        <h2 style="color:#ff6b6b;margin:0 0 20px 0;font-size:28px;">â° VOCÊ TOMOU O REMÉDIO?</h2>
                         <h3 style="color:#333;margin:0 0 10px 0;font-weight:600;">${med.name}</h3>
                         <p style="color:#666;font-size:18px;margin:0 0 20px 0;">${med.dosage}</p>
                         <div style="display:flex;gap:15px;justify-content:center;flex-wrap:wrap;margin-bottom:20px;">
@@ -6705,12 +6705,12 @@
             // 2. Inicia reconhecimento de voz
             const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
             if (!SpeechRecognition) {
-                if (statusEl) statusEl.innerHTML = "⚠ Reconhecimento de voz não suportado.";
+                if (statusEl) statusEl.innerHTML = "⚠ Reconhecimento de voz não suportado.";
                 return;
             }
 
             if (statusEl) {
-                statusEl.innerHTML = "<span style='color:#10b981;font-weight:600;'>🎙 Ouvindo... responda com 'Sim' ou 'Não'</span>";
+                statusEl.innerHTML = "<span style='color:#10b981;font-weight:600;'>🎙 Ouvindo... responda com 'Sim' ou 'Não'</span>";
                 statusEl.style.background = "rgba(16, 185, 129, 0.1)";
             }
 
@@ -6722,7 +6722,7 @@
 
             rec.onresult = function(event) {
                 const text = event.results[0][0].transcript.toLowerCase();
-                console.log('🎙 Reconhecido no modal de confirmação:', text);
+                console.log('🎙 Reconhecido no modal de confirmação:', text);
                 
                 if (statusEl) statusEl.innerHTML = `💬 Entendi: "${text}"`;
 
@@ -6746,8 +6746,8 @@
             };
 
             rec.onerror = function(event) {
-                console.error('🎙 Erro de reconhecimento:', event.error);
-                if (statusEl) statusEl.innerHTML = `⚠ Não consegui ouvir. Escolha tocando nos botões acima.`;
+                console.error('🎙 Erro de reconhecimento:', event.error);
+                if (statusEl) statusEl.innerHTML = `⚠ Não consegui ouvir. Escolha tocando nos botões acima.`;
             };
 
             rec.onend = function() {
@@ -6810,7 +6810,7 @@
             modal.innerHTML = `
                 <div style="position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.7);display:flex;align-items:center;justify-content:center;z-index:10000;animation:fadeIn 0.3s ease;">
                     <div style="background:white;padding:40px;border-radius:20px;max-width:500px;width:90%;text-align:center;box-shadow:0 10px 40px rgba(0,0,0,0.5);color:#333;">
-                        <h2 style="color:#f59e0b;margin:0 0 10px 0;font-size:28px;">⚠ MEDICAMENTO NÃO TOMADO</h2>
+                        <h2 style="color:#f59e0b;margin:0 0 10px 0;font-size:28px;">⚠ MEDICAMENTO NÃO TOMADO</h2>
                         <p style="color:#666;font-size:16px;margin:0 0 20px 0;">O responsável foi notificado.<br><br><strong>Deseja reagendar?</strong></p>
                         <label style="display:block;text-align:left;margin-bottom:8px;color:#666;font-weight:500;">Novo horário:</label>
                         <input type="time" id="novo-horario" style="padding:14px;font-size:18px;border:2px solid #ddd;border-radius:10px;margin:0 0 25px 0;width:100%;box-sizing:border-box;font-weight:600;">
@@ -6839,12 +6839,12 @@
 
             const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
             if (!SpeechRecognition) {
-                if (statusEl) statusEl.innerHTML = "⚠ Reconhecimento de voz não suportado.";
+                if (statusEl) statusEl.innerHTML = "⚠ Reconhecimento de voz não suportado.";
                 return;
             }
 
             if (statusEl) {
-                statusEl.innerHTML = "<span style='color:#3b82f6;font-weight:600;'>🎙 Ouvindo... diga o horário (ex: 'Dez e meia', 'Quatorze e trinta')</span>";
+                statusEl.innerHTML = "<span style='color:#3b82f6;font-weight:600;'>🎙 Ouvindo... diga o horário (ex: 'Dez e meia', 'Quatorze e trinta')</span>";
                 statusEl.style.background = "rgba(59, 130, 246, 0.1)";
             }
 
@@ -6856,7 +6856,7 @@
 
             rec.onresult = function(event) {
                 const text = event.results[0][0].transcript.toLowerCase().trim();
-                console.log('🎙 Reconhecido no reagendamento:', text);
+                console.log('🎙 Reconhecido no reagendamento:', text);
                 
                 if (statusEl) statusEl.innerHTML = `💬 Entendi: "${text}"`;
 
@@ -6885,8 +6885,8 @@
             };
 
             rec.onerror = function(event) {
-                console.error('🎙 Erro de reconhecimento:', event.error);
-                if (statusEl) statusEl.innerHTML = `⚠ Não entendi o horário falado.`;
+                console.error('🎙 Erro de reconhecimento:', event.error);
+                if (statusEl) statusEl.innerHTML = `⚠ Não entendi o horário falado.`;
             };
 
             rec.onend = function() {
@@ -6908,12 +6908,12 @@
             const novoHorario = inputHorario?.value;
             
             if (!novoHorario || !/^\d{2}:\d{2}$/.test(novoHorario)) {
-                alert('⚠ Por favor, selecione um horário válido (HH:MM)!');
+                alert('⚠ Por favor, selecione um horário válido (HH:MM)!');
                 return;
             }
             
             try {
-                showToast('â³ Reagendando...');
+                showToast('â³ Reagendando...');
                 const targetDateStr = viewingSpecificDate || getLocalDateStr();
                 
                 const response = await fetch(
@@ -6968,7 +6968,7 @@
                     }
                     
                     tocarAlertaMedicamento(med.name, med.dosage, "fechado");
-                    showToast('⚠ Medicamento não tomado');
+                    showToast('⚠ Medicamento não tomado');
                     setTimeout(() => reloadAndRefresh(), 1000);
                 } catch (err) {
                     console.error('âŒ Erro ao fechar reagendamento:', err);
@@ -7311,7 +7311,7 @@
         </script>        
 
         <script>
-        // 1⃣ Função para processar receita e preencher o grid
+        // 1⃣ Função para processar receita e preencher o grid
         async function processarReceita(file) {
             if (!file) {
                 showToast("âŒ Selecione um arquivo primeiro", "error");
@@ -7339,7 +7339,7 @@
                     const medicamentos = data.medications || data.meds || [];
                     
                     if (medicamentos.length === 0) {
-                        showToast("⚠ Nenhum medicamento identificado na receita", "warning");
+                        showToast("⚠ Nenhum medicamento identificado na receita", "warning");
                         return;
                     }
                     
@@ -7354,12 +7354,12 @@
             }
         }
 
-        // 2⃣ Função para preencher o grid de medicamentos
+        // 2⃣ Função para preencher o grid de medicamentos
         function preencherGridMedicamentos(medicamentos) {
             // ✅ VERIFICA se medicamentos é um array válido
             if (!medicamentos || !Array.isArray(medicamentos)) {
                 console.error('âŒ medicamentos não é um array:', medicamentos);
-                showToast("⚠ Erro ao processar medicamentos", "error");
+                showToast("⚠ Erro ao processar medicamentos", "error");
                 return;
             }
 
@@ -7375,7 +7375,7 @@
 
             if (!container) {
                 console.error('âŒ Container de medicamentos não encontrado!');
-                showToast("⚠ Erro ao identificar onde colocar os remédios.", "warning");
+                showToast("⚠ Erro ao identificar onde colocar os remédios.", "warning");
                 return;
             }
 
@@ -7393,7 +7393,7 @@
             atualizarContadorRemedios(medicamentos.length);
         }
 
-        // 3⃣ Função para criar card HTML (SEM BOTÃO EDITAR AMARELO + CARD CLICÃVEL)
+        // 3⃣ Função para criar card HTML (SEM BOTÃO EDITAR AMARELO + CARD CLICÃVEL)
         function criarCardMedicamento(med, index) {
             const card = document.createElement('div');
             card.className = 'med-card';
@@ -7453,7 +7453,7 @@
             return card;
         }
 
-        // 4⃣ Função para abrir o modal de edição ao clicar no card
+        // 4⃣ Função para abrir o modal de edição ao clicar no card
         function abrirModalEdicaoDoCard(med) {
             // Encontra os inputs do seu modal existente e preenche com os dados
             const inputNome = document.getElementById('med-name') || document.querySelector('input[placeholder*="Nome"]');
@@ -7468,10 +7468,10 @@
             const modal = document.getElementById('modal-edit-medication') || document.getElementById('modal-medication');
             if(modal) modal.style.display = 'flex';
             
-            showToast(`âœ Editando: ${med.name}`, "info");
+            showToast(`âœ Editando: ${med.name}`, "info");
         }
 
-        // 5⃣ Função para salvar (SEM RELOAD - CORRIGIDO!)
+        // 5⃣ Função para salvar (SEM RELOAD - CORRIGIDO!)
         async function salvarMedicamentoReceita(nome, dosagem, horario, duracao) {
             const userId = localStorage.getItem('userId');
             
@@ -7632,7 +7632,7 @@
                     const audio = new Audio(audioUrl);
                     audio.volume = 1.0;
                     await audio.play().catch(err => {
-                        console.warn('⚠ Autoplay do áudio bloqueado pela política do navegador. Interaja com a página para ouvir.', err);
+                        console.warn('⚠ Autoplay do áudio bloqueado pela política do navegador. Interaja com a página para ouvir.', err);
                     });
                     console.log('✅ Tentativa de áudio de consulta concluída!');
                 }
@@ -7648,7 +7648,7 @@
             const alerta = document.createElement('div');
             alerta.className = 'notification-consulta';
             
-            const titulo = tipo === '24horas' ? '🗓️ CONSULTA AMANHÃ' : 'â° CONSULTA HOJE';
+            const titulo = tipo === '24horas' ? '🗓️ CONSULTA AMANHÃ' : 'â° CONSULTA HOJE';
             const [ano, mes, dia] = consulta.appointment_date.split('-');
             const dataFormatada = `${dia}/${mes}/${ano}`;
             
@@ -7659,7 +7659,7 @@
                 </div>
                 <div class="detalhes">
                     <div>🗓️ ${dataFormatada}</div>
-                    <div>â° ${formatarHora(consulta.appointment_time)}</div>
+                    <div>â° ${formatarHora(consulta.appointment_time)}</div>
                 </div>
                 <button class="fechar" onclick="this.parentElement.remove()">Fechar</button>
             `;
@@ -7687,7 +7687,7 @@
 
     <!-- 🔖 INDICADOR DE VERSÃO -->
     <div style="text-align:center; padding:20px; color:#00D4FF; font-size:0.75rem; margin-top:30px; opacity:0.7;">
-        ðŸ  CR$ Home Care AI v2.6.0 — build 2026-07-18 — envio de documentos médicos por e-mail
+        ðŸ  CR$ Home Care AI v2.6.0 — build 2026-07-18 — envio de documentos médicos por e-mail
     </div>
 <!-- Cloudflare Web Analytics --><script type='module' src='https://static.cloudflareinsights.com/beacon.min.js' data-cf-beacon='{"token": "d1a9b25d409d47f693bbb1a7f0afbc97"}'></script><!-- End Cloudflare Web Analytics -->
         </body>

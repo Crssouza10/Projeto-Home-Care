@@ -2606,6 +2606,71 @@ async def test_whatsapp(db: Session = Depends(get_db)):
     else:
         return {"msg": "Falha ao enviar WhatsApp. Verifique os logs do Vercel e as variáveis de ambiente."}
 
+def verificar_e_enviar_alerta_compra(db: Session):
+    """
+    Verifica se há medicamentos ativos que estão chegando ao fim (faltando 5 ou menos dias para acabar)
+    e envia alertas de compra via Web Push e WhatsApp para os usuários.
+    """
+    try:
+        from datetime import timezone, timedelta, datetime
+        brasilia_tz = timezone(timedelta(hours=-3))
+        hoje = datetime.now(brasilia_tz).date()
+        
+        # Busca todas as medicações ativas que possuem data de término
+        meds = db.query(Medication).filter(
+            Medication.is_active == True,
+            Medication.end_date.isnot(None)
+        ).all()
+        
+        for med in meds:
+            try:
+                end_date_obj = datetime.strptime(med.end_date, "%Y-%m-%d").date()
+                dias_restantes = (end_date_obj - hoje).days
+                
+                # Alerta a partir do 55º dia (quando faltam 5 ou menos dias para acabar, até a data final)
+                if 0 <= dias_restantes <= 5:
+                    user = db.query(User).filter(User.id == med.user_id).first()
+                    if not user:
+                        continue
+                        
+                    data_formatada = end_date_obj.strftime("%d/%m/%Y")
+                    dias_texto = f"{dias_restantes} dias" if dias_restantes > 1 else "1 dia"
+                    if dias_restantes == 0:
+                        dias_texto = "hoje"
+                        msg_texto = f"Atenção {user.full_name}, seu medicamento {med.name} ({med.dosage}) acaba hoje ({data_formatada})! Lembre-se de comprar mais."
+                    else:
+                        msg_texto = f"Atenção {user.full_name}, seu medicamento {med.name} ({med.dosage}) está acabando! Restam apenas {dias_texto} de tratamento (término em {data_formatada}). Lembre-se de comprar mais."
+                    
+                    # 1. Enviar via Web Push
+                    subs = db.query(PushSubscription).filter(PushSubscription.user_id == user.id).all()
+                    for sub in subs:
+                        sub_info = {
+                            "endpoint": sub.endpoint,
+                            "keys": sub.keys
+                        }
+                        payload = json.dumps({
+                            "title": "🛒 Compra de Medicamento",
+                            "body": msg_texto,
+                            "icon": "/static/icons/icon-192x192.png",
+                            "badge": "/static/icons/icon-72x72.png",
+                            "data": {
+                                "url": "/dashboard-cliente",
+                                "medication_id": str(med.id),
+                                "medication_name": med.name
+                            }
+                        })
+                        enviar_web_push(sub_info, payload)
+                    
+                    # 2. Enviar via WhatsApp (se o usuário tiver telefone cadastrado)
+                    if user.phone:
+                        enviar_whatsapp_custom(user.phone, msg_texto)
+                        
+                    print(f"📢 [ALERTA COMPRA] Enviado para {user.full_name} referente ao remédio {med.name}. Restam {dias_restantes} dias.")
+            except Exception as med_err:
+                print(f"⚠️ [ALERTA COMPRA] Erro ao processar medicamento {med.id}: {med_err}")
+    except Exception as e:
+        print(f"🔥 [ALERTA COMPRA] Erro geral: {e}")
+
 def verificar_e_enviar_relatorios(db: Session):
     """
     Verifica se existem relatorios diarios de medicamentos para enviar
@@ -2783,6 +2848,10 @@ async def check_reminders(db: Session = Depends(get_db)):
         current_time = now.strftime("%H:%M")
         
         print(f"⏰ [CRON] Horário em Brasília: {current_time}")
+        
+        # Alerta de compra de remédios que estão acabando (Roda uma vez por dia às 09:00)
+        if current_time == "09:00":
+            verificar_e_enviar_alerta_compra(db)
         
         # Busca medicamentos
         meds_due = db.query(Medication).filter(
@@ -3078,6 +3147,8 @@ async def ocr_allergies(user_id: str, file: UploadFile = File(...)):
             "success": True,
             "allergies": generated_text
         })
+    except HTTPException as http_ex:
+        raise http_ex
     except Exception as e:
         print(f"🔥 Erro no OCR de alergias: {e}")
         raise HTTPException(status_code=500, detail=str(e))
