@@ -1,4 +1,4 @@
-# ===== v1.5.4 - 2026-08-05 ==========================================
+# ===== v21.5.5 - 2026-08-06 ==========================================
 # Correções:
 # - Adicionado endpoint de suporte 'Falar com a Equipe' (chat IA + e-mail com protocolo)
 # - Extraídas funções auxiliares _get_gmail_access_token() e _send_email_via_gmail_api()
