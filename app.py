@@ -914,9 +914,28 @@ async def send_documents_email(user_id: str, payload: dict, db: Session = Depend
                 print(f"⚠️ Erro ao anexar {default_filename}: {e}")
                 return False
                 
-        # Anexa os arquivos
-        anexou_id = anexar_base64(user.identity_document_file, "documento_identidade")
-        anexou_card = anexar_base64(user.health_insurance_card, "carteirinha_plano")
+        # Anexa os arquivos (suporta múltiplos arquivos separados por '|')
+        anexou_id = False
+        if user.identity_document_file:
+            id_files = user.identity_document_file.split('|')
+            for idx, file_uri in enumerate(id_files):
+                if file_uri:
+                    suffix = "_frente" if idx == 0 else "_verso"
+                    if len(id_files) == 1:
+                        suffix = ""
+                    if anexar_base64(file_uri, f"documento_identidade{suffix}"):
+                        anexou_id = True
+                        
+        anexou_card = False
+        if user.health_insurance_card:
+            card_files = user.health_insurance_card.split('|')
+            for idx, file_uri in enumerate(card_files):
+                if file_uri:
+                    suffix = "_frente" if idx == 0 else "_verso"
+                    if len(card_files) == 1:
+                        suffix = ""
+                    if anexar_base64(file_uri, f"carteirinha_plano{suffix}"):
+                        anexou_card = True
         
         if is_mock:
             # Em modo de desenvolvimento/mock, permite envio mesmo sem documentos
@@ -3248,14 +3267,15 @@ async def upload_prescription(file: UploadFile = File(...)):
         contents = await file.read()
         filename = file.filename.lower()
         mime_type = file.content_type or "image/jpeg"
-        
-        # Inferir mime type se indefinido
-        if filename.endswith('.pdf'):
-            mime_type = 'application/pdf'
-        elif filename.endswith('.png'):
-            mime_type = 'image/png'
-        elif filename.endswith('.jpg') or filename.endswith('.jpeg'):
-            mime_type = 'image/jpeg'
+        if "octet-stream" in mime_type or not mime_type or mime_type not in ["image/jpeg", "image/png", "image/webp", "application/pdf"]:
+            if filename.endswith('.pdf'):
+                mime_type = 'application/pdf'
+            elif filename.endswith('.png'):
+                mime_type = 'image/png'
+            elif filename.endswith('.webp'):
+                mime_type = 'image/webp'
+            else:
+                mime_type = 'image/jpeg'
             
         gemini_key = os.getenv("GEMINI_API_KEY")
         if not gemini_key:
@@ -3375,13 +3395,15 @@ async def ocr_allergies(user_id: str, file: UploadFile = File(...)):
         contents = await file.read()
         filename = file.filename.lower()
         mime_type = file.content_type or "image/jpeg"
-        
-        if filename.endswith('.pdf'):
-            mime_type = 'application/pdf'
-        elif filename.endswith('.png'):
-            mime_type = 'image/png'
-        elif filename.endswith('.jpg') or filename.endswith('.jpeg'):
-            mime_type = 'image/jpeg'
+        if "octet-stream" in mime_type or not mime_type or mime_type not in ["image/jpeg", "image/png", "image/webp", "application/pdf"]:
+            if filename.endswith('.pdf'):
+                mime_type = 'application/pdf'
+            elif filename.endswith('.png'):
+                mime_type = 'image/png'
+            elif filename.endswith('.webp'):
+                mime_type = 'image/webp'
+            else:
+                mime_type = 'image/jpeg'
             
         gemini_key = os.getenv("GEMINI_API_KEY")
         if not gemini_key:
@@ -3471,12 +3493,15 @@ async def upload_insurance_card(user_id: str, file: UploadFile = File(...), db: 
         contents = await file.read()
         filename = file.filename.lower()
         mime_type = file.content_type or "image/jpeg"
-        if filename.endswith('.png'):
-            mime_type = 'image/png'
-        elif filename.endswith('.jpg') or filename.endswith('.jpeg'):
-            mime_type = 'image/jpeg'
-        elif filename.endswith('.pdf'):
-            mime_type = 'application/pdf'
+        if "octet-stream" in mime_type or not mime_type or mime_type not in ["image/jpeg", "image/png", "image/webp", "application/pdf"]:
+            if filename.endswith('.pdf'):
+                mime_type = 'application/pdf'
+            elif filename.endswith('.png'):
+                mime_type = 'image/png'
+            elif filename.endswith('.webp'):
+                mime_type = 'image/webp'
+            else:
+                mime_type = 'image/jpeg'
             
         # Converte para Data URI (base64) para persistência 100% serverless
         b64_str = base64.b64encode(contents).decode("utf-8")
@@ -3616,12 +3641,15 @@ async def upload_identity_document(user_id: str, file: UploadFile = File(...), d
         filename = file.filename.lower()
         
         mime_type = file.content_type or "image/jpeg"
-        if filename.endswith('.png'):
-            mime_type = 'image/png'
-        elif filename.endswith('.jpg') or filename.endswith('.jpeg'):
-            mime_type = 'image/jpeg'
-        elif filename.endswith('.pdf'):
-            mime_type = 'application/pdf'
+        if "octet-stream" in mime_type or not mime_type or mime_type not in ["image/jpeg", "image/png", "image/webp", "application/pdf"]:
+            if filename.endswith('.pdf'):
+                mime_type = 'application/pdf'
+            elif filename.endswith('.png'):
+                mime_type = 'image/png'
+            elif filename.endswith('.webp'):
+                mime_type = 'image/webp'
+            else:
+                mime_type = 'image/jpeg'
             
         # Converte para Data URI (base64) para persistência 100% serverless
         b64_str = base64.b64encode(contents).decode("utf-8")

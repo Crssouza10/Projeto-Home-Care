@@ -1932,7 +1932,7 @@
                         </div>
                         <strong style="color: #FFFFFF;" id="clinical-view-identity-document">-</strong>
                         <div id="clinical-view-identity-document-container" style="margin-top: 10px; display: none;">
-                            <img id="clinical-view-identity-document-img" src="" style="max-width: 100%; max-height: 120px; border-radius: 8px; border: 1px solid rgba(0, 212, 255, 0.3); object-fit: contain;" />
+                            <div id="clinical-view-id-previews-container" style="display: flex; gap: 10px; flex-wrap: wrap;"></div>
                         </div>
                     </div>
                     <div id="clinical-view-insurance-box" style="background: rgba(0, 212, 255, 0.05); border: 1px solid rgba(0, 212, 255, 0.1); padding: 12px; border-radius: 10px; transition: background 0.2s;" onclick="openInsuranceCardFile()">
@@ -1945,7 +1945,7 @@
                         </div>
                         <strong style="color: #FFFFFF;" id="clinical-view-insurance">-</strong>
                         <div id="clinical-view-insurance-card-container" style="margin-top: 10px; display: none;">
-                            <img id="clinical-view-insurance-card-img" src="" style="max-width: 100%; max-height: 120px; border-radius: 8px; border: 1px solid rgba(0, 212, 255, 0.3); object-fit: contain;" />
+                            <div id="clinical-view-insurance-previews-container" style="display: flex; gap: 10px; flex-wrap: wrap;"></div>
                         </div>
                     </div>
                     
@@ -2031,39 +2031,68 @@
                     <textarea class="form-textarea" id="clinical-edit-conditions" placeholder="Ex: Hipertensão, Diabetes Tipo 2, Alzheimer..."></textarea>
                 </div>
                 <div class="form-group">
-                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
-                        <label class="form-label" style="margin-bottom:0;">Documento de Identificação</label>
-                        <div style="display:flex; gap:6px;">
-                            <button type="button" id="btn-delete-identity-document" class="btn-action" onclick="deleteIdentityDocument()" style="height: 32px; padding: 0 12px; font-size: 0.75rem; background: #ef4444; color: #FFFFFF; border: none; border-radius: 4px; font-weight: 600; cursor: pointer; display: none; align-items: center; justify-content: center; gap: 4px; box-sizing: border-box;">
-                                🗑 Excluir
-                            </button>
-                            <button type="button" class="btn-action" onclick="triggerIdentityDocumentUpload()" style="height: 32px; padding: 0 12px; font-size: 0.75rem; background: #10b981; color: #FFFFFF; border: none; border-radius: 4px; font-weight: 600; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 4px; box-sizing: border-box;">
-                                📤 Importar Documento
-                            </button>
-                        </div>
-                        <input type="file" id="identity-document-file" accept="image/*,application/pdf" style="display:none;" onchange="handleIdentityDocumentUpload(event)" />
-                    </div>
+                    <label class="form-label">Documento de Identificação (Frente e Verso)</label>
                     <input type="text" class="form-input" id="clinical-edit-identity-document" placeholder="Ex: CPF: 123.456.789-00 ou RG: 12.345.678-9...">
-                    <div id="clinical-edit-identity-document-preview-container" style="margin-top: 10px; display: none;">
-                        <img id="clinical-edit-identity-document-preview-img" src="" style="max-height: 80px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.1);" />
+                    
+                    <div style="display: flex; gap: 16px; margin-top: 10px; flex-wrap: wrap;">
+                        <!-- Frente Slot -->
+                        <div style="flex: 1; min-width: 140px; background: rgba(255,255,255,0.02); border: 1px dashed rgba(255,255,255,0.15); border-radius: 12px; padding: 12px; text-align: center; position: relative;">
+                            <div style="font-size: 0.8rem; color: #8A9BB5; margin-bottom: 6px;">Frente</div>
+                            <div id="clinical-edit-id-front-preview-container" style="display: none; margin-bottom: 8px;">
+                                <img id="clinical-edit-id-front-preview-img" src="" style="max-height: 60px; max-width: 100%; border-radius: 6px;" />
+                            </div>
+                            <div style="display: flex; gap: 4px; justify-content: center;">
+                                <button type="button" class="btn-action" onclick="triggerIdFrontUpload()" style="height: 28px; padding: 0 8px; font-size: 0.7rem; background: #10b981; color: #fff; border: none; border-radius: 4px; cursor: pointer;">📤 Enviar</button>
+                                <button type="button" id="btn-delete-id-front" class="btn-action" onclick="deleteIdFront()" style="height: 28px; padding: 0 8px; font-size: 0.7rem; background: #ef4444; color: #fff; border: none; border-radius: 4px; cursor: pointer; display: none;">🗑️</button>
+                            </div>
+                            <input type="file" id="id-front-file" accept="image/*,application/pdf" style="display:none;" onchange="handleIdFrontUpload(event)" />
+                        </div>
+                        
+                        <!-- Verso Slot -->
+                        <div style="flex: 1; min-width: 140px; background: rgba(255,255,255,0.02); border: 1px dashed rgba(255,255,255,0.15); border-radius: 12px; padding: 12px; text-align: center; position: relative;">
+                            <div style="font-size: 0.8rem; color: #8A9BB5; margin-bottom: 6px;">Verso</div>
+                            <div id="clinical-edit-id-back-preview-container" style="display: none; margin-bottom: 8px;">
+                                <img id="clinical-edit-id-back-preview-img" src="" style="max-height: 60px; max-width: 100%; border-radius: 6px;" />
+                            </div>
+                            <div style="display: flex; gap: 4px; justify-content: center;">
+                                <button type="button" class="btn-action" onclick="triggerIdBackUpload()" style="height: 28px; padding: 0 8px; font-size: 0.7rem; background: #10b981; color: #fff; border: none; border-radius: 4px; cursor: pointer;">📤 Enviar</button>
+                                <button type="button" id="btn-delete-id-back" class="btn-action" onclick="deleteIdBack()" style="height: 28px; padding: 0 8px; font-size: 0.7rem; background: #ef4444; color: #fff; border: none; border-radius: 4px; cursor: pointer; display: none;">🗑️</button>
+                            </div>
+                            <input type="file" id="id-back-file" accept="image/*,application/pdf" style="display:none;" onchange="handleIdBackUpload(event)" />
+                        </div>
                     </div>
                 </div>
+                
                 <div class="form-group">
-                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
-                        <label class="form-label" style="margin-bottom:0;">Plano de Saúde</label>
-                        <div style="display:flex; gap:6px;">
-                            <button type="button" id="btn-delete-insurance-card" class="btn-action" onclick="deleteInsuranceCard()" style="height: 32px; padding: 0 12px; font-size: 0.75rem; background: #ef4444; color: #FFFFFF; border: none; border-radius: 4px; font-weight: 600; cursor: pointer; display: none; align-items: center; justify-content: center; gap: 4px; box-sizing: border-box;">
-                                🗑 Excluir
-                            </button>
-                            <button type="button" class="btn-action" onclick="triggerInsuranceCardUpload()" style="height: 32px; padding: 0 12px; font-size: 0.75rem; background: #10b981; color: #FFFFFF; border: none; border-radius: 4px; font-weight: 600; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 4px; box-sizing: border-box;">
-                                📤 Importar Carteirinha
-                            </button>
-                        </div>
-                        <input type="file" id="insurance-card-file" accept="image/*,application/pdf" style="display:none;" onchange="handleInsuranceCardUpload(event)" />
-                    </div>
+                    <label class="form-label">Plano de Saúde (Frente e Verso)</label>
                     <input type="text" class="form-input" id="clinical-edit-insurance" placeholder="Ex: Unimed, Amil, SUS...">
-                    <div id="clinical-edit-insurance-card-preview-container" style="margin-top: 10px; display: none;">
-                        <img id="clinical-edit-insurance-card-preview-img" src="" style="max-height: 80px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.1);" />
+                    
+                    <div style="display: flex; gap: 16px; margin-top: 10px; flex-wrap: wrap;">
+                        <!-- Frente Slot -->
+                        <div style="flex: 1; min-width: 140px; background: rgba(255,255,255,0.02); border: 1px dashed rgba(255,255,255,0.15); border-radius: 12px; padding: 12px; text-align: center; position: relative;">
+                            <div style="font-size: 0.8rem; color: #8A9BB5; margin-bottom: 6px;">Frente</div>
+                            <div id="clinical-edit-insurance-front-preview-container" style="display: none; margin-bottom: 8px;">
+                                <img id="clinical-edit-insurance-front-preview-img" src="" style="max-height: 60px; max-width: 100%; border-radius: 6px;" />
+                            </div>
+                            <div style="display: flex; gap: 4px; justify-content: center;">
+                                <button type="button" class="btn-action" onclick="triggerInsuranceFrontUpload()" style="height: 28px; padding: 0 8px; font-size: 0.7rem; background: #10b981; color: #fff; border: none; border-radius: 4px; cursor: pointer;">📤 Enviar</button>
+                                <button type="button" id="btn-delete-insurance-front" class="btn-action" onclick="deleteInsuranceFront()" style="height: 28px; padding: 0 8px; font-size: 0.7rem; background: #ef4444; color: #fff; border: none; border-radius: 4px; cursor: pointer; display: none;">🗑️</button>
+                            </div>
+                            <input type="file" id="insurance-front-file" accept="image/*,application/pdf" style="display:none;" onchange="handleInsuranceFrontUpload(event)" />
+                        </div>
+                        
+                        <!-- Verso Slot -->
+                        <div style="flex: 1; min-width: 140px; background: rgba(255,255,255,0.02); border: 1px dashed rgba(255,255,255,0.15); border-radius: 12px; padding: 12px; text-align: center; position: relative;">
+                            <div style="font-size: 0.8rem; color: #8A9BB5; margin-bottom: 6px;">Verso</div>
+                            <div id="clinical-edit-insurance-back-preview-container" style="display: none; margin-bottom: 8px;">
+                                <img id="clinical-edit-insurance-back-preview-img" src="" style="max-height: 60px; max-width: 100%; border-radius: 6px;" />
+                            </div>
+                            <div style="display: flex; gap: 4px; justify-content: center;">
+                                <button type="button" class="btn-action" onclick="triggerInsuranceBackUpload()" style="height: 28px; padding: 0 8px; font-size: 0.7rem; background: #10b981; color: #fff; border: none; border-radius: 4px; cursor: pointer;">📤 Enviar</button>
+                                <button type="button" id="btn-delete-insurance-back" class="btn-action" onclick="deleteInsuranceBack()" style="height: 28px; padding: 0 8px; font-size: 0.7rem; background: #ef4444; color: #fff; border: none; border-radius: 4px; cursor: pointer; display: none;">🗑️</button>
+                            </div>
+                            <input type="file" id="insurance-back-file" accept="image/*,application/pdf" style="display:none;" onchange="handleInsuranceBackUpload(event)" />
+                        </div>
                     </div>
                 </div>
                 
@@ -3114,26 +3143,51 @@
                 document.getElementById('clinical-view-identity-document').textContent = clinicalData.identity_document || 'Não informado';
                 const docUrl = clinicalData.identity_document_file;
                 const docContainer = document.getElementById('clinical-view-identity-document-container');
-                const docImg = document.getElementById('clinical-view-identity-document-img');
+                const docPreviews = document.getElementById('clinical-view-id-previews-container');
                 
+                docPreviews.innerHTML = '';
                 if (docUrl) {
-                    document.getElementById('clinical-view-id-box').style.cursor = 'pointer';
-                    const indicator = document.getElementById('clinical-view-id-indicator');
-                    if (indicator) indicator.style.display = 'inline';
-                    const fullDocUrl = (docUrl.startsWith('data:') || docUrl.startsWith('http')) ? docUrl : `${API_URL}${docUrl}`;
-                    const isPdf = docUrl.toLowerCase().endsWith('.pdf') || docUrl.startsWith('data:application/pdf');
-                    if (isPdf) {
-                        docImg.src = "https://cdn-icons-png.flaticon.com/512/337/337946.png";
-                        docImg.style.maxHeight = "80px";
-                    } else {
-                        docImg.src = fullDocUrl;
-                        docImg.style.maxHeight = "120px";
-                    }
+                    const files = docUrl.split('|');
+                    files.forEach((fileUrl, index) => {
+                        if (!fileUrl) return;
+                        const label = index === 0 ? "Frente" : "Verso";
+                        const fullDocUrl = (fileUrl.startsWith('data:') || fileUrl.startsWith('http')) ? fileUrl : `${API_URL}${fileUrl}`;
+                        const isPdf = fileUrl.toLowerCase().endsWith('.pdf') || fileUrl.startsWith('data:application/pdf');
+                        
+                        const wrapper = document.createElement('div');
+                        wrapper.style.textAlign = 'center';
+                        wrapper.style.cursor = 'pointer';
+                        wrapper.onclick = (e) => {
+                            e.stopPropagation();
+                            if (isPdf && fileUrl.startsWith('data:')) {
+                                // Abre PDF base64 em nova aba
+                                const pdfWindow = window.open("");
+                                pdfWindow.document.write("<iframe width='100%' height='100%' src='" + fullDocUrl + "'></iframe>");
+                            } else {
+                                window.open(fullDocUrl, '_blank');
+                            }
+                        };
+                        
+                        const img = document.createElement('img');
+                        img.src = isPdf ? "https://cdn-icons-png.flaticon.com/512/337/337946.png" : fullDocUrl;
+                        img.style.maxWidth = "100%";
+                        img.style.maxHeight = "100px";
+                        img.style.borderRadius = "8px";
+                        img.style.border = "1px solid rgba(0, 212, 255, 0.3)";
+                        img.style.objectFit = "contain";
+                        
+                        const caption = document.createElement('div');
+                        caption.style.fontSize = '0.7rem';
+                        caption.style.color = '#8A9BB5';
+                        caption.style.marginTop = '4px';
+                        caption.textContent = label;
+                        
+                        wrapper.appendChild(img);
+                        wrapper.appendChild(caption);
+                        docPreviews.appendChild(wrapper);
+                    });
                     docContainer.style.display = 'block';
                 } else {
-                    document.getElementById('clinical-view-id-box').style.cursor = 'default';
-                    const indicator = document.getElementById('clinical-view-id-indicator');
-                    if (indicator) indicator.style.display = 'none';
                     docContainer.style.display = 'none';
                 }
                 
@@ -3141,26 +3195,50 @@
                 document.getElementById('clinical-view-insurance').textContent = clinicalData.health_insurance || 'Não informado';
                 const cardUrl = clinicalData.health_insurance_card;
                 const cardContainer = document.getElementById('clinical-view-insurance-card-container');
-                const cardImg = document.getElementById('clinical-view-insurance-card-img');
+                const cardPreviews = document.getElementById('clinical-view-insurance-previews-container');
                 
+                cardPreviews.innerHTML = '';
                 if (cardUrl) {
-                    document.getElementById('clinical-view-insurance-box').style.cursor = 'pointer';
-                    const indicator = document.getElementById('clinical-view-insurance-indicator');
-                    if (indicator) indicator.style.display = 'inline';
-                    const fullCardUrl = (cardUrl.startsWith('data:') || cardUrl.startsWith('http')) ? cardUrl : `${API_URL}${cardUrl}`;
-                    const isPdf = cardUrl.toLowerCase().endsWith('.pdf') || cardUrl.startsWith('data:application/pdf');
-                    if (isPdf) {
-                        cardImg.src = "https://cdn-icons-png.flaticon.com/512/337/337946.png";
-                        cardImg.style.maxHeight = "80px";
-                    } else {
-                        cardImg.src = fullCardUrl;
-                        cardImg.style.maxHeight = "120px";
-                    }
+                    const files = cardUrl.split('|');
+                    files.forEach((fileUrl, index) => {
+                        if (!fileUrl) return;
+                        const label = index === 0 ? "Frente" : "Verso";
+                        const fullCardUrl = (fileUrl.startsWith('data:') || fileUrl.startsWith('http')) ? fileUrl : `${API_URL}${fileUrl}`;
+                        const isPdf = fileUrl.toLowerCase().endsWith('.pdf') || fileUrl.startsWith('data:application/pdf');
+                        
+                        const wrapper = document.createElement('div');
+                        wrapper.style.textAlign = 'center';
+                        wrapper.style.cursor = 'pointer';
+                        wrapper.onclick = (e) => {
+                            e.stopPropagation();
+                            if (isPdf && fileUrl.startsWith('data:')) {
+                                const pdfWindow = window.open("");
+                                pdfWindow.document.write("<iframe width='100%' height='100%' src='" + fullCardUrl + "'></iframe>");
+                            } else {
+                                window.open(fullCardUrl, '_blank');
+                            }
+                        };
+                        
+                        const img = document.createElement('img');
+                        img.src = isPdf ? "https://cdn-icons-png.flaticon.com/512/337/337946.png" : fullCardUrl;
+                        img.style.maxWidth = "100%";
+                        img.style.maxHeight = "100px";
+                        img.style.borderRadius = "8px";
+                        img.style.border = "1px solid rgba(0, 212, 255, 0.3)";
+                        img.style.objectFit = "contain";
+                        
+                        const caption = document.createElement('div');
+                        caption.style.fontSize = '0.7rem';
+                        caption.style.color = '#8A9BB5';
+                        caption.style.marginTop = '4px';
+                        caption.textContent = label;
+                        
+                        wrapper.appendChild(img);
+                        wrapper.appendChild(caption);
+                        cardPreviews.appendChild(wrapper);
+                    });
                     cardContainer.style.display = 'block';
                 } else {
-                    document.getElementById('clinical-view-insurance-box').style.cursor = 'default';
-                    const indicator = document.getElementById('clinical-view-insurance-indicator');
-                    if (indicator) indicator.style.display = 'none';
                     cardContainer.style.display = 'none';
                 }
                 
@@ -3202,53 +3280,9 @@
                 document.getElementById('clinical-edit-identity-document').value = clinicalData.identity_document || '';
                 document.getElementById('clinical-edit-insurance').value = clinicalData.health_insurance || '';
                 
-                // Configura o botão de excluir documento
-                const btnDeleteDoc = document.getElementById('btn-delete-identity-document');
-                if (clinicalData.identity_document_file) {
-                    btnDeleteDoc.style.display = 'inline-flex';
-                } else {
-                    btnDeleteDoc.style.display = 'none';
-                }
-                
-                // Configura o botão de excluir carteirinha
-                const btnDeleteIns = document.getElementById('btn-delete-insurance-card');
-                if (clinicalData.health_insurance_card) {
-                    btnDeleteIns.style.display = 'inline-flex';
-                } else {
-                    btnDeleteIns.style.display = 'none';
-                }
-                
-                const docPreviewContainer = document.getElementById('clinical-edit-identity-document-preview-container');
-                const docPreviewImg = document.getElementById('clinical-edit-identity-document-preview-img');
-                if (clinicalData.identity_document_file) {
-                    const docUrl = clinicalData.identity_document_file;
-                    const fullDocUrl = (docUrl.startsWith('data:') || docUrl.startsWith('http')) ? docUrl : `${API_URL}${docUrl}`;
-                    const isPdf = docUrl.toLowerCase().endsWith('.pdf') || docUrl.startsWith('data:application/pdf');
-                    if (isPdf) {
-                        docPreviewImg.src = "https://cdn-icons-png.flaticon.com/512/337/337946.png";
-                    } else {
-                        docPreviewImg.src = fullDocUrl;
-                    }
-                    docPreviewContainer.style.display = 'block';
-                } else {
-                    docPreviewContainer.style.display = 'none';
-                }
-                
-                const previewContainer = document.getElementById('clinical-edit-insurance-card-preview-container');
-                const previewImg = document.getElementById('clinical-edit-insurance-card-preview-img');
-                if (clinicalData.health_insurance_card) {
-                    const cardUrl = clinicalData.health_insurance_card;
-                    const fullCardUrl = (cardUrl.startsWith('data:') || cardUrl.startsWith('http')) ? cardUrl : `${API_URL}${cardUrl}`;
-                    const isPdf = cardUrl.toLowerCase().endsWith('.pdf') || cardUrl.startsWith('data:application/pdf');
-                    if (isPdf) {
-                        previewImg.src = "https://cdn-icons-png.flaticon.com/512/337/337946.png";
-                    } else {
-                        previewImg.src = fullCardUrl;
-                    }
-                    previewContainer.style.display = 'block';
-                } else {
-                    previewContainer.style.display = 'none';
-                }
+                // Inicializa e renderiza os previews dos slots Frente/Verso
+                renderIdEditPreviews();
+                renderInsuranceEditPreviews();
                 
                 const respObj = responsiblesData[0] || {};
                 document.getElementById('clinical-edit-resp-name').value = respObj.name || '';
@@ -3467,124 +3501,243 @@
                     body: formData
                 });
                 
-                const result = await response.json();
-                if (result.success && result.allergies) {
-                    const allergiesTextarea = document.getElementById('clinical-edit-allergies');
-                    const currentValue = allergiesTextarea.value.trim();
-                    
-                    if (currentValue) {
-                        allergiesTextarea.value = currentValue + ", " + result.allergies;
-                    } else {
-                        allergiesTextarea.value = result.allergies;
-                    }
-                    
-                    showToast("✅ Alergias extraídas e adicionadas!");
-                } else {
-                    showToast("âŒ Não foi possível ler as alergias", true);
-                }
-            } catch (error) {
-                console.error("Erro no OCR de alergias:", error);
-                showToast("âŒ Erro ao processar OCR", true);
-            }
+                const result = awai        // Documento de Identificação - Frente/Verso
+        function triggerIdFrontUpload() {
+            document.getElementById('id-front-file').click();
+        }
+        function triggerIdBackUpload() {
+            document.getElementById('id-back-file').click();
         }
         
-        function triggerIdentityDocumentUpload() {
-            document.getElementById('identity-document-file').click();
-        }
-
-        async function handleIdentityDocumentUpload(event) {
+        async function handleIdFrontUpload(event) {
             const file = event.target.files[0];
             if (!file) return;
-            
-            showToast("â³ Importando documento de identificação...");
-            
+            showToast("⏳ Importando frente do documento...");
             const formData = new FormData();
             formData.append('file', file);
-            
             try {
                 const response = await fetch(`${API_URL}/api/cliente/${userId}/upload-identity-document`, {
                     method: 'POST',
                     body: formData
                 });
-                
                 const result = await response.json();
                 if (result.success) {
-                    document.getElementById('clinical-edit-identity-document').value = result.identity_document;
-                    clinicalData.identity_document = result.identity_document;
-                    clinicalData.identity_document_file = result.identity_document_file;
-                    
-                    const previewContainer = document.getElementById('clinical-edit-identity-document-preview-container');
-                    const previewImg = document.getElementById('clinical-edit-identity-document-preview-img');
-                    const docUrl = result.identity_document_file;
-                    const isPdf = docUrl.toLowerCase().endsWith('.pdf') || docUrl.startsWith('data:application/pdf');
-                    if (isPdf) {
-                        previewImg.src = "https://cdn-icons-png.flaticon.com/512/337/337946.png";
-                    } else {
-                        previewImg.src = (docUrl.startsWith('data:') || docUrl.startsWith('http')) ? docUrl : `${API_URL}${docUrl}`;
+                    const textInput = document.getElementById('clinical-edit-identity-document');
+                    if (!textInput.value) {
+                        textInput.value = result.identity_document;
                     }
-                    previewContainer.style.display = 'block';
                     
-                    const btnDeleteDoc = document.getElementById('btn-delete-identity-document');
-                    if (btnDeleteDoc) btnDeleteDoc.style.display = 'inline-flex';
+                    let files = (clinicalData.identity_document_file || "").split('|');
+                    files[0] = result.identity_document_file;
+                    clinicalData.identity_document_file = files.join('|');
                     
-                    showToast("✅ Documento de identificação enviado e lido com sucesso!");
+                    renderIdEditPreviews();
+                    showToast("✅ Frente enviada com sucesso!");
                 } else {
-                    showToast("âŒ Erro ao enviar documento de identificação", true);
+                    showToast("❌ Erro ao enviar frente do documento", true);
                 }
             } catch (error) {
-                console.error("Erro no upload do documento de identificação:", error);
-                showToast("âŒ Erro ao enviar documento de identificação", true);
+                console.error(error);
+                showToast("❌ Erro ao enviar frente do documento", true);
+            }
+        }
+        
+        async function handleIdBackUpload(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            showToast("⏳ Importando verso do documento...");
+            const formData = new FormData();
+            formData.append('file', file);
+            try {
+                const response = await fetch(`${API_URL}/api/cliente/${userId}/upload-identity-document`, {
+                    method: 'POST',
+                    body: formData
+                });
+                const result = await response.json();
+                if (result.success) {
+                    let files = (clinicalData.identity_document_file || "").split('|');
+                    if (files.length === 0) files = [""];
+                    files[1] = result.identity_document_file;
+                    clinicalData.identity_document_file = files.join('|');
+                    
+                    renderIdEditPreviews();
+                    showToast("✅ Verso enviado com sucesso!");
+                } else {
+                    showToast("❌ Erro ao enviar verso do documento", true);
+                }
+            } catch (error) {
+                console.error(error);
+                showToast("❌ Erro ao enviar verso do documento", true);
+            }
+        }
+        
+        function deleteIdFront() {
+            let files = (clinicalData.identity_document_file || "").split('|');
+            files[0] = "";
+            clinicalData.identity_document_file = files.join('|');
+            renderIdEditPreviews();
+        }
+        function deleteIdBack() {
+            let files = (clinicalData.identity_document_file || "").split('|');
+            if (files.length > 1) {
+                files[1] = "";
+            }
+            clinicalData.identity_document_file = files.join('|');
+            renderIdEditPreviews();
+        }
+        
+        function renderIdEditPreviews() {
+            const files = (clinicalData.identity_document_file || "").split('|');
+            const frontUrl = files[0];
+            const backUrl = files[1] || "";
+            
+            const frontContainer = document.getElementById('clinical-edit-id-front-preview-container');
+            const frontImg = document.getElementById('clinical-edit-id-front-preview-img');
+            const frontBtnDelete = document.getElementById('btn-delete-id-front');
+            
+            if (frontUrl) {
+                const isPdf = frontUrl.toLowerCase().endsWith('.pdf') || frontUrl.startsWith('data:application/pdf');
+                frontImg.src = isPdf ? "https://cdn-icons-png.flaticon.com/512/337/337946.png" : ((frontUrl.startsWith('data:') || frontUrl.startsWith('http')) ? frontUrl : `${API_URL}${frontUrl}`);
+                frontContainer.style.display = 'block';
+                frontBtnDelete.style.display = 'inline-flex';
+            } else {
+                frontContainer.style.display = 'none';
+                frontBtnDelete.style.display = 'none';
+            }
+            
+            const backContainer = document.getElementById('clinical-edit-id-back-preview-container');
+            const backImg = document.getElementById('clinical-edit-id-back-preview-img');
+            const backBtnDelete = document.getElementById('btn-delete-id-back');
+            
+            if (backUrl) {
+                const isPdf = backUrl.toLowerCase().endsWith('.pdf') || backUrl.startsWith('data:application/pdf');
+                backImg.src = isPdf ? "https://cdn-icons-png.flaticon.com/512/337/337946.png" : ((backUrl.startsWith('data:') || backUrl.startsWith('http')) ? backUrl : `${API_URL}${backUrl}`);
+                backContainer.style.display = 'block';
+                backBtnDelete.style.display = 'inline-flex';
+            } else {
+                backContainer.style.display = 'none';
+                backBtnDelete.style.display = 'none';
             }
         }
 
-        function triggerInsuranceCardUpload() {
-            document.getElementById('insurance-card-file').click();
+        // Plano de Saúde - Frente/Verso
+        function triggerInsuranceFrontUpload() {
+            document.getElementById('insurance-front-file').click();
+        }
+        function triggerInsuranceBackUpload() {
+            document.getElementById('insurance-back-file').click();
         }
         
-        async function handleInsuranceCardUpload(event) {
+        async function handleInsuranceFrontUpload(event) {
             const file = event.target.files[0];
             if (!file) return;
-            
-            showToast("â³ Importando carteirinha...");
-            
+            showToast("⏳ Importando frente da carteirinha...");
             const formData = new FormData();
             formData.append('file', file);
-            
             try {
                 const response = await fetch(`${API_URL}/api/cliente/${userId}/upload-insurance-card`, {
                     method: 'POST',
                     body: formData
                 });
-                
                 const result = await response.json();
                 if (result.success) {
-                    document.getElementById('clinical-edit-insurance').value = result.health_insurance;
-                    clinicalData.health_insurance = result.health_insurance;
-                    clinicalData.health_insurance_card = result.health_insurance_card;
-                    
-                    const previewContainer = document.getElementById('clinical-edit-insurance-card-preview-container');
-                    const previewImg = document.getElementById('clinical-edit-insurance-card-preview-img');
-                    const cardUrl = result.health_insurance_card;
-                    const isPdf = cardUrl.toLowerCase().endsWith('.pdf') || cardUrl.startsWith('data:application/pdf');
-                    if (isPdf) {
-                        previewImg.src = "https://cdn-icons-png.flaticon.com/512/337/337946.png";
-                    } else {
-                        previewImg.src = (cardUrl.startsWith('data:') || cardUrl.startsWith('http')) ? cardUrl : `${API_URL}${cardUrl}`;
+                    const textInput = document.getElementById('clinical-edit-insurance');
+                    if (!textInput.value) {
+                        textInput.value = result.health_insurance;
                     }
-                    previewContainer.style.display = 'block';
                     
-                    const btnDeleteIns = document.getElementById('btn-delete-insurance-card');
-                    if (btnDeleteIns) btnDeleteIns.style.display = 'inline-flex';
+                    let files = (clinicalData.health_insurance_card || "").split('|');
+                    files[0] = result.health_insurance_card;
+                    clinicalData.health_insurance_card = files.join('|');
                     
-                    showToast("✅ Carteirinha enviada e lida com sucesso!");
+                    renderInsuranceEditPreviews();
+                    showToast("✅ Frente enviada com sucesso!");
                 } else {
-                    showToast("âŒ Erro ao enviar carteirinha", true);
+                    showToast("❌ Erro ao enviar frente da carteirinha", true);
                 }
             } catch (error) {
-                console.error("Erro no upload da carteirinha:", error);
-                showToast("âŒ Erro ao enviar carteirinha", true);
+                console.error(error);
+                showToast("❌ Erro ao enviar frente da carteirinha", true);
             }
         }
+        
+        async function handleInsuranceBackUpload(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            showToast("⏳ Importando verso da carteirinha...");
+            const formData = new FormData();
+            formData.append('file', file);
+            try {
+                const response = await fetch(`${API_URL}/api/cliente/${userId}/upload-insurance-card`, {
+                    method: 'POST',
+                    body: formData
+                });
+                const result = await response.json();
+                if (result.success) {
+                    let files = (clinicalData.health_insurance_card || "").split('|');
+                    if (files.length === 0) files = [""];
+                    files[1] = result.health_insurance_card;
+                    clinicalData.health_insurance_card = files.join('|');
+                    
+                    renderInsuranceEditPreviews();
+                    showToast("✅ Verso enviado com sucesso!");
+                } else {
+                    showToast("❌ Erro ao enviar verso da carteirinha", true);
+                }
+            } catch (error) {
+                console.error(error);
+                showToast("❌ Erro ao enviar verso da carteirinha", true);
+            }
+        }
+        
+        function deleteInsuranceFront() {
+            let files = (clinicalData.health_insurance_card || "").split('|');
+            files[0] = "";
+            clinicalData.health_insurance_card = files.join('|');
+            renderInsuranceEditPreviews();
+        }
+        function deleteInsuranceBack() {
+            let files = (clinicalData.health_insurance_card || "").split('|');
+            if (files.length > 1) {
+                files[1] = "";
+            }
+            clinicalData.health_insurance_card = files.join('|');
+            renderInsuranceEditPreviews();
+        }
+        
+        function renderInsuranceEditPreviews() {
+            const files = (clinicalData.health_insurance_card || "").split('|');
+            const frontUrl = files[0];
+            const backUrl = files[1] || "";
+            
+            const frontContainer = document.getElementById('clinical-edit-insurance-front-preview-container');
+            const frontImg = document.getElementById('clinical-edit-insurance-front-preview-img');
+            const frontBtnDelete = document.getElementById('btn-delete-insurance-front');
+            
+            if (frontUrl) {
+                const isPdf = frontUrl.toLowerCase().endsWith('.pdf') || frontUrl.startsWith('data:application/pdf');
+                frontImg.src = isPdf ? "https://cdn-icons-png.flaticon.com/512/337/337946.png" : ((frontUrl.startsWith('data:') || frontUrl.startsWith('http')) ? frontUrl : `${API_URL}${frontUrl}`);
+                frontContainer.style.display = 'block';
+                frontBtnDelete.style.display = 'inline-flex';
+            } else {
+                frontContainer.style.display = 'none';
+                frontBtnDelete.style.display = 'none';
+            }
+            
+            const backContainer = document.getElementById('clinical-edit-insurance-back-preview-container');
+            const backImg = document.getElementById('clinical-edit-insurance-back-preview-img');
+            const backBtnDelete = document.getElementById('btn-delete-insurance-back');
+            
+            if (backUrl) {
+                const isPdf = backUrl.toLowerCase().endsWith('.pdf') || backUrl.startsWith('data:application/pdf');
+                backImg.src = isPdf ? "https://cdn-icons-png.flaticon.com/512/337/337946.png" : ((backUrl.startsWith('data:') || backUrl.startsWith('http')) ? backUrl : `${API_URL}${backUrl}`);
+                backContainer.style.display = 'block';
+                backBtnDelete.style.display = 'inline-flex';
+            } else {
+                backContainer.style.display = 'none';
+                backBtnDelete.style.display = 'none';
+            }
+                    
 
         // =====================================================
         // 📷 UPLOAD DA IMAGEM DA CAIXA DO REMÉDIO

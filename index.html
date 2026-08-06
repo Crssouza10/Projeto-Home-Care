@@ -92,6 +92,10 @@ nav {
   background:var(--accent); color:#fff;
 }
 .btn-accent:hover { background:var(--accent-hover); transform:translateY(-1px); box-shadow:0 4px 16px rgba(244,132,95,0.35) }
+.btn-warning {
+  background:#f59e0b; color:#fff;
+}
+.btn-warning:hover { background:#d97706; transform:translateY(-1px); box-shadow:0 4px 16px rgba(245,158,11,0.35) }
 
 /* ── Sections ── */
 section { padding:100px 24px }
@@ -1011,11 +1015,11 @@ footer p { font-size:0.9rem; line-height:1.6 }
         <ul class="pricing-features">
           <li><span class="check">✓</span> 1 usuário responsável</li>
           <li><span class="check">✓</span> Lembretes de medicamentos</li>
-          <li><span class="check">✓</span> Até 2 pessoas cuidadas</li>
+          <li><span class="check">✓</span> Até 1 pessoa cuidada</li>
           <li><span class="check">✓</span> Registro básico de saúde</li>
           <li><span class="check">✓</span> App mobile</li>
         </ul>
-        <a href="#" class="btn btn-outline pricing-cta">Testar grátis</a>
+        <a href="#" class="btn btn-warning pricing-cta">Testar grátis</a>
       </div>
       <!-- Básico -->
       <div class="pricing-card featured-p">
@@ -1354,7 +1358,7 @@ const plansData = {
         features: [
             '1 usuário responsável',
             'Lembretes de medicamentos',
-            'Até 2 pessoas cuidadas',
+            'Até 1 pessoa cuidada',
             'Registro básico de saúde',
             'App mobile'
         ],
