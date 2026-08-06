@@ -4197,8 +4197,8 @@ async def criar_assinatura(request: Request, db: Session = Depends(get_db)):
         raise HTTPException(status_code=400, detail="user_id e email são obrigatórios")
 
     planos_precos = {
-        "basico_mensal": ("Básico Mensal", 29.90),
-        "pro_mensal": ("Pro Mensal", 49.90),
+        "basico_mensal": ("Básico Mensal", 49.90),
+        "pro_mensal": ("Pro Mensal", 89.90),
         "pro_trimestral": ("Pro Trimestral", 129.90),
         "pro_anual": ("Pro Anual", 449.90),
     }
@@ -4430,8 +4430,8 @@ async def register_subscribe(request: Request, db: Session = Depends(get_db)):
             raise HTTPException(status_code=400, detail="Telefone já cadastrado por outro usuário")
 
     planos_precos = {
-        "basico": ("Plano Básico", 29.90),
-        "pro": ("Plano Pro", 49.90),
+        "basico": ("Plano Básico", 49.90),
+        "pro": ("Plano Pro", 89.90),
     }
     if plan_key not in planos_precos:
         raise HTTPException(status_code=400, detail=f"Plano inválido: {plan_key}")
