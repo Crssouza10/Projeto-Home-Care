@@ -297,7 +297,26 @@ section { padding:100px 24px }
   padding:6px 20px; border-radius:100px;
   font-size:0.8rem; font-weight:700; white-space:nowrap;
 }
-.pricing-icon { font-size:2rem; margin-bottom:12px }
+.pricing-icon {
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.8rem;
+  margin-bottom: 16px;
+  box-shadow: 0 4px 10px rgba(15, 61, 40, 0.05);
+}
+.pricing-icon.icon-trial {
+  background: rgba(244, 132, 95, 0.15); /* Destaque laranja correspondente ao --accent */
+}
+.pricing-icon.icon-basic {
+  background: var(--green-100); /* Destaque verde */
+}
+.pricing-icon.icon-pro {
+  background: #FEF3C7; /* Destaque amarelo ouro/premium */
+}
 .pricing-name {
   font-family:var(--font-display); font-size:1.2rem;
   font-weight:600; color:var(--gray-900); margin-bottom:4px;
@@ -469,7 +488,42 @@ footer p { font-size:0.9rem; line-height:1.6 }
   .cta-actions { flex-direction:column; align-items:center }
   .cta-actions .btn { width:100%; max-width:320px; justify-content:center }
   /* Mobile nav */
-  .nav-links { display:none }
+  .nav-toggle { display: flex !important; }
+  .nav-links {
+    display: none;
+    flex-direction: column;
+    position: absolute;
+    top: 60px;
+    left: 0;
+    width: 100%;
+    background: rgba(255, 250, 245, 0.98);
+    backdrop-filter: blur(16px);
+    border-bottom: 1px solid var(--gray-200);
+    padding: 24px;
+    gap: 16px;
+    box-shadow: 0 10px 30px rgba(15, 61, 40, 0.08);
+    list-style: none;
+    z-index: 100;
+  }
+  .nav-links.active {
+    display: flex !important;
+  }
+  .nav-links li {
+    width: 100%;
+    text-align: center;
+  }
+  .nav-links a {
+    font-size: 1.1rem;
+    padding: 10px 0;
+    width: 100%;
+    display: block;
+  }
+  .nav-links .btn {
+    width: 100%;
+    justify-content: center;
+    max-width: 280px;
+    margin: 0 auto;
+  }
   nav { padding:0 16px }
   .nav-inner { height:60px }
   .logo { font-size:1.25rem }
@@ -794,14 +848,20 @@ footer p { font-size:0.9rem; line-height:1.6 }
       <span class="logo-mark">♥</span>
       Cuidadoso
     </a>
-    <ul class="nav-links">
-      <li><a href="#features">Funcionalidades</a></li>
-      <li><a href="#planos">Planos</a></li>
-      <li><a href="#como-funciona">Como funciona</a></li>
-      <li><a href="#depoimentos">Depoimentos</a></li>
-      <li><a href="#faq">FAQ</a></li>
-      <li><a href="javascript:void(0)" onclick="openLogin()" style="font-weight:600; color:var(--green-700);">Entrar</a></li>
-      <li><a href="javascript:void(0)" onclick="openLogin('trial')" class="btn btn-primary">Começar grátis</a></li>
+    <!-- Botão de menu hambúrguer para mobile -->
+    <button class="nav-toggle" id="nav-toggle-btn" onclick="toggleMobileMenu()" aria-label="Menu" style="display: none; background: transparent; border: none; flex-direction: column; gap: 5px; cursor: pointer; padding: 10px; z-index: 101;">
+      <span style="width: 25px; height: 3px; background: var(--green-900); border-radius: 2px; transition: 0.3s; transform-origin: left center;"></span>
+      <span style="width: 25px; height: 3px; background: var(--green-900); border-radius: 2px; transition: 0.3s; transform-origin: left center;"></span>
+      <span style="width: 25px; height: 3px; background: var(--green-900); border-radius: 2px; transition: 0.3s; transform-origin: left center;"></span>
+    </button>
+    <ul class="nav-links" id="nav-menu">
+      <li><a href="#features" onclick="closeMobileMenu()">Funcionalidades</a></li>
+      <li><a href="#planos" onclick="closeMobileMenu()">Planos</a></li>
+      <li><a href="#como-funciona" onclick="closeMobileMenu()">Como funciona</a></li>
+      <li><a href="#depoimentos" onclick="closeMobileMenu()">Depoimentos</a></li>
+      <li><a href="#faq" onclick="closeMobileMenu()">FAQ</a></li>
+      <li><a href="javascript:void(0)" onclick="closeMobileMenu(); openLogin()" style="font-weight:600; color:var(--green-700);">Entrar</a></li>
+      <li><a href="javascript:void(0)" onclick="closeMobileMenu(); openLogin('trial')" class="btn btn-primary">Começar grátis</a></li>
     </ul>
   </div>
 </nav>
@@ -943,7 +1003,7 @@ footer p { font-size:0.9rem; line-height:1.6 }
     <div class="pricing-grid">
       <!-- Grátis / Trial -->
       <div class="pricing-card">
-        <div class="pricing-icon">🎁</div>
+        <div class="pricing-icon icon-trial">🎁</div>
         <div class="pricing-name">Trial</div>
         <div class="pricing-desc">Experimente sem custo</div>
         <div class="pricing-price">14<span>dias</span></div>
@@ -960,7 +1020,7 @@ footer p { font-size:0.9rem; line-height:1.6 }
       <!-- Básico -->
       <div class="pricing-card featured-p">
         <div class="pricing-badge">MAIS POPULAR</div>
-        <div class="pricing-icon">💚</div>
+        <div class="pricing-icon icon-basic">💚</div>
         <div class="pricing-name">Básico</div>
         <div class="pricing-desc">Para famílias que cuidam</div>
         <div class="pricing-price">R$49<span>,90</span></div>
@@ -977,7 +1037,7 @@ footer p { font-size:0.9rem; line-height:1.6 }
       </div>
       <!-- Pró -->
       <div class="pricing-card">
-        <div class="pricing-icon">👑</div>
+        <div class="pricing-icon icon-pro">👑</div>
         <div class="pricing-name">Pró</div>
         <div class="pricing-desc">Cuidado profissional completo</div>
         <div class="pricing-price">R$89<span>,90</span></div>
@@ -1263,7 +1323,7 @@ footer p { font-size:0.9rem; line-height:1.6 }
             <input type="email" class="form-input" id="reg-email" placeholder="seu-email@exemplo.com" required>
           </div>
           
-          <div class="form-group">
+          <div class="form-group" id="reg-phone-group">
             <label class="form-label">Telefone (opcional)</label>
             <input type="tel" class="form-input" id="reg-phone" placeholder="(00) 00000-0000">
           </div>
@@ -1350,6 +1410,30 @@ function openLogin(planKey) {
     // Guarda o plano selecionado para uso no registro
     window._selectedPlan = planKey || 'trial';
 
+    // Oculta/Exibe campo de telefone com base no plano selecionado
+    const phoneGroup = document.getElementById('reg-phone-group');
+    if (phoneGroup) {
+        if (window._selectedPlan === 'trial') {
+            phoneGroup.style.display = 'none';
+        } else {
+            phoneGroup.style.display = 'block';
+        }
+    }
+
+    // Altera dinamicamente o link de cadastro na tela de login
+    const registerLink = document.querySelector('#login-view p a');
+    if (registerLink) {
+        if (window._selectedPlan === 'trial') {
+            registerLink.textContent = 'Criar Conta Grátis';
+        } else if (window._selectedPlan === 'basico') {
+            registerLink.textContent = 'Criar Conta Básica';
+        } else if (window._selectedPlan === 'pro') {
+            registerLink.textContent = 'Criar Conta Pró';
+        } else {
+            registerLink.textContent = 'Criar Conta';
+        }
+    }
+
     // Reset views
     showLoginView();
 
@@ -1397,6 +1481,20 @@ function closeLogin() {
 function showRegisterView() {
     document.getElementById('login-view').style.display = 'none';
     document.getElementById('register-view').style.display = 'block';
+
+    // Atualiza o título do cadastro de acordo com o plano
+    const planKey = window._selectedPlan || 'trial';
+    const regTitle = document.querySelector('#register-view .modal-title');
+    const regSubtitle = document.querySelector('#register-view .modal-subtitle');
+    
+    if (planKey === 'trial') {
+        if (regTitle) regTitle.textContent = 'Criar Conta Grátis';
+        if (regSubtitle) regSubtitle.textContent = 'Gratuito • Configure em 2 minutos';
+    } else {
+        const planName = planKey === 'pro' ? 'Pró' : 'Básico';
+        if (regTitle) regTitle.textContent = `Criar Conta ${planName}`;
+        if (regSubtitle) regSubtitle.textContent = `Plano ${planName} • Configure em 2 minutos`;
+    }
 }
 
 function showLoginView() {
@@ -1533,7 +1631,7 @@ async function handleRegister(e) {
             });
             const data = await response.json();
             if (response.ok) {
-                alert('✅ Conta criada com sucesso!\\n\\nFaça login agora com suas credenciais.');
+                alert('✅ Conta criada com sucesso!\n\nFaça login agora com suas credenciais.');
                 showLoginView();
                 document.getElementById('username').value = email;
                 document.getElementById('password').focus();
@@ -1620,6 +1718,35 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 });
+
+function toggleMobileMenu() {
+    const menu = document.getElementById('nav-menu');
+    const btn = document.getElementById('nav-toggle-btn');
+    menu.classList.toggle('active');
+    
+    // Animação do hambúrguer
+    const lines = btn.querySelectorAll('span');
+    if (menu.classList.contains('active')) {
+        lines[0].style.transform = 'rotate(45deg) translate(2px, -3px)';
+        lines[1].style.opacity = '0';
+        lines[2].style.transform = 'rotate(-45deg) translate(2px, 3px)';
+    } else {
+        lines[0].style.transform = 'none';
+        lines[1].style.opacity = '1';
+        lines[2].style.transform = 'none';
+    }
+}
+
+function closeMobileMenu() {
+    const menu = document.getElementById('nav-menu');
+    const btn = document.getElementById('nav-toggle-btn');
+    menu.classList.remove('active');
+    
+    const lines = btn.querySelectorAll('span');
+    lines[0].style.transform = 'none';
+    lines[1].style.opacity = '1';
+    lines[2].style.transform = 'none';
+}
 </script>
 
 <!-- Cloudflare Web Analytics --><script type='module' src='https://static.cloudflareinsights.com/beacon.min.js' data-cf-beacon='{"token": "d1a9b25d409d47f693bbb1a7f0afbc97"}'></script><!-- End Cloudflare Web Analytics -->

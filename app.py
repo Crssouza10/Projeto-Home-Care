@@ -2180,13 +2180,18 @@ async def create_user(user: UserCreate, db: Session = Depends(get_db)):
     if existing:
         raise HTTPException(status_code=400, detail="Email já cadastrado")
         
-    if user.phone:
-        existing_phone = db.query(User).filter(User.phone == user.phone).first()
+    # Normaliza telefone vazio para None para evitar violação do UNIQUE no banco
+    phone_val = user.phone.strip() if user.phone else None
+    if not phone_val:
+        phone_val = None
+        
+    if phone_val:
+        existing_phone = db.query(User).filter(User.phone == phone_val).first()
         if existing_phone:
             raise HTTPException(status_code=400, detail="Telefone já cadastrado por outro usuário")
     
     password_hash = bcrypt.hashpw(user.password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
-    db_user = User(full_name=user.full_name, email=user.email, phone=user.phone, password_hash=password_hash)
+    db_user = User(full_name=user.full_name, email=user.email, phone=phone_val, password_hash=password_hash)
     db.add(db_user)
     db.commit()
     db.refresh(db_user)
@@ -4414,6 +4419,16 @@ async def register_subscribe(request: Request, db: Session = Depends(get_db)):
     if existing:
         raise HTTPException(status_code=400, detail="Email já cadastrado")
 
+    # Normaliza telefone
+    phone_val = phone.strip() if phone else None
+    if not phone_val:
+        phone_val = None
+
+    if phone_val:
+        existing_phone = db.query(User).filter(User.phone == phone_val).first()
+        if existing_phone:
+            raise HTTPException(status_code=400, detail="Telefone já cadastrado por outro usuário")
+
     planos_precos = {
         "basico": ("Plano Básico", 29.90),
         "pro": ("Plano Pro", 49.90),
@@ -4487,7 +4502,7 @@ async def register_subscribe(request: Request, db: Session = Depends(get_db)):
             "pid": mp_preference_id,
             "name": full_name,
             "email": email,
-            "phone": phone,
+            "phone": phone_val,
             "pwd": bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8'),
             "plan": plan_key
         })

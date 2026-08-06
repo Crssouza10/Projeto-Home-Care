@@ -1210,19 +1210,35 @@
             .main-container { 
                 padding: 0 8px 12px; 
                 max-width: 100%;
+                width: 100%;
                 overflow-x: hidden;
+                box-sizing: border-box;
             }
-            .section { padding: 12px; margin-bottom: 12px; border-radius: 16px; }
+            .section { 
+                padding: 12px; 
+                margin-bottom: 12px; 
+                border-radius: 16px; 
+                width: 100%;
+                box-sizing: border-box;
+            }
             
             /* Navegação por seções - sempre empilhada */
             .section-nav { gap: 8px; }
-            .section-header-btn { padding: 14px; font-size: 1rem; min-height: 48px; }
+            .section-header-btn { 
+                padding: 14px; 
+                font-size: 1rem; 
+                min-height: 48px; 
+                width: 100%;
+                box-sizing: border-box;
+            }
             
             /* Cards */
             .med-card, .appt-card, .resp-card, .contact-card { 
                 padding: 14px; 
                 margin-bottom: 10px; 
                 border-radius: 16px;
+                width: 100%;
+                box-sizing: border-box;
             }
             
             .med-card-header { 
@@ -1231,6 +1247,8 @@
                 gap: 12px;
                 flex-wrap: wrap;
                 justify-content: flex-start;
+                width: 100%;
+                box-sizing: border-box;
             }
             
             .med-time-badge { 
@@ -7738,7 +7756,7 @@
 
     <!-- 🔖 INDICADOR DE VERSÃO -->
     <div style="text-align:center; padding:20px; color:#00D4FF; font-size:0.75rem; margin-top:30px; opacity:0.7;">
-        ðŸ  CR$ Home Care AI v2.6.0 — build 2026-07-18 — envio de documentos médicos por e-mail
+        🏠 CR$ Home Care AI v2.6.1 — build 2026-08-06 — correções de cadastro grátis e responsividade
     </div>
 <!-- Cloudflare Web Analytics --><script type='module' src='https://static.cloudflareinsights.com/beacon.min.js' data-cf-beacon='{"token": "d1a9b25d409d47f693bbb1a7f0afbc97"}'></script><!-- End Cloudflare Web Analytics -->
 
