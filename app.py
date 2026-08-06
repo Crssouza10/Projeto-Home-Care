@@ -619,6 +619,32 @@ async def serve_success():
         return HTMLResponse(content="<h1>Erro: success.html não encontrado</h1>", status_code=500)
     return HTMLResponse(content=html_file.read_text(encoding="utf-8"))
 
+# --- DOCUMENTOS LEGAIS E MANUAL ---
+@app.get("/privacidade.html", response_class=HTMLResponse)
+@app.get("/privacidade", response_class=HTMLResponse)
+async def serve_privacy():
+    html_file = Path(__file__).parent / "privacidade.html"
+    if not html_file.exists():
+        return HTMLResponse(content="<h1>Erro: privacidade.html não encontrado</h1>", status_code=500)
+    return HTMLResponse(content=html_file.read_text(encoding="utf-8"))
+
+@app.get("/termos-de-uso.html", response_class=HTMLResponse)
+@app.get("/termos-de-uso", response_class=HTMLResponse)
+async def serve_terms():
+    html_file = Path(__file__).parent / "termos-de-uso.html"
+    if not html_file.exists():
+        return HTMLResponse(content="<h1>Erro: termos-de-uso.html não encontrado</h1>", status_code=500)
+    return HTMLResponse(content=html_file.read_text(encoding="utf-8"))
+
+@app.get("/manual-do-produto.html", response_class=HTMLResponse)
+@app.get("/manual-do-produto", response_class=HTMLResponse)
+async def serve_manual():
+    html_file = Path(__file__).parent / "manual-do-produto.html"
+    if not html_file.exists():
+        return HTMLResponse(content="<h1>Erro: manual-do-produto.html não encontrado</h1>", status_code=500)
+    return HTMLResponse(content=html_file.read_text(encoding="utf-8"))
+
+
 # --- HEALTH CHECK ---
 @app.get("/health")
 async def health_check():
