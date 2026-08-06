@@ -3501,7 +3501,28 @@
                     body: formData
                 });
                 
-                const result = awai        // Documento de Identificação - Frente/Verso
+                const result = await response.json();
+                if (result.success && result.allergies) {
+                    const allergiesTextarea = document.getElementById('clinical-edit-allergies');
+                    const currentValue = allergiesTextarea.value.trim();
+                    
+                    if (currentValue) {
+                        allergiesTextarea.value = currentValue + ", " + result.allergies;
+                    } else {
+                        allergiesTextarea.value = result.allergies;
+                    }
+                    
+                    showToast("✅ Alergias extraídas e adicionadas!");
+                } else {
+                    showToast("❌ Não foi possível ler as alergias", true);
+                }
+            } catch (error) {
+                console.error("Erro no OCR de alergias:", error);
+                showToast("❌ Erro ao processar OCR", true);
+            }
+        }
+
+        // Documento de Identificação - Frente/Verso
         function triggerIdFrontUpload() {
             document.getElementById('id-front-file').click();
         }
@@ -3737,6 +3758,7 @@
                 backContainer.style.display = 'none';
                 backBtnDelete.style.display = 'none';
             }
+        }
                     
 
         // =====================================================
