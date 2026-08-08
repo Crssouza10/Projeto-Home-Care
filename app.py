@@ -1,20 +1,10 @@
-# ===== v21.5.6 - 2026-08-07 ==========================================
-# - Adicionadas rotas /sw.js (Service Worker) e /favicon.ico
-# - Registro do Service Worker no dashboard para notificações push em background
-# Correções:
-# - Adicionado endpoint de suporte 'Falar com a Equipe' (chat IA + e-mail com protocolo)
-# - Extraídas funções auxiliares _get_gmail_access_token() e _send_email_via_gmail_api()
-# - Ajustado Service Worker (sw.js) e VAPID key para notificações push em background
-# - Substituído SMTP (bloqueado no Railway) por Gmail API REST (HTTPS/443)
-# - Removido import inexistente 'from models import ...' 
-# - Adicionado campo 'location' na tabela appointments (modelo + migration + endpoints)
-# - Adicionado groq e mercadopago ao requirements.txt
-# - GET /api/cliente/{user_id}/medications agora aceita ?date=YYYY-MM-DD
-# - Frontend busca horários reais da data visualizada (não só de hoje)
-# - Independência real dos dias: editar horário dia 15 NÃO afeta dia 16
-# - Visualização nativa de PDFs (Documentos e Carteirinha) via rotas HTTP inline
-# - Fuso horário estrito de Brasília (UTC-3) para mitigar vazamentos de data do servidor
-# - Correções de erros JavaScript de escopo e constante na renderização do frontend
+# ===== v21.5.7 - 2026-08-08 ==========================================
+# - Adicionada camada de autenticação via cookie de sessão (session_token)
+# - Login define cookie HttpOnly com 30 dias de duração
+# - Dashboard (/dashboard, /dashboard-cliente, /ia) protegido — requer login
+# - APIs (/medications, /clinical-info, /appointments) retornam 401 sem autenticação
+# - Correção CTG-023: dashboard não expõe HTML sem login (401 em vez de 200)
+# - Correção CTG-125: APIs retornam 401 em vez de 400/404 para requests sem auth
 import sys
 # Garante codificação UTF-8 para evitar erros de unicode no console (especialmente no Windows)
 if sys.platform.startswith('win'):
@@ -26,7 +16,7 @@ if sys.platform.startswith('win'):
 
 from fastapi import FastAPI, HTTPException, Depends, status, Request, File, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import HTMLResponse, JSONResponse, FileResponse, StreamingResponse, Response
+from fastapi.responses import HTMLResponse, JSONResponse, FileResponse, StreamingResponse, Response, RedirectResponse
 from fastapi.staticfiles import StaticFiles  # ✅ IMPORTAÇÃO CRÍTICA!
 from sqlalchemy import create_engine, Column, String, DateTime, Boolean, Time, Date, Text, or_, Integer, text
 from sqlalchemy.orm import sessionmaker, declarative_base, Session
@@ -557,6 +547,30 @@ def get_db():
     finally:
         db.close()
 
+# ==================== AUTENTICAÇÃO ====================
+
+def get_current_user(request: Request, db: Session = Depends(get_db)):
+    """Dependência de autenticação: valida cookie de sessão (session_token = user_id).
+    
+    Retorna o objeto User se autenticado.
+    Levanta HTTPException 401 se não autenticado.
+    """
+    session_token = request.cookies.get("session_token")
+    if not session_token:
+        raise HTTPException(status_code=401, detail="Não autenticado. Faça login.")
+    
+    # Valida UUID
+    try:
+        user_uuid = uuid.UUID(session_token)
+    except ValueError:
+        raise HTTPException(status_code=401, detail="Sessão inválida. Faça login novamente.")
+    
+    user = db.query(User).filter(User.id == user_uuid, User.is_active == True).first()
+    if not user:
+        raise HTTPException(status_code=401, detail="Usuário não encontrado ou inativo.")
+    
+    return user
+
 # ==================== FUNÇÕES AUXILIARES ====================
 
 def _get_periodo(time_val):
@@ -594,21 +608,21 @@ async def serve_landing():
     return HTMLResponse(content=html_file.read_text(encoding="utf-8"))
 
 @app.get("/dashboard", response_class=HTMLResponse)
-async def serve_dashboard():
+async def serve_dashboard(user: User = Depends(get_current_user)):
     html_file = Path(__file__).parent / "dashboard.html"
     if not html_file.exists():
         return HTMLResponse(content="<h1>Erro: dashboard.html não encontrado</h1>", status_code=500)
     return HTMLResponse(content=html_file.read_text(encoding="utf-8"))
 
 @app.get("/dashboard-cliente", response_class=HTMLResponse)
-async def serve_dashboard_cliente():
+async def serve_dashboard_cliente(user: User = Depends(get_current_user)):
     html_file = Path(__file__).parent / "dashboard_cliente.html"
     if not html_file.exists():
         return HTMLResponse(content="<h1>Erro: dashboard_cliente.html não encontrado</h1>", status_code=500)
     return HTMLResponse(content=html_file.read_text(encoding="utf-8"))
 
 @app.get("/ia", response_class=HTMLResponse)
-async def serve_home_care_ia():
+async def serve_home_care_ia(user: User = Depends(get_current_user)):
     html_file = Path(__file__).parent / "home_care_ia.html"
     if not html_file.exists():
         return HTMLResponse(content="<h1>Erro: home_care_ia.html não encontrado</h1>", status_code=500)
@@ -682,7 +696,7 @@ async def health_check():
 # 📅 HISTÓRICO DE MEDICAMENTOS POR DATA
 # =========================================================
 @app.get("/api/cliente/{user_id}/medications/history")
-async def get_medication_history(user_id: str, date: str, db: Session = Depends(get_db)):
+async def get_medication_history(user_id: str, date: str, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     """
     Retorna medicamentos agendados para uma data específica
     """
@@ -797,7 +811,7 @@ async def cliente_login(credentials: dict, db: Session = Depends(get_db)):
     if not bcrypt.checkpw(password.encode('utf-8'), user.password_hash.encode('utf-8')):
         raise HTTPException(status_code=401, detail="Senha incorreta")
     
-    return {
+    response = JSONResponse({
         "status": "sucesso",
         "user": {
             "id": str(user.id),
@@ -807,10 +821,20 @@ async def cliente_login(credentials: dict, db: Session = Depends(get_db)):
             "plan": user.plan or "basico",
             "created_at": user.created_at.strftime("%Y-%m-%dT%H:%M:%S") if user.created_at else None
         }
-    }
+    })
+    # Define cookie de sessão (HttpOnly, SameSite=Lax, 30 dias)
+    response.set_cookie(
+        key="session_token",
+        value=str(user.id),
+        httponly=True,
+        samesite="lax",
+        max_age=30 * 24 * 3600,  # 30 dias
+        path="/"
+    )
+    return response
 
 @app.get("/api/cliente/{user_id}/clinical-info")
-async def get_clinical_info(user_id: str, db: Session = Depends(get_db)):
+async def get_clinical_info(user_id: str, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     try:
         user_uuid = uuid.UUID(user_id)
     except ValueError:
@@ -837,7 +861,7 @@ async def get_clinical_info(user_id: str, db: Session = Depends(get_db)):
     }
 
 @app.put("/api/cliente/{user_id}/clinical-info")
-async def update_clinical_info(user_id: str, info: ClinicalInfoUpdate, db: Session = Depends(get_db)):
+async def update_clinical_info(user_id: str, info: ClinicalInfoUpdate, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     try:
         user_uuid = uuid.UUID(user_id)
     except ValueError:
@@ -1435,7 +1459,7 @@ def marcar_nao_tomados_fim_do_dia(db: Session):
         print(f"⚠️ Erro ao marcar não tomados ao fim do dia: {e}")
 
 @app.get("/api/cliente/{user_id}/medications", response_model=List[ClienteMedicationResponse])
-async def get_client_medications(user_id: str, date: str = None, db: Session = Depends(get_db)):
+async def get_client_medications(user_id: str, date: str = None, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     """Lista medicamentos com schedules de uma data específica (ou hoje, se não informada)"""
     marcar_nao_tomados_fim_do_dia(db)
     try:
@@ -1579,7 +1603,7 @@ def distribute_time(user_id, preferred_time_str: str, db: Session, current_med_i
     return preferred_time_str
 
 @app.post("/api/cliente/{user_id}/medications", status_code=status.HTTP_201_CREATED)
-async def create_medication(user_id: str, med: MedicationCreate, db: Session = Depends(get_db)):
+async def create_medication(user_id: str, med: MedicationCreate, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     try:
         user_uuid = uuid.UUID(user_id)
     except ValueError:
@@ -2027,7 +2051,7 @@ async def notify_responsible_async(medication_id: uuid.UUID):
 # =========================================================
 
 @app.get("/api/cliente/{user_id}/appointments")
-async def get_client_appointments(user_id: str, db: Session = Depends(get_db)):
+async def get_client_appointments(user_id: str, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     try:
         user_uuid = uuid.UUID(user_id)
     except ValueError:
