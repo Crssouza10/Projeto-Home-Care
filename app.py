@@ -1,4 +1,6 @@
 # ===== v21.5.6 - 2026-08-07 ==========================================
+# - Adicionadas rotas /sw.js (Service Worker) e /favicon.ico
+# - Registro do Service Worker no dashboard para notificações push em background
 # Correções:
 # - Adicionado endpoint de suporte 'Falar com a Equipe' (chat IA + e-mail com protocolo)
 # - Extraídas funções auxiliares _get_gmail_access_token() e _send_email_via_gmail_api()
@@ -644,6 +646,25 @@ async def serve_manual():
     if not html_file.exists():
         return HTMLResponse(content="<h1>Erro: manual-do-produto.html não encontrado</h1>", status_code=500)
     return HTMLResponse(content=html_file.read_text(encoding="utf-8"))
+
+# --- SERVICE WORKER E FAVICON ---
+@app.get("/sw.js")
+async def serve_service_worker():
+    """Serve o Service Worker para notificações push em background."""
+    sw_file = Path(__file__).parent / "sw.js"
+    if not sw_file.exists():
+        return Response(content="// Service Worker not found", media_type="application/javascript", status_code=404)
+    return FileResponse(sw_file, media_type="application/javascript")
+
+@app.get("/favicon.ico")
+async def serve_favicon():
+    """Serve o favicon do site."""
+    favicon_file = Path(__file__).parent / "favicon.ico"
+    if not favicon_file.exists():
+        # Fallback: gerar um favicon SVG inline simples
+        svg = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><text y=".9em" font-size="90">💊</text></svg>'
+        return Response(content=svg, media_type="image/svg+xml")
+    return FileResponse(favicon_file, media_type="image/x-icon")
 
 
 # --- HEALTH CHECK ---

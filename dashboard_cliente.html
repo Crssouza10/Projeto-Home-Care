@@ -2551,6 +2551,16 @@
         document.addEventListener('DOMContentLoaded', async function() {
             console.log('🚀 Sistema CR$ HOME CARE AI - Inicializando...');
             
+            // ===== REGISTRAR SERVICE WORKER (PWA + Notificações Push) =====
+            if ('serviceWorker' in navigator) {
+                try {
+                    const registration = await navigator.serviceWorker.register('/sw.js');
+                    console.log('✅ Service Worker registrado:', registration.scope);
+                } catch (err) {
+                    console.warn('⚠️ Service Worker não registrado:', err.message);
+                }
+            }
+            
             // ===== CARREGAR DADOS DO USUÃRIO =====
             // ============================================
             //  VERIFICAÇÃO DE SEGURANÇA (COLE NO TOPO!)
