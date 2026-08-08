@@ -1019,7 +1019,7 @@ footer p { font-size:0.9rem; line-height:1.6 }
           <li><span class="check">✓</span> Registro básico de saúde</li>
           <li><span class="check">✓</span> App mobile</li>
         </ul>
-        <a href="#" class="btn btn-warning pricing-cta">Testar grátis</a>
+        <a href="javascript:void(0)" onclick="openLogin('trial')" class="btn btn-warning pricing-cta">Testar grátis</a>
       </div>
       <!-- Básico -->
       <div class="pricing-card featured-p">
@@ -1037,7 +1037,7 @@ footer p { font-size:0.9rem; line-height:1.6 }
           <li><span class="check">✓</span> App mobile + notificações</li>
           <li><span class="check">✓</span> IA de monitoramento</li>
         </ul>
-        <a href="#" class="btn btn-primary pricing-cta">Assinar Básico</a>
+        <a href="javascript:void(0)" onclick="openLogin('basico')" class="btn btn-primary pricing-cta">Assinar Básico</a>
       </div>
       <!-- Pró -->
       <div class="pricing-card">
@@ -1055,7 +1055,7 @@ footer p { font-size:0.9rem; line-height:1.6 }
           <li><span class="check">✓</span> IA preditiva avançada</li>
           <li><span class="check">✓</span> Relatórios para médico</li>
         </ul>
-        <a href="#" class="btn btn-accent pricing-cta">Assinar Pró</a>
+        <a href="javascript:void(0)" onclick="openLogin('pro')" class="btn btn-accent pricing-cta">Assinar Pró</a>
       </div>
     </div>
     <p class="trial-note">
@@ -1223,7 +1223,7 @@ footer p { font-size:0.9rem; line-height:1.6 }
   <p>
     Home Care Inteligente — Tecnologia e cuidado para sua família.<br>
     &copy; 2025 Cuidadoso. Todos os direitos reservados.
-    <br><span style="font-size: 0.8rem; color: rgba(255,255,255,0.45);">Versão: v21.5.7 em 08/08/2026</span>
+    <br><span style="font-size: 0.8rem; color: rgba(255,255,255,0.45);">Versão: v21.5.8 em 08/08/2026</span>
     <br><br>
     <a href="/privacidade.html" style="color:rgba(255,255,255,.6);text-decoration:none;margin:0 12px">Política de Privacidade</a>
     <a href="/termos-de-uso.html" style="color:rgba(255,255,255,.6);text-decoration:none;margin:0 12px">Termos de Uso</a>
@@ -1829,7 +1829,7 @@ function sendSupportMessage() {
         
         if (data.protocolo) {
             const protocolDiv = document.getElementById('support-protocol');
-            protocolDiv.textContent = `📋 Protocolo gerado: ${data.protocolo}. Retornaremos em seu e-mail.`;
+            protocolDiv.textContent = `📋 Protocolo gerado: ${data.protocolo}. Use este número para acompanhar.`;
             protocolDiv.style.display = 'block';
         }
     })

@@ -1,10 +1,10 @@
-# ===== v21.5.7 - 2026-08-08 ==========================================
-# - Adicionada camada de autenticação via cookie de sessão (session_token)
-# - Login define cookie HttpOnly com 30 dias de duração
-# - Dashboard (/dashboard, /dashboard-cliente, /ia) protegido — requer login
-# - APIs (/medications, /clinical-info, /appointments) retornam 401 sem autenticação
-# - Correção CTG-023: dashboard não expõe HTML sem login (401 em vez de 200)
-# - Correção CTG-125: APIs retornam 401 em vez de 400/404 para requests sem auth
+# ===== v21.5.8 - 2026-08-08 ==========================================
+# - Correção CTG-032: envio de documentos usa user.email como fallback
+# - Correção suporte: classificação de dúvidas de pagamento como 'simples'
+# - Correção suporte: mensagem sem e-mail na landing page não menciona envio
+# - Correção landing: botões de pricing com onclick inline (trial/basico/pro)
+# - Manual do Produto: preços atualizados v1.5 (R$49,90 / R$89,90)
+# - Frontend: protocolo de suporte sem menção a 'retornaremos por e-mail'
 import sys
 # Garante codificação UTF-8 para evitar erros de unicode no console (especialmente no Windows)
 if sys.platform.startswith('win'):
@@ -898,7 +898,10 @@ async def send_documents_email(user_id: str, payload: dict, db: Session = Depend
             
         destinatario = payload.get("email", "").strip()
         if not destinatario:
-            raise HTTPException(status_code=400, detail="E-mail destinatário é obrigatório")
+            # Fallback: usa o e-mail do usuário logado
+            destinatario = user.email
+        if not destinatario:
+            raise HTTPException(status_code=400, detail="E-mail destinatário é obrigatório. Cadastre um e-mail ou informe um destinatário.")
             
         # Gmail API Config (HTTPS/443 — funciona no Railway)
         gmail_client_id = os.getenv("GMAIL_CLIENT_ID")
@@ -1130,14 +1133,18 @@ async def support_message(payload: dict, db: Session = Depends(get_db)):
         # 1. Classificar a intenção com Gemini
         gemini_key = os.getenv("GEMINI_API_KEY")
         if not gemini_key:
-            # Sem IA, envia e-mail direto
+            # Sem IA, envia e-mail direto (se tiver e-mail)
             protocolo = _gerar_protocolo()
-            _enviar_email_suporte(protocolo, user_name, user_email, message, history)
+            if user_email:
+                _enviar_email_suporte(protocolo, user_name, user_email, message, history)
+                msg_resposta = f"Recebemos sua mensagem! Protocolo: {protocolo}. Responderemos em até 2h no seu e-mail."
+            else:
+                msg_resposta = f"Recebemos sua mensagem! Protocolo: {protocolo}. Entre em contato pelo e-mail crs.home.care.ai@gmail.com mencionando este protocolo."
             return {
                 "status": "forwarded",
                 "protocolo": protocolo,
-                "message": f"Recebemos sua mensagem! Protocolo: {protocolo}. Responderemos em até 2h no seu e-mail.",
-                "ia_response": f"Recebemos sua mensagem! Um atendente vai analisar e responder em até 2h no e-mail cadastrado. Seu protocolo é: {protocolo}."
+                "message": msg_resposta,
+                "ia_response": msg_resposta
             }
         
         # 2. Perguntar ao Gemini se é dúvida simples ou precisa de humano
@@ -1146,8 +1153,9 @@ async def support_message(payload: dict, db: Session = Depends(get_db)):
             "O aplicativo ajuda cuidadores e familiares a gerenciar medicamentos, consultas médicas, "
             "e cuidar de pessoas que precisam de atenção especial.\n\n"
             "Analise a mensagem do usuário e classifique em:\n"
-            "- 'simples': dúvida comum sobre planos, preços, funcionalidades, uso do app. Responda diretamente.\n"
-            "- 'complexa': problema técnico, reclamação, solicitação específica que precisa de um humano.\n\n"
+            "- 'simples': dúvida sobre planos, preços, formas de pagamento, cartão, funcionalidades, uso do app, cadastro. Responda diretamente com informações corretas e úteis.\n"
+            "- 'complexa': SOMENTE problemas técnicos (bug, erro, algo quebrado), reclamação grave, ou solicitação que exija ação manual de um atendente.\n\n"
+            "REGRA: Na dúvida, classifique como 'simples'. Só classifique como 'complexa' se for claramente um problema técnico que você não pode resolver.\n\n"
             "Responda EXATAMENTE neste formato JSON (sem texto antes ou depois):\n"
             '{"tipo":"simples|complexa","resposta":"sua resposta aqui","assunto":"resumo em 5 palavras"}\n\n'
             f"Usuário: {user_name}\n"
@@ -1168,14 +1176,18 @@ async def support_message(payload: dict, db: Session = Depends(get_db)):
                     gemini_data = await resp.json()
                     raw_text = gemini_data["candidates"][0]["content"]["parts"][0]["text"]
         except Exception as e:
-            # Fallback: encaminha para humano
+            # Fallback: encaminha para humano (se tiver e-mail)
             protocolo = _gerar_protocolo()
-            _enviar_email_suporte(protocolo, user_name, user_email, message, history)
+            if user_email:
+                _enviar_email_suporte(protocolo, user_name, user_email, message, history)
+                ia_msg = f"Obrigado, {user_name}! Sua mensagem foi registrada com o protocolo {protocolo}. Nossa equipe analisará e responderá em até 2h no e-mail cadastrado."
+            else:
+                ia_msg = f"Obrigado, {user_name}! Sua mensagem foi registrada com o protocolo {protocolo}. Entre em contato pelo e-mail crs.home.care.ai@gmail.com mencionando este protocolo."
             return {
                 "status": "forwarded",
                 "protocolo": protocolo,
                 "message": f"Recebemos sua mensagem! Protocolo: {protocolo}.",
-                "ia_response": f"Obrigado, {user_name}! Sua mensagem foi registrada com o protocolo {protocolo}. Nossa equipe analisará e responderá em até 2h no e-mail cadastrado."
+                "ia_response": ia_msg
             }
         
         # 3. Parse da resposta
@@ -1191,14 +1203,18 @@ async def support_message(payload: dict, db: Session = Depends(get_db)):
         try:
             result = json_lib.loads(raw_text.strip())
         except:
-            # Se falhar o parse, encaminha
+            # Se falhar o parse, encaminha (se tiver e-mail)
             protocolo = _gerar_protocolo()
-            _enviar_email_suporte(protocolo, user_name, user_email, message, history)
+            if user_email:
+                _enviar_email_suporte(protocolo, user_name, user_email, message, history)
+                ia_msg = f"Obrigado! Sua mensagem foi registrada ({protocolo}). Um atendente responderá em até 2h."
+            else:
+                ia_msg = f"Obrigado! Sua mensagem foi registrada ({protocolo}). Entre em contato pelo e-mail crs.home.care.ai@gmail.com."
             return {
                 "status": "forwarded",
                 "protocolo": protocolo,
                 "message": f"Recebemos sua mensagem! Protocolo: {protocolo}.",
-                "ia_response": f"Obrigado! Sua mensagem foi registrada ({protocolo}). Um atendente responderá em até 2h."
+                "ia_response": ia_msg
             }
         
         tipo = result.get("tipo", "complexa")
@@ -1213,13 +1229,23 @@ async def support_message(payload: dict, db: Session = Depends(get_db)):
         
         # 4. Dúvida complexa → gerar protocolo e enviar e-mail
         protocolo = _gerar_protocolo()
-        _enviar_email_suporte(protocolo, user_name, user_email, message, history)
         
-        resposta_completa = (
-            f"{resposta}\n\n"
-            f"📋 Sua solicitação foi registrada com o protocolo **{protocolo}**. "
-            f"Nossa equipe analisará e responderá em até 2h no e-mail cadastrado."
-        )
+        # Só tenta enviar e-mail se tiver destinatário
+        if user_email:
+            _enviar_email_suporte(protocolo, user_name, user_email, message, history)
+            resposta_completa = (
+                f"{resposta}\n\n"
+                f"📋 Sua solicitação foi registrada com o protocolo **{protocolo}**. "
+                f"Nossa equipe analisará e responderá em até 2h no e-mail **{user_email}**."
+            )
+        else:
+            # Sem e-mail (ex: landing page) — não menciona e-mail
+            resposta_completa = (
+                f"{resposta}\n\n"
+                f"📋 Sua solicitação foi registrada com o protocolo **{protocolo}**. "
+                f"Entre em contato pelo e-mail **crs.home.care.ai@gmail.com** "
+                f"mencionando este protocolo para acompanhar o atendimento."
+            )
         
         return {
             "status": "forwarded",
