@@ -1,4 +1,5 @@
-# ===== v21.5.8 - 2026-08-08 ==========================================
+# ===== v21.5.9 - 2026-08-08 ==========================================
+# - Suporte landing page: campo de e-mail + timeout 20s + prompt melhorado (Maximus)
 # - Correção CTG-032: envio de documentos usa user.email como fallback
 # - Correção suporte: classificação de dúvidas de pagamento como 'simples'
 # - Correção suporte: mensagem sem e-mail na landing page não menciona envio
@@ -1149,13 +1150,22 @@ async def support_message(payload: dict, db: Session = Depends(get_db)):
         
         # 2. Perguntar ao Gemini se é dúvida simples ou precisa de humano
         faq_prompt = (
-            "Você é um assistente de suporte do aplicativo Cuidadoso (Home Care IA). "
-            "O aplicativo ajuda cuidadores e familiares a gerenciar medicamentos, consultas médicas, "
-            "e cuidar de pessoas que precisam de atenção especial.\n\n"
-            "Analise a mensagem do usuário e classifique em:\n"
-            "- 'simples': dúvida sobre planos, preços, formas de pagamento, cartão, funcionalidades, uso do app, cadastro. Responda diretamente com informações corretas e úteis.\n"
-            "- 'complexa': SOMENTE problemas técnicos (bug, erro, algo quebrado), reclamação grave, ou solicitação que exija ação manual de um atendente.\n\n"
-            "REGRA: Na dúvida, classifique como 'simples'. Só classifique como 'complexa' se for claramente um problema técnico que você não pode resolver.\n\n"
+            "Você é o Maximus, assistente virtual oficial do Cuidadoso (cuidaidoso.ia.br), "
+            "uma plataforma de Home Care Inteligente que ajuda famílias a gerenciar medicamentos, "
+            "consultas médicas e cuidados de pessoas que precisam de atenção especial.\n\n"
+            "INFORMAÇÕES DO PRODUTO (use estas informações nas respostas):\n"
+            "- Planos: Trial (14 dias grátis, 1 pessoa cuidada), Básico (R$49,90/mês, até 3 pessoas), Pró (R$89,90/mês, até 5 pessoas)\n"
+            "- Formas de pagamento: PIX, boleto e cartão de crédito (em breve)\n"
+            "- Funcionalidades: lembretes de medicamentos com OCR de receita, calendário de doses, "
+            "ficha médica com documentos, agendamento de consultas, assistente IA, notificações push\n"
+            "- Não é necessário cartão de crédito para o trial de 14 dias\n"
+            "- O cancelamento é imediato e sem multa\n\n"
+            "REGRAS DE CLASSIFICAÇÃO:\n"
+            "- 'simples': dúvidas sobre planos, preços, pagamento, funcionalidades, cadastro, uso do app, "
+            "trial, cancelamento, diferenças entre planos. Responda de forma AMIGÁVEL, ÚTIL e COMPLETA.\n"
+            "- 'complexa': SOMENTE problemas técnicos graves (bug confirmado, erro no sistema, dados perdidos) "
+            "ou reclamações que exigem ação manual de um atendente humano.\n"
+            "REGRA: Na dúvida, classifique como 'simples'. A maioria das perguntas é simples.\n\n"
             "Responda EXATAMENTE neste formato JSON (sem texto antes ou depois):\n"
             '{"tipo":"simples|complexa","resposta":"sua resposta aqui","assunto":"resumo em 5 palavras"}\n\n'
             f"Usuário: {user_name}\n"

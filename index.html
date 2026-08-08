@@ -1223,7 +1223,7 @@ footer p { font-size:0.9rem; line-height:1.6 }
   <p>
     Home Care Inteligente — Tecnologia e cuidado para sua família.<br>
     &copy; 2025 Cuidadoso. Todos os direitos reservados.
-    <br><span style="font-size: 0.8rem; color: rgba(255,255,255,0.45);">Versão: v21.5.8 em 08/08/2026</span>
+    <br><span style="font-size: 0.8rem; color: rgba(255,255,255,0.45);">Versão: v21.5.9 em 08/08/2026</span>
     <br><br>
     <a href="/privacidade.html" style="color:rgba(255,255,255,.6);text-decoration:none;margin:0 12px">Política de Privacidade</a>
     <a href="/termos-de-uso.html" style="color:rgba(255,255,255,.6);text-decoration:none;margin:0 12px">Termos de Uso</a>
@@ -1249,6 +1249,10 @@ footer p { font-size:0.9rem; line-height:1.6 }
         </div>
     </div>
     
+    <div style="display: flex; gap: 8px; margin-bottom: 8px;">
+        <input type="email" id="support-chat-email" placeholder="Seu e-mail (para retornarmos)" 
+            style="flex: 1; background: #1e293b; border: 1px solid rgba(255,255,255,0.1); border-radius: 10px; padding: 10px 14px; color: #fff; font-size: 0.85rem; outline: none;">
+    </div>
     <div style="display: flex; gap: 8px;">
         <input type="text" id="support-chat-input" placeholder="Digite sua dúvida..." 
             style="flex: 1; background: #1e293b; border: 1px solid rgba(255,255,255,0.1); border-radius: 10px; padding: 10px 14px; color: #fff; font-size: 0.9rem; outline: none;"
@@ -1795,8 +1799,11 @@ function closeSupportModal() {
 
 function sendSupportMessage() {
     const input = document.getElementById('support-chat-input');
+    const emailInput = document.getElementById('support-chat-email');
     const msg = input.value.trim();
     if (!msg) return;
+    
+    const userEmail = emailInput ? emailInput.value.trim() : '';
     
     appendSupportMessage('user', msg);
     input.value = '';
@@ -1807,19 +1814,25 @@ function sendSupportMessage() {
     
     const url = API_BASE + "/api/support/message";
     
+    // Timeout de 20s — se demorar, mostra fallback
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 20000);
+    
     fetch(url, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
             user_id: '',
             user_name: 'Visitante (Site)',
-            user_email: '',
+            user_email: userEmail,
             message: msg,
             history: supportHistory
-        })
+        }),
+        signal: controller.signal
     })
     .then(r => r.json())
     .then(data => {
+        clearTimeout(timeoutId);
         const typingEl = document.getElementById(typingId);
         if (typingEl) typingEl.remove();
         
@@ -1834,10 +1847,16 @@ function sendSupportMessage() {
         }
     })
     .catch(err => {
-        console.error(err);
+        clearTimeout(timeoutId);
         const typingEl = document.getElementById(typingId);
         if (typingEl) typingEl.remove();
-        appendSupportMessage('assistant', '⚠️ Desculpe, ocorreu um erro de conexão com o suporte.');
+        
+        if (err.name === 'AbortError') {
+            appendSupportMessage('assistant', '⏱️ Nosso assistente está sobrecarregado. Tente novamente em alguns instantes, ou envie um e-mail para crs.home.care.ai@gmail.com.');
+            supportHistory.push({role: 'assistant', content: 'Timeout'});
+        } else {
+            appendSupportMessage('assistant', '⚠️ Desculpe, ocorreu um erro de conexão com o suporte. Tente novamente.');
+        }
     })
     .finally(() => {
         input.disabled = false;
