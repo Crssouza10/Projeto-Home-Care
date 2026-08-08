@@ -2594,7 +2594,7 @@
                         } catch(e) { console.error('Error parsing created_at:', e); }
                     }
                     
-                    trialBadge.textContent = `⏳ ${daysLeft} dias restantes`;
+                    trialBadge.textContent = `Plano Grátis | ⏳ ${daysLeft} dias restantes`;
                     trialBadge.style.display = 'inline-block';
                 } else {
                     // Contas básicas e pro: oculta badge de trial
@@ -2608,13 +2608,9 @@
                 };
             }
             
-            // Oculta botão flutuante de receita para contas gratuitas/trial
+            // Oculta botão flutuante de receita definitivamente
             if (btnFloatingReceita) {
-                if (isTrialOrFree) {
-                    btnFloatingReceita.style.setProperty('display', 'none', 'important');
-                } else {
-                    btnFloatingReceita.style.display = 'flex';
-                }
+                btnFloatingReceita.style.setProperty('display', 'none', 'important');
             }
             
             // ===== CONFIGURAÇÕES INICIAIS =====
@@ -7471,9 +7467,9 @@
         <!-- Toast container (garantir que exista) -->
         <div class="toast" id="toast"></div>
 
-        <!-- Botão que aciona o upload -->
+        <!-- Botão que aciona o upload (Desativado permanentemente) -->
         <button id="btn-floating-receita" onclick="openReceitaModal()" 
-                style="background: #8b5cf6; color: white; padding: 8px 16px; border-radius: 8px; border: none; cursor: pointer; font-weight: bold; display: flex; align-items: center; gap: 5px;">
+                style="display: none !important;">
             📄 Receita/Remédio
         </button>
 
@@ -7978,7 +7974,7 @@
 
     <!-- 🔖 INDICADOR DE VERSÃO -->
     <div style="text-align:center; padding:20px; color:#00D4FF; font-size:0.75rem; margin-top:30px; opacity:0.7;">
-        🏠 CR$ Home Care AI v21.5.5 — build 2026-08-06 — correções de cadastro grátis e responsividade
+        🏠 CR$ Home Care AI v21.5.6 — build 2026-08-07 — correções de cadastro grátis e responsividade
     </div>
 <!-- Cloudflare Web Analytics --><script type='module' src='https://static.cloudflareinsights.com/beacon.min.js' data-cf-beacon='{"token": "d1a9b25d409d47f693bbb1a7f0afbc97"}'></script><!-- End Cloudflare Web Analytics -->
 

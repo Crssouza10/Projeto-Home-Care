@@ -1,4 +1,4 @@
-# ===== v21.5.5 - 2026-08-06 ==========================================
+# ===== v21.5.6 - 2026-08-07 ==========================================
 # Correções:
 # - Adicionado endpoint de suporte 'Falar com a Equipe' (chat IA + e-mail com protocolo)
 # - Extraídas funções auxiliares _get_gmail_access_token() e _send_email_via_gmail_api()
@@ -163,7 +163,7 @@ except Exception as e:
 # Garante que a coluna plan existe na tabela users
 try:
     with engine.connect() as conn:
-        conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS plan VARCHAR(20) DEFAULT 'basico';"))
+        conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS plan VARCHAR(20) DEFAULT 'trial';"))
         conn.commit()
         print("✅ Coluna plan verificada/adicionada com sucesso na tabela users.")
 except Exception as e:
@@ -256,7 +256,7 @@ class User(Base):
     conditions = Column(Text, nullable=True)
     blood_type = Column(String(10), nullable=True)
     health_insurance = Column(String(100), nullable=True)
-    plan = Column(String(20), default="basico")  # basico | pro
+    plan = Column(String(20), default="trial")  # trial | basico | pro
     health_insurance_card = Column(Text, nullable=True)
     identity_document = Column(String(100), nullable=True)
     identity_document_file = Column(Text, nullable=True)
@@ -371,7 +371,7 @@ class Subscription(Base):
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     user_id = Column(UUID(as_uuid=True), nullable=False, index=True)
-    plan = Column(String(20), nullable=False, default="basico")
+    plan = Column(String(20), nullable=False, default="trial")
     mp_preference_id = Column(String(100), nullable=True)
     mp_subscription_id = Column(String(100), nullable=True)
     checkout_url = Column(Text, nullable=True)
@@ -403,6 +403,7 @@ class UserCreate(BaseModel):
     email: str
     phone: Optional[str] = None
     password: str
+    plan: Optional[str] = "trial"
 
 class UserResponse(BaseModel):
     id: uuid.UUID
@@ -410,7 +411,7 @@ class UserResponse(BaseModel):
     email: str
     phone: Optional[str]
     is_active: bool
-    plan: Optional[str] = "basico"
+    plan: Optional[str] = "trial"
     created_at: datetime
     model_config = ConfigDict(from_attributes=True)
 
@@ -2236,7 +2237,7 @@ async def create_user(user: UserCreate, db: Session = Depends(get_db)):
             raise HTTPException(status_code=400, detail="Telefone já cadastrado por outro usuário")
     
     password_hash = bcrypt.hashpw(user.password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
-    db_user = User(full_name=user.full_name, email=user.email, phone=phone_val, password_hash=password_hash)
+    db_user = User(full_name=user.full_name, email=user.email, phone=phone_val, password_hash=password_hash, plan=user.plan)
     db.add(db_user)
     db.commit()
     db.refresh(db_user)
