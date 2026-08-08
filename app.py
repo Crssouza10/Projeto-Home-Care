@@ -1,5 +1,6 @@
-# ===== v21.5.9 - 2026-08-08 ==========================================
-# - Suporte landing page: campo de e-mail + timeout 20s + prompt melhorado (Maximus)
+# ===== v21.5.10 - 2026-08-08 ==========================================
+# - Função _ask_ai() com fallback Gemini → DeepSeek (cota Gemini esgotada)
+# - support_message e ocr_allergies adaptados para usar _ask_ai()
 # - Correção CTG-032: envio de documentos usa user.email como fallback
 # - Correção suporte: classificação de dúvidas de pagamento como 'simples'
 # - Correção suporte: mensagem sem e-mail na landing page não menciona envio
@@ -1048,6 +1049,74 @@ async def send_documents_email(user_id: str, payload: dict, db: Session = Depend
 
 
 # ══════════════════════════════════════════════════════════════
+# FUNÇÃO AUXILIAR — IA com fallback (Gemini → DeepSeek)
+# ══════════════════════════════════════════════════════════════
+
+def _ask_ai(prompt: str, image_base64: str = None, image_mime: str = "image/jpeg") -> str:
+    """
+    Envia prompt para IA. Tenta Gemini primeiro; se falhar (cota, erro),
+    faz fallback para DeepSeek. Retorna o texto da resposta.
+    Para prompts com imagem, apenas Gemini é usado (DeepSeek não suporta visão).
+    """
+    gemini_key = os.getenv("GEMINI_API_KEY")
+    deepseek_key = os.getenv("DEEPSEEK_API_KEY")
+    
+    # === TENTATIVA 1: Gemini ===
+    if gemini_key:
+        try:
+            if image_base64:
+                # Prompt com imagem (Gemini apenas)
+                payload = {
+                    "contents": [{
+                        "parts": [
+                            {"text": prompt},
+                            {"inlineData": {"mimeType": image_mime, "data": image_base64}}
+                        ]
+                    }],
+                    "generationConfig": {"temperature": 0.3, "maxOutputTokens": 500}
+                }
+            else:
+                payload = {
+                    "contents": [{"parts": [{"text": prompt}]}],
+                    "generationConfig": {"temperature": 0.3, "maxOutputTokens": 500}
+                }
+            
+            for model in ["gemini-2.0-flash", "gemini-1.5-flash"]:
+                url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={gemini_key}"
+                r = requests.post(url, json=payload, timeout=20)
+                if r.status_code == 200:
+                    data = r.json()
+                    return data["candidates"][0]["content"]["parts"][0]["text"]
+                elif r.status_code == 429:
+                    continue  # Quota exceeded, try next model
+        except Exception as e:
+            print(f"⚠️ Gemini falhou: {e}")
+    
+    # === TENTATIVA 2: DeepSeek (apenas texto, sem imagem) ===
+    if deepseek_key and not image_base64:
+        try:
+            headers = {
+                "Authorization": f"Bearer {deepseek_key}",
+                "Content-Type": "application/json"
+            }
+            payload = {
+                "model": "deepseek-chat",
+                "messages": [{"role": "user", "content": prompt}],
+                "temperature": 0.3,
+                "max_tokens": 500
+            }
+            r = requests.post("https://api.deepseek.com/v1/chat/completions", 
+                            headers=headers, json=payload, timeout=20)
+            if r.status_code == 200:
+                data = r.json()
+                return data["choices"][0]["message"]["content"]
+        except Exception as e:
+            print(f"⚠️ DeepSeek falhou: {e}")
+    
+    # === FALHA TOTAL ===
+    raise RuntimeError("Nenhuma IA disponível (Gemini e DeepSeek indisponíveis)")
+
+# ══════════════════════════════════════════════════════════════
 # FUNÇÕES AUXILIARES — GMAIL API
 # ══════════════════════════════════════════════════════════════
 
@@ -1131,24 +1200,7 @@ async def support_message(payload: dict, db: Session = Depends(get_db)):
             except ValueError:
                 pass
         
-        # 1. Classificar a intenção com Gemini
-        gemini_key = os.getenv("GEMINI_API_KEY")
-        if not gemini_key:
-            # Sem IA, envia e-mail direto (se tiver e-mail)
-            protocolo = _gerar_protocolo()
-            if user_email:
-                _enviar_email_suporte(protocolo, user_name, user_email, message, history)
-                msg_resposta = f"Recebemos sua mensagem! Protocolo: {protocolo}. Responderemos em até 2h no seu e-mail."
-            else:
-                msg_resposta = f"Recebemos sua mensagem! Protocolo: {protocolo}. Entre em contato pelo e-mail crs.home.care.ai@gmail.com mencionando este protocolo."
-            return {
-                "status": "forwarded",
-                "protocolo": protocolo,
-                "message": msg_resposta,
-                "ia_response": msg_resposta
-            }
-        
-        # 2. Perguntar ao Gemini se é dúvida simples ou precisa de humano
+        # 1. Classificar a intenção com IA (Gemini → fallback DeepSeek)
         faq_prompt = (
             "Você é o Maximus, assistente virtual oficial do Cuidadoso (cuidaidoso.ia.br), "
             "uma plataforma de Home Care Inteligente que ajuda famílias a gerenciar medicamentos, "
@@ -1173,20 +1225,9 @@ async def support_message(payload: dict, db: Session = Depends(get_db)):
         )
         
         try:
-            import aiohttp
-            async with aiohttp.ClientSession() as session:
-                async with session.post(
-                    f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key={gemini_key}",
-                    json={
-                        "contents": [{"role": "user", "parts": [{"text": faq_prompt}]}],
-                        "generationConfig": {"temperature": 0.3, "maxOutputTokens": 500}
-                    },
-                    timeout=aiohttp.ClientTimeout(total=15)
-                ) as resp:
-                    gemini_data = await resp.json()
-                    raw_text = gemini_data["candidates"][0]["content"]["parts"][0]["text"]
+            raw_text = _ask_ai(faq_prompt)
         except Exception as e:
-            # Fallback: encaminha para humano (se tiver e-mail)
+            # Fallback: IA indisponível → encaminha para humano (se tiver e-mail)
             protocolo = _gerar_protocolo()
             if user_email:
                 _enviar_email_suporte(protocolo, user_name, user_email, message, history)
@@ -1200,20 +1241,16 @@ async def support_message(payload: dict, db: Session = Depends(get_db)):
                 "ia_response": ia_msg
             }
         
-        # 3. Parse da resposta
+        # 2. Parse da resposta JSON
         import json as json_lib
         raw_text = raw_text.strip()
-        if raw_text.startswith("```json"):
-            raw_text = raw_text[7:]
-        if raw_text.startswith("```"):
-            raw_text = raw_text[3:]
-        if raw_text.endswith("```"):
-            raw_text = raw_text[:-3]
+        if raw_text.startswith("```json"): raw_text = raw_text[7:]
+        if raw_text.startswith("```"): raw_text = raw_text[3:]
+        if raw_text.endswith("```"): raw_text = raw_text[:-3]
         
         try:
             result = json_lib.loads(raw_text.strip())
         except:
-            # Se falhar o parse, encaminha (se tiver e-mail)
             protocolo = _gerar_protocolo()
             if user_email:
                 _enviar_email_suporte(protocolo, user_name, user_email, message, history)
@@ -3506,51 +3543,13 @@ async def ocr_allergies(user_id: str, file: UploadFile = File(...)):
             "Retorne APENAS a lista no formato de texto simples, sem markdown ou explicacoes adicionais."
         )
         
-        payload = {
-            "contents": [
-                {
-                    "parts": [
-                        {"text": prompt},
-                        {
-                            "inlineData": {
-                               "mimeType": mime_type,
-                               "data": base64_data
-                            }
-                        }
-                    ]
-                }
-            ]
-        }
-        
-        candidate_models = ["gemini-2.0-flash", "gemini-1.5-flash"]
-        response = None
-        
-        async with httpx.AsyncClient(timeout=30.0) as client:
-            for model in candidate_models:
-                url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={gemini_key}"
-                headers = {"Content-Type": "application/json"}
-                try:
-                    r = await client.post(url, headers=headers, json=payload)
-                    if r.status_code == 200:
-                        response = r
-                        break
-                except Exception as ex:
-                    print(f"⚠️ Erro ao tentar modelo {model} para alergias: {str(ex)}")
-        
-        if not response:
-            raise HTTPException(status_code=502, detail="Erro da API do Gemini (falha na leitura de alergias).")
-            
-        generated_text = "Nenhuma alergia relatada"
         try:
-            resp_json = response.json()
-            candidates = resp_json.get("candidates", [])
-            if candidates:
-                parts = candidates[0].get("content", {}).get("parts", [])
-                if parts:
-                    generated_text = parts[0].get("text", "").strip()
-        except Exception as parse_ex:
-            print(f"⚠️ Erro ao parsear resposta do Gemini para alergias: {parse_ex}")
-            
+            generated_text = _ask_ai(prompt, image_base64=base64_data, image_mime=mime_type)
+            generated_text = generated_text.strip()
+        except Exception as e:
+            print(f"⚠️ IA indisponível para OCR alergias: {e}")
+            raise HTTPException(status_code=502, detail="Serviço de IA indisponível no momento. Tente novamente em instantes.")
+        
         return JSONResponse(content={
             "success": True,
             "allergies": generated_text
