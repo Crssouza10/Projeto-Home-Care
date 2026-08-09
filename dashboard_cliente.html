@@ -1544,6 +1544,10 @@
                     style="background-color: #ef4444; color: white; padding: 8px 16px; border-radius: 8px; border: none; font-weight: bold; cursor: pointer; font-size: 14px;">
                 Sair
             </button>
+            <button onclick="handleDeactivateAccount()" title="Cancelar Conta"
+                    style="background: transparent; color: #f87171; padding: 8px 16px; border-radius: 8px; border: 1px solid #f87171; font-weight: bold; cursor: pointer; font-size: 12px; opacity: 0.8;">
+                ✕
+            </button>
         </div>
     </header>
     
@@ -7369,7 +7373,55 @@
                     window.location.replace('/');
                 }, 1000);
             } else {
-                console.log('âŒ Logout cancelado pelo usuário');
+                console.log('❌ Logout cancelado pelo usuário');
+            }
+        }
+
+        // ============================================
+        // 🗑️ FUNÇÃO DE CANCELAR CONTA (SOFT DELETE)
+        // ============================================
+        async function handleDeactivateAccount() {
+            if (!confirm('Tem certeza que deseja cancelar sua conta?\n\nSeus dados serão preservados caso queira reativar no futuro. Esta ação não pode ser desfeita por você.')) {
+                return;
+            }
+
+            // Dupla confirmação
+            if (!confirm('Confirme: deseja realmente cancelar sua conta?')) {
+                return;
+            }
+
+            const userId = state.user?.id || localStorage.getItem('user_id');
+            if (!userId) {
+                alert('Erro: usuário não identificado.');
+                return;
+            }
+
+            try {
+                const API_URL = window.location.hostname === 'localhost'
+                    ? `http://localhost:${window.location.port || '8866'}`
+                    : 'https://web-production-46b53.up.railway.app';
+
+                const response = await fetch(`${API_URL}/api/cliente/${userId}/deactivate`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'include'
+                });
+
+                if (!response.ok) {
+                    const err = await response.json();
+                    throw new Error(err.detail || 'Erro ao cancelar conta');
+                }
+
+                alert('✅ Conta cancelada com sucesso.\n\nSeus dados foram preservados. Entre em contato caso queira reativar sua conta.');
+
+                // Limpar dados locais e redirecionar
+                localStorage.clear();
+                sessionStorage.clear();
+                window.location.href = '/';
+
+            } catch (err) {
+                alert('❌ Erro: ' + err.message);
+                console.error('Erro ao cancelar conta:', err);
             }
         }
 

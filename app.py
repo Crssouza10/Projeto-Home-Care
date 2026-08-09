@@ -1,4 +1,4 @@
-# ===== v21.5.10 - 2026-08-08 ==========================================
+# ===== v1.5.11 - 2026-08-09 ==========================================
 # - Função _ask_ai() com fallback Gemini → DeepSeek (cota Gemini esgotada)
 # - support_message e ocr_allergies adaptados para usar _ask_ai()
 # - Correção CTG-032: envio de documentos usa user.email como fallback
@@ -4485,6 +4485,43 @@ async def cancelar_assinatura(user_id: str, db: Session = Depends(get_db)):
     db.commit()
 
     return {"status": "success", "message": "Assinatura cancelada com sucesso"}
+
+
+@app.post("/api/cliente/{user_id}/deactivate")
+async def desativar_conta(user_id: str, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    """Desativa a conta do usuário (soft delete). Os dados são preservados para possível reativação."""
+    try:
+        user_uuid = uuid.UUID(user_id)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="user_id inválido")
+
+    user = db.query(User).filter(User.id == user_uuid, User.is_active == True).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="Usuário não encontrado ou já inativo")
+
+    # Cancela assinatura ativa no Mercado Pago, se houver
+    subscription = db.query(Subscription).filter(
+        Subscription.user_id == user_uuid,
+        Subscription.status == "active"
+    ).order_by(Subscription.created_at.desc()).first()
+
+    if subscription:
+        if subscription.mp_subscription_id and mp_sdk:
+            try:
+                mp_sdk.preapproval().update(subscription.mp_subscription_id, {"status": "cancelled"})
+            except Exception as e:
+                print(f"⚠️ Erro ao cancelar assinatura MP na desativação: {e}")
+        subscription.status = "cancelled"
+        subscription.end_date = datetime.utcnow()
+
+    # Soft delete: desativa o usuário (preserva dados)
+    user.is_active = False
+    db.commit()
+
+    return {
+        "status": "success",
+        "message": "Conta desativada com sucesso. Seus dados foram preservados. Entre em contato para reativar."
+    }
 
 
 @app.post("/api/webhook/mercadopago")
