@@ -4524,6 +4524,23 @@ async def desativar_conta(user_id: str, db: Session = Depends(get_db), current_u
     }
 
 
+@app.post("/api/admin/reactivate/{user_id}")
+async def reativar_conta(user_id: str, db: Session = Depends(get_db)):
+    """Reativa a conta do usuário (uso administrativo)."""
+    try:
+        user_uuid = uuid.UUID(user_id)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="user_id inválido")
+
+    user = db.query(User).filter(User.id == user_uuid).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="Usuário não encontrado")
+
+    user.is_active = True
+    db.commit()
+    return {"status": "success", "message": "Conta reativada com sucesso"}
+
+
 @app.post("/api/webhook/mercadopago")
 async def webhook_mercadopago(request: Request, db: Session = Depends(get_db)):
     """Recebe notificações de pagamento do Mercado Pago"""
