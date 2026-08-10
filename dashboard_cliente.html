@@ -5274,9 +5274,10 @@
                 document.getElementById('med-name').value = med.name || '';
                 document.getElementById('med-dosage').value = med.dosage || '';
                 
-                // Preenche duração
+                // Preenche duração e desmarca contínuo
                 if (med.duration_days) {
                     document.getElementById('med-duration').value = med.duration_days;
+                    document.getElementById('med-continuous').checked = false;
                 }
                 
                 // Preenche horário (primeiro da lista)
