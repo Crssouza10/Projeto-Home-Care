@@ -396,7 +396,7 @@ class UserCreate(BaseModel):
     full_name: str
     email: str
     phone: Optional[str] = None
-    password: str
+    password: str = Field(..., min_length=4, description="Senha deve ter pelo menos 4 caracteres")
     plan: Optional[str] = "trial"
 
 class UserResponse(BaseModel):
@@ -1573,13 +1573,11 @@ async def get_client_medications(user_id: str, date: str = None, db: Session = D
     
     for med in medications:
         sched = schedules_by_med.get(med.id)
-        if sched:
-            status = sched.status
-            med_time = sched.scheduled_time
-        else:
-            # Fallback: usa medication.time do template (horário padrão)
-            status = "pending"
-            med_time = med.time
+        if not sched:
+            # Sem schedule para esta data — não inclui (evita fantasmas após deleção "Só hoje")
+            continue
+        status = sched.status
+        med_time = sched.scheduled_time
             
         resultado.append({
             "id": str(med.id),

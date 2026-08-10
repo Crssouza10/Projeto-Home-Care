@@ -3665,6 +3665,19 @@
         async function handleIdFrontUpload(event) {
             const file = event.target.files[0];
             if (!file) return;
+            
+            // Preview local IMEDIATO (antes do upload)
+            const frontContainer = document.getElementById('clinical-edit-id-front-preview-container');
+            const frontImg = document.getElementById('clinical-edit-id-front-preview-img');
+            const frontBtnDelete = document.getElementById('btn-delete-id-front');
+            if (file.type.startsWith('image/')) {
+                frontImg.src = URL.createObjectURL(file);
+            } else {
+                frontImg.src = 'https://cdn-icons-png.flaticon.com/512/337/337946.png';
+            }
+            frontContainer.style.display = 'block';
+            frontBtnDelete.style.display = 'inline-flex';
+            
             showToast("⏳ Importando frente do documento...");
             const formData = new FormData();
             formData.append('file', file);
@@ -3698,6 +3711,19 @@
         async function handleIdBackUpload(event) {
             const file = event.target.files[0];
             if (!file) return;
+            
+            // Preview local IMEDIATO (antes do upload)
+            const backContainer = document.getElementById('clinical-edit-id-back-preview-container');
+            const backImg = document.getElementById('clinical-edit-id-back-preview-img');
+            const backBtnDelete = document.getElementById('btn-delete-id-back');
+            if (file.type.startsWith('image/')) {
+                backImg.src = URL.createObjectURL(file);
+            } else {
+                backImg.src = 'https://cdn-icons-png.flaticon.com/512/337/337946.png';
+            }
+            backContainer.style.display = 'block';
+            backBtnDelete.style.display = 'inline-flex';
+            
             showToast("⏳ Importando verso do documento...");
             const formData = new FormData();
             formData.append('file', file);
@@ -3784,6 +3810,19 @@
         async function handleInsuranceFrontUpload(event) {
             const file = event.target.files[0];
             if (!file) return;
+            
+            // Preview local IMEDIATO (antes do upload)
+            const frontContainer = document.getElementById('clinical-edit-insurance-front-preview-container');
+            const frontImg = document.getElementById('clinical-edit-insurance-front-preview-img');
+            const frontBtnDelete = document.getElementById('btn-delete-insurance-front');
+            if (file.type.startsWith('image/')) {
+                frontImg.src = URL.createObjectURL(file);
+            } else {
+                frontImg.src = 'https://cdn-icons-png.flaticon.com/512/337/337946.png';
+            }
+            frontContainer.style.display = 'block';
+            frontBtnDelete.style.display = 'inline-flex';
+            
             showToast("⏳ Importando frente da carteirinha...");
             const formData = new FormData();
             formData.append('file', file);
@@ -3817,6 +3856,19 @@
         async function handleInsuranceBackUpload(event) {
             const file = event.target.files[0];
             if (!file) return;
+            
+            // Preview local IMEDIATO (antes do upload)
+            const backContainer = document.getElementById('clinical-edit-insurance-back-preview-container');
+            const backImg = document.getElementById('clinical-edit-insurance-back-preview-img');
+            const backBtnDelete = document.getElementById('btn-delete-insurance-back');
+            if (file.type.startsWith('image/')) {
+                backImg.src = URL.createObjectURL(file);
+            } else {
+                backImg.src = 'https://cdn-icons-png.flaticon.com/512/337/337946.png';
+            }
+            backContainer.style.display = 'block';
+            backBtnDelete.style.display = 'inline-flex';
+            
             showToast("⏳ Importando verso da carteirinha...");
             const formData = new FormData();
             formData.append('file', file);
@@ -4650,6 +4702,13 @@
             }
             
             if (status === 'pending') {
+                // Verifica se o horário do medicamento já passou (atrasado)
+                const minutosMed = parseInt(h) * 60 + parseInt(m);
+                if (minutosAtuais > minutosMed) {
+                    return `<button disabled style="width:100%; margin-top:10px; padding:14px; background:rgba(239,68,68,0.15); color:#ef4444; border:1px solid rgba(239,68,68,0.5); border-radius:12px; font-weight:800; font-size:1.1rem; cursor:default;">
+                        ⏰ Atrasado — era às ${horaMed}
+                    </button>`;
+                }
                 return '';
             }
             
@@ -5356,6 +5415,23 @@
             const days = Array.from(document.querySelectorAll('#med-days .day-chip.active')).map(chip => parseInt(chip.dataset.day));
             console.log(`💊 [DIAGNÓSTICO] ID do remédio (vazio se novo): "${id}", Dias da semana:`, days);
             
+            // Validações
+            const medName = document.getElementById('med-name').value.trim();
+            if (!medName) {
+                alert('⚠️ Nome do medicamento é obrigatório.');
+                document.getElementById('med-name').focus();
+                btn.disabled = false;
+                btn.textContent = originalText;
+                return;
+            }
+            
+            if (days.length === 0) {
+                alert('⚠️ Selecione pelo menos um dia da semana.');
+                btn.disabled = false;
+                btn.textContent = originalText;
+                return;
+            }
+
             // ✅ Obtém horário dos selects (formato 24h garantido: "HH:MM")
             let timeValue = getFormattedTime();
             if (!timeValue) {
@@ -7537,9 +7613,10 @@
                 return;
             }
 
-            const userId = state.user?.id || localStorage.getItem('user_id');
+            const userId = state.user?.id || localStorage.getItem('userId') || localStorage.getItem('user_id');
             if (!userId) {
-                alert('Erro: usuário não identificado.');
+                alert('Erro: usuário não identificado. Faça login novamente.');
+                window.location.href = '/';
                 return;
             }
 
