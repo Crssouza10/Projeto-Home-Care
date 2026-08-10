@@ -1521,6 +1521,25 @@
                 📄 Receita
             </button>
 
+            <!-- 🔔 BOTÃO ATIVAR NOTIFICAÇÕES PUSH -->
+            <button id="btn-push-notify" onclick="activatePushNotifications()"
+                    style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); 
+                        color: white; 
+                        padding: 8px 14px; 
+                        border-radius: 10px; 
+                        border: none; 
+                        font-weight: 700; 
+                        cursor: pointer; 
+                        font-size: 12px;
+                        display: flex; 
+                        align-items: center; 
+                        gap: 6px;
+                        box-shadow: 0 3px 6px rgba(16,185,129,0.3);
+                        transition: transform 0.2s;
+                        white-space: nowrap;">
+                🔔 Ativar Alertas
+            </button>
+
             <div class="header-stat" onclick="showTodayCommitments()">
                 <div class="header-stat-icon">💊</div>
                 <div>
@@ -5939,8 +5958,53 @@
                 });
                 console.log('✅ Assinatura Push enviada!');
             } catch (err) {
-                console.error('âŒ Erro no Push:', err);
+                console.error('❌ Erro no Push:', err);
             }
+        }
+
+        // ===== ATIVAÇÃO DE NOTIFICAÇÕES VIA BOTÃO (USER GESTURE) =====
+        async function activatePushNotifications() {
+            const btn = document.getElementById('btn-push-notify');
+            if (!btn) return;
+            
+            // Já ativado — não faz nada
+            if (Notification.permission === 'granted') {
+                updatePushButtonState('granted');
+                return;
+            }
+            
+            try {
+                await registerPush();
+                updatePushButtonState('granted');
+            } catch (err) {
+                console.error('❌ Falha ao ativar notificações:', err);
+                // Se o usuário negou, atualiza o botão mesmo assim
+                updatePushButtonState(Notification.permission);
+            }
+        }
+
+        function updatePushButtonState(permission) {
+            const btn = document.getElementById('btn-push-notify');
+            if (!btn) return;
+            
+            if (permission === 'granted') {
+                btn.innerHTML = '🔔 Alertas Ativos';
+                btn.style.background = 'linear-gradient(135deg, #6b7280 0%, #4b5563 100%)';
+                btn.style.boxShadow = 'none';
+                btn.style.opacity = '0.7';
+                btn.onclick = null;  // Remove onclick — já está ativo
+                btn.style.cursor = 'default';
+                btn.title = 'Notificações já ativadas';
+            } else if (permission === 'denied') {
+                btn.innerHTML = '🔕 Bloqueado';
+                btn.style.background = 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)';
+                btn.style.boxShadow = '0 3px 6px rgba(239,68,68,0.3)';
+                btn.style.opacity = '0.7';
+                btn.onclick = null;
+                btn.style.cursor = 'default';
+                btn.title = 'Notificações bloqueadas pelo navegador. Desbloqueie nas configurações.';
+            }
+            // 'default' ou 'prompt' → mantém o botão como "Ativar Alertas"
         }
 
         // ===== INICIALIZAÇÃO (DOMContentLoaded) =====
@@ -5987,9 +6051,9 @@
                 });
             }
             
-            // Registrar Push (se permitido)
+            // Verificar estado das notificações (apenas UI, sem pedir permissão)
             if ('Notification' in window) {
-                registerPush();
+                updatePushButtonState(Notification.permission);
             }
         });
         </script>
