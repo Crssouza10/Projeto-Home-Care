@@ -1540,14 +1540,16 @@
                 <div class="day" id="current-day">19</div>
                 <div class="month-year" id="current-month">Maio 2026</div>
             </div>
-            <button onclick="handleLogout()" 
-                    style="background-color: #ef4444; color: white; padding: 8px 16px; border-radius: 8px; border: none; font-weight: bold; cursor: pointer; font-size: 14px;">
-                Sair
-            </button>
-            <button onclick="handleDeactivateAccount()" title="Cancelar Conta"
-                    style="background: transparent; color: #f87171; padding: 8px 16px; border-radius: 8px; border: 1px solid #f87171; font-weight: bold; cursor: pointer; font-size: 12px; opacity: 0.8;">
-                ✕
-            </button>
+            <div style="display: flex; flex-direction: column; gap: 6px; align-items: center;">
+                <button onclick="handleLogout()" 
+                        style="background-color: #ef4444; color: white; padding: 8px 16px; border-radius: 8px; border: none; font-weight: bold; cursor: pointer; font-size: 14px;">
+                    Sair
+                </button>
+                <button onclick="handleDeactivateAccount()" title="Encerrar Conta"
+                        style="background: transparent; color: #f87171; padding: 6px 12px; border-radius: 8px; border: 1px solid #f87171; font-weight: bold; cursor: pointer; font-size: 11px; opacity: 0.8;">
+                    Encerrar Conta
+                </button>
+            </div>
         </div>
     </header>
     
