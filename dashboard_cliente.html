@@ -5988,21 +5988,39 @@
             if (!btn) return;
             
             if (permission === 'granted') {
-                btn.innerHTML = '🔔 Alertas Ativos';
+                btn.innerHTML = '🔔 Ativo';
                 btn.style.background = 'linear-gradient(135deg, #6b7280 0%, #4b5563 100%)';
                 btn.style.boxShadow = 'none';
-                btn.style.opacity = '0.7';
-                btn.onclick = null;  // Remove onclick — já está ativo
-                btn.style.cursor = 'default';
-                btn.title = 'Notificações já ativadas';
+                btn.style.opacity = '0.8';
+                btn.onclick = function() { alert('✅ As notificações já estão ativadas! Você receberá alertas de medicamentos e consultas mesmo com o app fechado.'); };
+                btn.style.cursor = 'pointer';
+                btn.title = 'Notificações já ativadas — clique para confirmar';
             } else if (permission === 'denied') {
                 btn.innerHTML = '🔕 Bloqueado';
                 btn.style.background = 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)';
                 btn.style.boxShadow = '0 3px 6px rgba(239,68,68,0.3)';
-                btn.style.opacity = '0.7';
-                btn.onclick = null;
-                btn.style.cursor = 'default';
-                btn.title = 'Notificações bloqueadas pelo navegador. Desbloqueie nas configurações.';
+                btn.style.opacity = '0.85';
+                btn.onclick = function() {
+                    // Tenta pedir permissão novamente (funciona se usuário desbloqueou nas configs)
+                    if (Notification.permission !== 'denied') {
+                        activatePushNotifications();
+                        return;
+                    }
+                    // Se ainda bloqueado, mostra instruções
+                    var isAndroid = /android/i.test(navigator.userAgent);
+                    var isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
+                    var msg = '⚠️ Notificações bloqueadas.\\n\\n';
+                    if (isAndroid) {
+                        msg += 'Para desbloquear:\\n1. Toque no 🔒 cadeado na barra de endereço\\n2. Vá em Permissões → Notificações\\n3. Selecione "Permitir"\\n4. Recarregue a página';
+                    } else if (isIOS) {
+                        msg += 'Para desbloquear:\\n1. Vá em Ajustes → Safari\\n2. Role até "Notificações"\\n3. Encontre o site e ative';
+                    } else {
+                        msg += 'Para desbloquear:\\n1. Clique no ícone de cadeado na barra de endereço\\n2. Altere a permissão de Notificações\\n3. Recarregue a página';
+                    }
+                    alert(msg);
+                };
+                btn.style.cursor = 'pointer';
+                btn.title = 'Notificações bloqueadas — clique para ver como desbloquear';
             }
             // 'default' ou 'prompt' → mantém o botão como "Ativar Alertas"
         }
@@ -6054,6 +6072,12 @@
             // Verificar estado das notificações (apenas UI, sem pedir permissão)
             if ('Notification' in window) {
                 updatePushButtonState(Notification.permission);
+                // Reavaliar quando usuário volta ao app (pode ter mudado configs do navegador)
+                document.addEventListener('visibilitychange', function() {
+                    if (!document.hidden) {
+                        updatePushButtonState(Notification.permission);
+                    }
+                });
             }
         });
         </script>
