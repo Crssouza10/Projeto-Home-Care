@@ -2218,7 +2218,7 @@
                     </div>
                     <span class="option-count" id="delete-count-future">--</span>
                 </button>
-                <button class="delete-option-btn all-option" onclick="confirmDeleteMed('all')" style="display: none;">
+                <button class="delete-option-btn all-option" onclick="confirmDeleteMed('all')">
                     <span class="option-icon">🗑 </span>
                     <div class="option-info">
                         <div class="option-title">Excluir tudo</div>
@@ -5404,7 +5404,8 @@
                 const response = await fetch(url, {
                     method,
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload)
+                    body: JSON.stringify(payload),
+                    credentials: 'include'
                 });
                 
                 if (!response.ok) {
@@ -5582,7 +5583,7 @@
             try {
                 const countUrl = `${API_URL}/api/medications/${id}/schedules/count`;
                 console.log('📡 [DIAGNÓSTICO] Buscando contagem em:', countUrl);
-                const res = await fetch(countUrl);
+                const res = await fetch(countUrl, { credentials: 'include' });
                 console.log('📡 [DIAGNÓSTICO] Resposta da contagem recebida. Status:', res.status);
                 const counts = await res.json();
                 console.log('📊 [DIAGNÓSTICO] Contagens decodificadas:', counts);
@@ -5646,7 +5647,8 @@
                 }
                 console.log('📡 [DIAGNÓSTICO] Enviando DELETE para:', url);
                 const response = await fetch(url, { 
-                    method: 'DELETE' 
+                    method: 'DELETE',
+                    credentials: 'include'
                 });
                 
                 console.log('📡 [DIAGNÓSTICO] Resposta de exclusão recebida. Status:', response.status);
