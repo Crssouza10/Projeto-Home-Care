@@ -3192,6 +3192,50 @@
             }
         };
 
+        // ===== DELEÇÃO DIRETA DE DOCUMENTOS (MODO VISUALIZAÇÃO) =====
+        // CTG-039/CTG-040: Permite limpar/substituir documentos já inseridos
+        async function deleteDocumentDirect(type) {
+            const label = type === 'id' ? 'documento de identificação' : 'carteirinha do plano de saúde';
+            if (!confirm(`Deseja realmente remover a ${label} anexada?`)) return;
+            
+            if (type === 'id') {
+                clinicalData.identity_document_file = null;
+            } else if (type === 'insurance') {
+                clinicalData.health_insurance_card = null;
+            }
+            
+            // Persiste a remoção via API (envia TODOS os campos para não limpar outros dados)
+            try {
+                const payload = {
+                    age: clinicalData.age || null,
+                    blood_type: clinicalData.blood_type || '',
+                    allergies: clinicalData.allergies || '',
+                    conditions: clinicalData.conditions || '',
+                    health_insurance: clinicalData.health_insurance || '',
+                    health_insurance_card: clinicalData.health_insurance_card || null,
+                    identity_document: clinicalData.identity_document || '',
+                    identity_document_file: clinicalData.identity_document_file || null,
+                    report_time: clinicalData.report_time || null
+                };
+                const res = await fetch(`${API_URL}/api/cliente/${userId}/clinical-info`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                
+                if (res.ok) {
+                    showToast(`✅ ${label.charAt(0).toUpperCase() + label.slice(1)} removida com sucesso!`);
+                    // Recarrega a visualização para refletir a mudança
+                    await openClinicalInfoModal();
+                } else {
+                    showToast(`❌ Erro ao remover ${label}`, true);
+                }
+            } catch (err) {
+                console.error('Erro ao deletar documento:', err);
+                showToast(`❌ Erro ao remover ${label}`, true);
+            }
+        }
+
         async function openClinicalInfoModal() {
             try {
                 if (!userId) return;
@@ -3258,8 +3302,13 @@
                         docPreviews.appendChild(wrapper);
                     });
                     docContainer.style.display = 'block';
+                    // Mostra botão de deletar no modo visualização
+                    document.getElementById('clinical-view-id-delete').style.display = 'inline-flex';
+                    document.getElementById('clinical-view-id-indicator').style.display = 'inline';
                 } else {
                     docContainer.style.display = 'none';
+                    document.getElementById('clinical-view-id-delete').style.display = 'none';
+                    document.getElementById('clinical-view-id-indicator').style.display = 'none';
                 }
                 
                 // Preenche o Plano de Saúde e Carteirinha
@@ -3309,8 +3358,13 @@
                         cardPreviews.appendChild(wrapper);
                     });
                     cardContainer.style.display = 'block';
+                    // Mostra botão de deletar no modo visualização
+                    document.getElementById('clinical-view-insurance-delete').style.display = 'inline-flex';
+                    document.getElementById('clinical-view-insurance-indicator').style.display = 'inline';
                 } else {
                     cardContainer.style.display = 'none';
+                    document.getElementById('clinical-view-insurance-delete').style.display = 'none';
+                    document.getElementById('clinical-view-insurance-indicator').style.display = 'none';
                 }
                 
                 // Preenche o modo de visualização para Responsável
