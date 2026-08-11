@@ -4585,6 +4585,10 @@ async def register_subscribe(request: Request, db: Session = Depends(get_db)):
     if not all([full_name, email, password, plan_key]):
         raise HTTPException(status_code=400, detail="full_name, email, password e plan são obrigatórios")
 
+    # Valida tamanho mínimo da senha (CTG-010)
+    if len(password) < 4:
+        raise HTTPException(status_code=400, detail="A senha deve ter pelo menos 4 caracteres")
+
     # Valida se email já existe
     existing = db.query(User).filter(User.email == email).first()
     if existing:
