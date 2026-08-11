@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🔍 Teste de API - Medicamentos</title>
+    <style>
+        body { font-family: 'Segoe UI', sans-serif; background: #0A1128; color: #fff; padding: 20px; margin: 0; }
+        .container { max-width: 1200px; margin: 0 auto; }
+        h1 { color: #00D4FF; margin-bottom: 20px; }
+        .btn { 
+            background: linear-gradient(135deg, #10b981, #059669); 
+            color: white; padding: 15px 30px; border: none; 
+            border-radius: 10px; font-size: 16px; font-weight: bold; 
+            cursor: pointer; margin-bottom: 20px; 
+        }
+        .btn:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(16,185,129,0.4); }
+        .btn:disabled { opacity: 0.6; cursor: not-allowed; }
+        
+        table { width: 100%; border-collapse: collapse; background: rgba(11,26,58,0.8); border-radius: 10px; overflow: hidden; }
+        th, td { padding: 12px 15px; text-align: left; border-bottom: 1px solid rgba(0,212,255,0.1); }
+        th { background: rgba(0,212,255,0.2); color: #00D4FF; font-weight: 700; }
+        tr:hover { background: rgba(0,212,255,0.05); }
+        
+        .status-badge { 
+            padding: 4px 12px; border-radius: 20px; font-size: 0.85em; font-weight: 600; 
+        }
+        .status-pending { background: #f39c12; color: white; }
+        .status-taken { background: #2ecc71; color: white; }
+        .status-rescheduled { background: #3498db; color: white; }
+        .status-not_taken { background: #e74c3c; color: white; }
+        .status-unknown { background: #95a5a6; color: white; }
+        
+        .error { background: #e74c3c; color: white; padding: 15px; border-radius: 10px; margin: 20px 0; }
+        .loading { color: #00D4FF; font-style: italic; }
+        
+        .json-output { 
+            background: #1a1a2e; padding: 15px; border-radius: 10px; 
+            font-family: monospace; font-size: 0.9em; max-height: 300px; overflow: auto; 
+            margin-top: 20px; white-space: pre-wrap;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔍 Teste de API - Medicamentos</h1>
+        
+        <button class="btn" id="btnFetch" onclick="buscarDados()">🔄 Buscar Dados da API</button>
+        
+        <div id="resultado"></div>
+        
+        <h3 style="margin-top: 30px;">📦 Dados Brutos (JSON):</h3>
+        <pre class="json-output" id="jsonOutput">Clique em "Buscar Dados" para ver...</pre>
+    </div>
+
+    <script>
+        const API_URL = 'http://localhost:8000';
+        const USER_ID = '4bb47caf-45df-4595-8d19-309369a015ee';
+
+        function getStatusClass(status) {
+            const map = {
+                'pending': 'status-pending',
+                'taken': 'status-taken',
+                'rescheduled': 'status-rescheduled',
+                'not_taken': 'status-not_taken'
+            };
+            return map[status] || 'status-unknown';
+        }
+
+        async function buscarDados() {
+            const btn = document.getElementById('btnFetch');
+            const resultado = document.getElementById('resultado');
+            const jsonOutput = document.getElementById('jsonOutput');
+            
+            btn.disabled = true;
+            btn.textContent = '⏳ Carregando...';
+            resultado.innerHTML = '<p class="loading">Conectando ao backend...</p>';
+            jsonOutput.textContent = 'Carregando...';
+            
+            try {
+                const response = await fetch(`${API_URL}/api/cliente/${USER_ID}/medications`);
+                
+                if (!response.ok) {
+                    throw new Error(`Erro HTTP: ${response.status} ${response.statusText}`);
+                }
+                
+                const data = await response.json();
+                
+                // Mostra JSON bruto
+                jsonOutput.textContent = JSON.stringify(data, null, 2);
+                
+                if (!Array.isArray(data) || data.length === 0) {
+                    resultado.innerHTML = '<p class="error">⚠️ Nenhum medicamento encontrado.</p>';
+                    return;
+                }
+                
+                // Gera tabela
+                let html = `
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Nome</th>
+                                <th>Hora</th>
+                                <th>Status</th>
+                                <th>Ativo</th>
+                                <th>Dias</th>
+                                <th>ID (resumido)</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                `;
+                
+                data.forEach(med => {
+                    const statusDisplay = med.taken_status || 'pending';
+                    const diasSemana = ['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'];
+                    const diasText = med.days_of_week?.length > 0 
+                        ? med.days_of_week.map(d => diasSemana[d]).join(', ') 
+                        : 'Todos';
+                    
+                    html += `
+                        <tr>
+                            <td><strong>${med.name || 'Sem nome'}</strong></td>
+                            <td>${med.time || '--:--'}</td>
+                            <td><span class="status-badge ${getStatusClass(statusDisplay)}">${statusDisplay}</span></td>
+                            <td>${med.is_active === true ? '✅ Sim' : med.is_active === false ? '❌ Não' : '❓ ?'}</td>
+                            <td>${diasText}</td>
+                            <td style="font-family:monospace;font-size:0.8em">${med.id?.substring(0,8)}...</td>
+                        </tr>
+                    `;
+                });
+                
+                html += '</tbody></table>';
+                resultado.innerHTML = html;
+                
+            } catch (error) {
+                console.error('Erro:', error);
+                resultado.innerHTML = `<p class="error">❌ Erro ao buscar: ${error.message}<br><small>Dica: O backend está rodando em http://localhost:8000 ?</small></p>`;
+                jsonOutput.textContent = `Erro: ${error.message}\n\nStack: ${error.stack}`;
+            } finally {
+                btn.disabled = false;
+                btn.textContent = '🔄 Buscar Dados da API';
+            }
+        }
+        
+        // Busca automaticamente ao carregar a página
+        window.addEventListener('load', buscarDados);
+    </script>
+</body>
+</html>

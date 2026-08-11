@@ -1,0 +1,31 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Local (caso queira isolar)
+  postgres:
+    image: postgres:17
+    container_name: homecare_postgres
+    environment:
+      POSTGRES_DB: homecare_dev
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: 200466
+    ports:
+      - "5433:5432"  # Porta 5433 para não conflitar com seu PostgreSQL local
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    restart: unless-stopped
+
+  # Aplicação
+  app:
+    build: .
+    container_name: homecare_app
+    ports:
+      - "8000:8000"
+    environment:
+      DATABASE_URL: postgresql://postgres:200466@postgres:5432/homecare_dev
+    depends_on:
+      - postgres
+    restart: unless-stopped
+
+volumes:
+  postgres_data:

@@ -1,0 +1,834 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CR$ HOME CARE AI — Cuidado Domiciliar Inteligente</title>
+    <meta name="description" content="Assistente inteligente para cuidados domiciliares. Lembretes de medicamentos, consultas, notificações para familiares e muito mais.">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-deep: #051937;
+            --bg-card: #0a2447;
+            --cyan: #00d2ff;
+            --cyan-dim: rgba(0,210,255,0.12);
+            --white: #ffffff;
+            --gray: #b0bcc8;
+            --gray-light: #8a9bb5;
+            --border: rgba(0,210,255,0.15);
+            --radius: 16px;
+            --radius-sm: 12px;
+        }
+
+        * { margin:0; padding:0; box-sizing:border-box; }
+
+        html { scroll-behavior: smooth; }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: var(--bg-deep);
+            color: var(--white);
+            min-height: 100vh;
+            font-size: 17px;
+            line-height: 1.6;
+            overflow-x: hidden;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        /* ─── Background Effects ─── */
+        .bg-grid {
+            position: fixed; inset: 0; z-index: 0; pointer-events: none;
+            background-image:
+                linear-gradient(rgba(0,210,255,0.025) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(0,210,255,0.025) 1px, transparent 1px);
+            background-size: 80px 80px;
+        }
+        .bg-glow-1 {
+            position: fixed; width: 600px; height: 600px; border-radius: 50%;
+            background: radial-gradient(circle, rgba(0,210,255,0.07) 0%, transparent 70%);
+            top: -200px; left: -200px; z-index:0; pointer-events: none;
+        }
+        .bg-glow-2 {
+            position: fixed; width: 500px; height: 500px; border-radius: 50%;
+            background: radial-gradient(circle, rgba(0,100,200,0.06) 0%, transparent 70%);
+            bottom: -150px; right: -150px; z-index:0; pointer-events: none;
+        }
+
+        /* ─── Layout ─── */
+        .container {
+            position: relative; z-index: 2;
+            max-width: 1100px; margin: 0 auto; padding: 0 24px;
+        }
+
+        /* ─── Header ─── */
+        header {
+            position: sticky; top: 0; z-index: 100;
+            background: rgba(5,25,55,0.85); backdrop-filter: blur(16px);
+            border-bottom: 1px solid var(--border);
+            padding: 14px 0;
+        }
+        header .container {
+            display: flex; align-items: center; justify-content: space-between;
+        }
+        .logo-area {
+            display: flex; align-items: center; gap: 12px;
+        }
+        .logo-img {
+            width: 48px; height: 48px; border-radius: 12px;
+            object-fit: contain;
+        }
+        .logo-text {
+            font-size: 20px; font-weight: 700;
+            background: linear-gradient(135deg, var(--cyan), #4dc9f6);
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+            letter-spacing: -0.5px;
+        }
+        .btn-header {
+            padding: 12px 28px; border-radius: 30px;
+            font-size: 16px; font-weight: 600; cursor: pointer;
+            border: 2px solid var(--cyan);
+            background: transparent; color: var(--cyan);
+            transition: all 0.3s; font-family: 'Inter', sans-serif;
+            text-decoration: none; display: inline-block;
+        }
+        .btn-header:hover {
+            background: var(--cyan);
+            color: #051937;
+            transform: translateY(-2px);
+            box-shadow: 0 8px 32px rgba(0,210,255,0.25);
+        }
+
+        /* ─── Hero ─── */
+        .hero {
+            padding: 80px 0 60px; text-align: center;
+        }
+        .hero-badge {
+            display: inline-block; padding: 8px 20px; border-radius: 50px;
+            background: rgba(0,210,255,0.1); border: 1px solid rgba(0,210,255,0.2);
+            color: var(--cyan); font-size: 14px; font-weight: 600;
+            margin-bottom: 28px; letter-spacing: 1px; text-transform: uppercase;
+        }
+        .hero h1 {
+            font-size: clamp(32px, 6vw, 52px);
+            font-weight: 800; letter-spacing: -1.5px;
+            line-height: 1.15; margin-bottom: 20px;
+        }
+        .hero h1 .highlight {
+            background: linear-gradient(135deg, var(--cyan), #4dc9f6);
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+        }
+        .hero p {
+            font-size: clamp(17px, 2.5vw, 21px);
+            color: var(--gray); max-width: 650px;
+            margin: 0 auto 36px; line-height: 1.55;
+        }
+        .hero-actions {
+            display: flex; gap: 16px; justify-content: center;
+            flex-wrap: wrap;
+        }
+        .btn-primary {
+            padding: 16px 40px; border-radius: 50px;
+            font-size: 18px; font-weight: 700; cursor: pointer;
+            border: none; font-family: 'Inter', sans-serif;
+            background: linear-gradient(135deg, var(--cyan), #0098cc);
+            color: #051937; text-decoration: none; display: inline-block;
+            transition: all 0.3s; letter-spacing: -0.3px;
+            box-shadow: 0 8px 32px rgba(0,210,255,0.3);
+        }
+        .btn-primary:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 14px 40px rgba(0,210,255,0.4);
+        }
+        .btn-secondary {
+            padding: 16px 40px; border-radius: 50px;
+            font-size: 18px; font-weight: 600; cursor: pointer;
+            border: 2px solid rgba(255,255,255,0.25);
+            background: transparent; color: var(--white);
+            font-family: 'Inter', sans-serif; text-decoration: none;
+            transition: all 0.3s; display: inline-block;
+        }
+        .btn-secondary:hover {
+            border-color: var(--white);
+            background: rgba(255,255,255,0.05);
+            transform: translateY(-2px);
+        }
+
+        /* ─── Circuit Divider ─── */
+        .circuit-divider {
+            display: flex; align-items: center; justify-content: center;
+            padding: 20px 0; gap: 16px;
+        }
+        .circuit-line {
+            height: 1px; width: 60px;
+            background: linear-gradient(90deg, transparent, rgba(0,210,255,0.3), transparent);
+        }
+        .circuit-dot {
+            width: 6px; height: 6px; border-radius: 50%;
+            background: var(--cyan);
+            box-shadow: 0 0 12px var(--cyan);
+        }
+
+        /* ─── Sections ─── */
+        section { padding: 72px 0; }
+        .section-label {
+            text-align: center; font-size: 14px; font-weight: 700;
+            color: var(--cyan); text-transform: uppercase;
+            letter-spacing: 2px; margin-bottom: 12px;
+        }
+        .section-title {
+            text-align: center; font-size: clamp(26px, 4.5vw, 38px);
+            font-weight: 800; letter-spacing: -1px;
+            margin-bottom: 16px;
+        }
+        .section-subtitle {
+            text-align: center; font-size: 18px;
+            color: var(--gray); max-width: 600px;
+            margin: 0 auto 48px;
+        }
+
+        /* ─── Cards Grid ─── */
+        .cards-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 24px;
+        }
+        .feature-card {
+            background: rgba(10,36,71,0.7); border: 1px solid var(--border);
+            border-radius: var(--radius); padding: 32px 28px;
+            transition: all 0.3s; position: relative; overflow: hidden;
+        }
+        .feature-card::before {
+            content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px;
+            background: linear-gradient(90deg, transparent, var(--cyan), transparent);
+            opacity: 0; transition: opacity 0.3s;
+        }
+        .feature-card:hover::before { opacity: 1; }
+        .feature-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 16px 48px rgba(0,0,0,0.3);
+            border-color: rgba(0,210,255,0.3);
+        }
+        .feature-icon {
+            font-size: 44px; margin-bottom: 18px; display: block;
+        }
+        .feature-card h3 {
+            font-size: 20px; font-weight: 700; margin-bottom: 10px;
+        }
+        .feature-card p {
+            font-size: 16px; color: var(--gray); line-height: 1.55;
+        }
+
+        /* ─── Steps ─── */
+        .steps-container {
+            display: flex; gap: 40px; justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        /* ─── Plans ─── */
+        .plans-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+            gap: 28px; max-width: 800px; margin: 0 auto;
+        }
+        .plan-card {
+            background: rgba(10,36,71,0.7); border: 1px solid var(--border);
+            border-radius: 20px; padding: 36px 32px;
+            text-align: center; position: relative;
+            transition: all 0.3s;
+        }
+        .plan-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 16px 48px rgba(0,0,0,0.3);
+            border-color: rgba(0,210,255,0.3);
+        }
+        .plan-card.featured {
+            border-color: var(--cyan);
+            box-shadow: 0 8px 40px rgba(0,210,255,0.15);
+        }
+        .plan-badge {
+            position: absolute; top: -14px; left: 50%; transform: translateX(-50%);
+            padding: 6px 20px; border-radius: 50px;
+            background: linear-gradient(135deg, var(--cyan), #0098cc);
+            color: #051937; font-size: 13px; font-weight: 700;
+            letter-spacing: 1px; text-transform: uppercase;
+        }
+        .plan-name {
+            font-size: 22px; font-weight: 700; margin-bottom: 6px;
+            margin-top: 8px;
+        }
+        .plan-price {
+            font-size: 42px; font-weight: 800;
+            background: linear-gradient(135deg, var(--cyan), #4dc9f6);
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+            margin-bottom: 4px;
+        }
+        .plan-price small {
+            font-size: 18px; font-weight: 400;
+            -webkit-text-fill-color: var(--gray);
+        }
+        .plan-period {
+            font-size: 14px; color: var(--gray-light); margin-bottom: 24px;
+        }
+        .plan-features {
+            list-style: none; padding: 0; margin: 0 0 28px 0;
+            text-align: left;
+        }
+        .plan-features li {
+            padding: 10px 0; font-size: 16px; color: var(--gray);
+            border-bottom: 1px solid rgba(255,255,255,0.04);
+            display: flex; align-items: center; gap: 10px;
+        }
+        .plan-features li::before {
+            content: '✅'; font-size: 14px; flex-shrink: 0;
+        }
+        .plan-btn {
+            display: block; width: 100%; padding: 14px;
+            border-radius: 50px; font-size: 17px; font-weight: 700;
+            cursor: pointer; border: 2px solid var(--cyan);
+            background: transparent; color: var(--cyan);
+            font-family: 'Inter', sans-serif; transition: all 0.3s;
+        }
+        .plan-btn:hover {
+            background: var(--cyan); color: #051937;
+            transform: translateY(-2px);
+            box-shadow: 0 8px 32px rgba(0,210,255,0.25);
+        }
+        .plan-btn.featured {
+            background: linear-gradient(135deg, var(--cyan), #0098cc);
+            color: #051937; border: none;
+            box-shadow: 0 8px 32px rgba(0,210,255,0.3);
+        }
+        .plan-btn.featured:hover {
+            box-shadow: 0 14px 40px rgba(0,210,255,0.4);
+        }
+        .step {
+            flex: 1; min-width: 240px; max-width: 310px;
+            text-align: center; padding: 32px 20px;
+            background: rgba(10,36,71,0.7); border: 1px solid var(--border);
+            border-radius: var(--radius); position: relative;
+        }
+        .step-number {
+            width: 52px; height: 52px; border-radius: 50%;
+            background: linear-gradient(135deg, var(--cyan), #0098cc);
+            color: #051937; font-size: 22px; font-weight: 800;
+            display: flex; align-items: center; justify-content: center;
+            margin: 0 auto 20px;
+            box-shadow: 0 8px 24px rgba(0,210,255,0.3);
+        }
+        .step h3 { font-size: 20px; font-weight: 700; margin-bottom: 8px; }
+        .step p { font-size: 16px; color: var(--gray); }
+
+        /* ─── Para Quem ─── */
+        .persona-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 24px;
+        }
+        .persona-card {
+            background: rgba(10,36,71,0.7); border: 1px solid var(--border);
+            border-radius: var(--radius); padding: 32px 28px;
+            text-align: center;
+        }
+        .persona-icon {
+            font-size: 56px; margin-bottom: 16px; display: block;
+        }
+        .persona-card h3 { font-size: 22px; font-weight: 700; margin-bottom: 10px; }
+        .persona-card p { font-size: 16px; color: var(--gray); }
+
+        /* ─── CTA Banner ─── */
+        .cta-banner {
+            background: linear-gradient(135deg, rgba(0,210,255,0.08), rgba(0,210,255,0.02));
+            border: 1px solid var(--border);
+            border-radius: 24px; padding: 56px 32px; text-align: center;
+            margin: 0 24px;
+        }
+        .cta-banner h2 {
+            font-size: clamp(24px, 4vw, 34px); font-weight: 800;
+            margin-bottom: 12px;
+        }
+        .cta-banner p {
+            font-size: 18px; color: var(--gray); margin-bottom: 28px;
+            max-width: 500px; margin-left: auto; margin-right: auto;
+        }
+
+        /* ─── Footer ─── */
+        footer {
+            text-align: center; padding: 40px 24px;
+            border-top: 1px solid var(--border);
+            color: var(--gray-light); font-size: 14px;
+            margin-top: 60px;
+        }
+        footer .logo-text { font-size: 16px; margin-bottom: 8px; }
+
+        /* ─── Modal de Login/Cadastro (Simples) ─── */
+        .modal-overlay {
+            display: none; position: fixed; inset: 0; z-index: 999;
+            background: rgba(5,25,55,0.9); backdrop-filter: blur(8px);
+            align-items: center; justify-content: center;
+        }
+        .modal-overlay.show { display: flex; }
+        .modal-card {
+            background: #0a2447; border: 1px solid var(--border);
+            border-radius: 24px; padding: 36px 32px;
+            width: 420px; max-width: 92vw; max-height: 90vh; overflow-y: auto;
+            box-shadow: 0 24px 64px rgba(0,0,0,0.4);
+        }
+        .modal-card h2 {
+            font-size: 24px; font-weight: 700; text-align: center; margin-bottom: 24px;
+        }
+        .form-group { margin-bottom: 18px; }
+        .form-group label {
+            display: block; font-size: 15px; font-weight: 600;
+            color: var(--gray); margin-bottom: 6px;
+        }
+        .form-group input, .form-group select {
+            width: 100%; padding: 14px 16px; border-radius: var(--radius-sm);
+            background: rgba(255,255,255,0.06); border: 1px solid var(--border);
+            color: var(--white); font-size: 16px; font-family: 'Inter', sans-serif;
+            outline: none; transition: border-color 0.2s;
+        }
+        .form-group input:focus, .form-group select:focus {
+            border-color: var(--cyan);
+        }
+        .form-error {
+            color: #ff4757; font-size: 14px; margin-bottom: 12px; display: none;
+        }
+        .modal-footer {
+            text-align: center; margin-top: 16px; font-size: 15px; color: var(--gray);
+        }
+        .modal-footer a { color: var(--cyan); cursor: pointer; text-decoration: none; font-weight: 600; }
+        .modal-footer a:hover { text-decoration: underline; }
+        .close-modal {
+            position: absolute; top: 16px; right: 16px;
+            background: none; border: none; color: var(--gray);
+            font-size: 24px; cursor: pointer;
+        }
+
+        /* ─── Accessibility ─── */
+        @media (prefers-reduced-motion: reduce) {
+            *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+        }
+        :focus-visible { outline: 3px solid var(--cyan); outline-offset: 2px; }
+
+        /* ─── Responsive ─── */
+        @media (max-width: 768px) {
+            .hero { padding: 48px 0 40px; }
+            section { padding: 48px 0; }
+            .cards-grid { grid-template-columns: 1fr; }
+            .persona-grid { grid-template-columns: 1fr; }
+            .steps-container { flex-direction: column; align-items: center; }
+            .step { max-width: 100%; }
+            .btn-primary, .btn-secondary { padding: 16px 32px; font-size: 17px; width: 100%; text-align: center; }
+            header .container { padding: 0 12px; }
+            .logo-text { font-size: 17px; }
+        }
+    </style>
+<!-- Cloudflare Web Analytics -->
+<script defer src='https://static.cloudflareinsights.com/beacon.min.js' data-cf-beacon='{"token":"d1a9b25d409d47f693bbb1a7f0afbc97"}'></script>
+<!-- End Cloudflare Web Analytics -->
+
+</head>
+<body>
+
+<div class="bg-grid"></div>
+<div class="bg-glow-1"></div>
+<div class="bg-glow-2"></div>
+
+<!-- ═══════════ HEADER ═══════════ -->
+<header>
+    <div class="container">
+        <div class="logo-area">
+            <img src="/static/logo.png" alt="CR$ Home Care AI" class="logo-img" onerror="this.style.display='none'">
+            <span class="logo-text">CR$ HOME CARE AI</span>
+        </div>
+        <a href="#" class="btn-header" onclick="openModal('login')">Acessar Sistema</a>
+    </div>
+</header>
+
+<!-- ═══════════ HERO ═══════════ -->
+<section class="hero">
+    <div class="container">
+        <div class="hero-badge">🩺 Inteligência Artificial + Cuidado Humano</div>
+        <h1>
+            Cuidar de quem você ama<br>
+            ficou <span class="highlight">mais simples</span>
+        </h1>
+        <p>
+            Um assistente inteligente que organiza medicamentos, lembra consultas
+            e mantém sua família informada — tudo no seu celular, com toques simples.
+        </p>
+        <div class="hero-actions">
+            <a href="#" class="btn-primary" onclick="openModal('register')">✨ Criar Minha Conta Grátis</a>
+            <a href="#" class="btn-secondary" onclick="openModal('login')">🔐 Já Tenho Conta</a>
+        </div>
+    </div>
+</section>
+
+<div class="circuit-divider">
+    <div class="circuit-line"></div><div class="circuit-dot"></div>
+    <div class="circuit-line"></div><div class="circuit-dot"></div>
+    <div class="circuit-line"></div><div class="circuit-dot"></div>
+    <div class="circuit-line"></div>
+</div>
+
+<!-- ═══════════ PLANOS ═══════════ -->
+<section id="planos">
+    <div class="container">
+        <div class="section-label">Planos</div>
+        <h2 class="section-title">Escolha o plano ideal para sua família</h2>
+        <p class="section-subtitle">
+            Comece agora e tenha todo o controle dos cuidados na palma da sua mão.
+        </p>
+
+        <div class="plans-grid">
+            <!-- Plano Básico -->
+            <div class="plan-card">
+                <div class="plan-name">🏠 Plano Básico</div>
+                <div class="plan-price">R$29<small>,90</small></div>
+                <div class="plan-period">por mês</div>
+                <ul class="plan-features">
+                    <li>1 Responsável</li>
+                    <li>Até 3 pessoas cuidadas</li>
+                    <li>Lembretes de medicamentos</li>
+                    <li>Agenda de consultas</li>
+                    <li>Notificações para familiares</li>
+                    <li>Contatos de emergência</li>
+                    <li>Ficha clínica digital</li>
+                </ul>
+                <button class="plan-btn" onclick="openModal('register')">Começar Grátis</button>
+            </div>
+
+            <!-- Plano Pro -->
+            <div class="plan-card featured">
+                <div class="plan-badge">Recomendado</div>
+                <div class="plan-name">⭐ Plano Pro</div>
+                <div class="plan-price">R$49<small>,90</small></div>
+                <div class="plan-period">por mês</div>
+                <ul class="plan-features">
+                    <li>1 Responsável</li>
+                    <li>Até 5 pessoas cuidadas</li>
+                    <li>Tudo do Plano Básico</li>
+                    <li>OCR de receitas médicas</li>
+                    <li>Reconhecimento de voz</li>
+                    <li>Áudio dos lembretes</li>
+                    <li>Suporte prioritário</li>
+                </ul>
+                <button class="plan-btn featured" onclick="openModal('register')">Assinar Pro</button>
+            </div>
+        </div>
+    </div>
+</section>
+
+<div class="circuit-divider">
+    <div class="circuit-line"></div><div class="circuit-dot"></div>
+    <div class="circuit-line"></div><div class="circuit-dot"></div>
+    <div class="circuit-line"></div><div class="circuit-dot"></div>
+    <div class="circuit-line"></div>
+</div>
+
+<!-- ═══════════ COMO FUNCIONA ═══════════ -->
+<section id="funcionalidades">
+    <div class="container">
+        <div class="section-label">Funcionalidades</div>
+        <h2 class="section-title">Tudo que você precisa em um só lugar</h2>
+        <p class="section-subtitle">
+            Tecnologia pensada para facilitar a rotina de cuidados, com simplicidade e segurança.
+        </p>
+
+        <div class="cards-grid">
+            <div class="feature-card">
+                <span class="feature-icon">💊</span>
+                <h3>Lembretes de Medicamentos</h3>
+                <p>
+                    Cadastre os remédios com nome, dosagem e horário. O sistema avisa na hora certa
+                    e acompanha se foram tomados. Notifica a família se algo estiver errado.
+                </p>
+            </div>
+
+            <div class="feature-card">
+                <span class="feature-icon">📅</span>
+                <h3>Agenda de Consultas</h3>
+                <p>
+                    Organize consultas médicas com data, horário e especialidade.
+                    Confirme, edite ou cancele com um toque. Nunca mais perca uma consulta.
+                </p>
+            </div>
+
+            <div class="feature-card">
+                <span class="feature-icon">👨‍👩‍👧</span>
+                <h3>Rede de Cuidadores</h3>
+                <p>
+                    Cadastre filhos, netos ou cuidadores como responsáveis. Eles recebem alertas
+                    por WhatsApp, SMS ou ligação quando algo precisa de atenção.
+                </p>
+            </div>
+
+            <div class="feature-card">
+                <span class="feature-icon">🆘</span>
+                <h3>Contatos de Emergência</h3>
+                <p>
+                    Tenha sempre à mão telefones de emergência: SAMU, hospital,
+                    médico de confiança. Informações vitais em um toque.
+                </p>
+            </div>
+
+            <div class="feature-card">
+                <span class="feature-icon">🩺</span>
+                <h3>Ficha Clínica Digital</h3>
+                <p>
+                    Guarde informações importantes: alergias, tipo sanguíneo,
+                    condições de saúde e plano de saúde. Prontas para qualquer atendimento.
+                </p>
+            </div>
+
+            <div class="feature-card">
+                <span class="feature-icon">🔔</span>
+                <h3>Notificações Inteligentes</h3>
+                <p>
+                    Receba lembretes no celular com áudio. O sistema avisa a família
+                    quando um medicamento não foi tomado, garantindo segurança.
+                </p>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ═══════════ COMO FUNCIONA ═══════════ -->
+<section id="como-funciona">
+    <div class="container">
+        <div class="section-label">Simples Assim</div>
+        <h2 class="section-title">Em 3 passos você começa</h2>
+        <p class="section-subtitle">
+            Criamos tudo para ser fácil — mesmo para quem não tem familiaridade com tecnologia.
+        </p>
+
+        <div class="steps-container">
+            <div class="step">
+                <div class="step-number">1</div>
+                <h3>Crie sua Conta</h3>
+                <p>Nome, telefone e senha. Leva menos de 1 minuto.</p>
+            </div>
+            <div class="step">
+                <div class="step-number">2</div>
+                <h3>Cadastre os Remédios</h3>
+                <p>Adicione nome, dosagem e horário de cada medicamento.</p>
+            </div>
+            <div class="step">
+                <div class="step-number">3</div>
+                <h3>Pronto!</h3>
+                <p>O sistema cuida dos lembretes e avisa sua família se precisar.</p>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ═══════════ PARA QUEM ═══════════ -->
+<section id="para-quem">
+    <div class="container">
+        <div class="section-label">Para Quem É</div>
+        <h2 class="section-title">Feito para cuidar de verdade</h2>
+        <p class="section-subtitle">
+            Nossa plataforma atende diferentes necessidades no cuidado domiciliar.
+        </p>
+
+        <div class="persona-grid">
+            <div class="persona-card">
+                <span class="persona-icon">👴</span>
+                <h3>Idosos</h3>
+                <p>
+                    Lembretes na tela do celular, botões grandes, áudio que fala o nome do remédio.
+                    Simples e direto, sem complicação.
+                </p>
+            </div>
+            <div class="persona-card">
+                <span class="persona-icon">👨‍👩‍👧</span>
+                <h3>Familiares</h3>
+                <p>
+                    Fiquem tranquilos: recebem notificações quando o medicamento
+                    não foi tomado. Saibam que está tudo bem, mesmo à distância.
+                </p>
+            </div>
+            <div class="persona-card">
+                <span class="persona-icon">🩺</span>
+                <h3>Cuidadores</h3>
+                <p>
+                    Organizem a rotina de múltiplos pacientes. Agenda de consultas,
+                    controle de medicamentos e histórico num só lugar.
+                </p>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ═══════════ CTA ═══════════ -->
+<section>
+    <div class="container">
+        <div class="cta-banner">
+            <h2>Comece agora — é gratuito</h2>
+            <p>
+                Cadastre-se em menos de 1 minuto e tenha todo o controle
+                dos cuidados na palma da sua mão.
+            </p>
+            <a href="#" class="btn-primary" onclick="openModal('register')" style="font-size:20px; padding:18px 48px;">
+                ✨ Criar Conta Gratuita
+            </a>
+            <p style="margin-top:16px; font-size:15px; color:var(--gray);">
+                Já tem conta? <a href="#" style="color:var(--cyan);" onclick="openModal('login')">Faça login aqui</a>
+            </p>
+        </div>
+    </div>
+</section>
+
+<!-- ═══════════ FOOTER ═══════════ -->
+<footer>
+    <div class="logo-text" style="background:linear-gradient(135deg,var(--cyan),#4dc9f6);-webkit-background-clip:text;-webkit-text-fill-color:transparent;display:inline;">
+        CR$ HOME CARE AI
+    </div>
+    <p style="margin-bottom:4px;">Token Hexagonal com Circuitos de IA</p>
+    <p>Cuidado domiciliar inteligente — feito no Brasil 🇧🇷</p>
+</footer>
+
+<!-- ═══════════ MODAL: LOGIN ═══════════ -->
+<div class="modal-overlay" id="modal-login">
+    <div class="modal-card">
+        <h2>🔐 Acessar Sistema</h2>
+        <div class="form-group">
+            <label>Nome ou Telefone</label>
+            <input type="text" id="login-user" placeholder="Seu nome ou telefone" autocomplete="username">
+        </div>
+        <div class="form-group">
+            <label>Senha</label>
+            <input type="password" id="login-pass" placeholder="Sua senha" autocomplete="current-password">
+        </div>
+        <div class="form-error" id="login-error"></div>
+        <button class="btn-primary" style="width:100%;" onclick="doLogin()">Entrar</button>
+        <div class="modal-footer">
+            Não tem conta? <a onclick="switchModal('register')">Cadastre-se aqui</a>
+        </div>
+    </div>
+</div>
+
+<!-- ═══════════ MODAL: CADASTRO ═══════════ -->
+<div class="modal-overlay" id="modal-register">
+    <div class="modal-card">
+        <h2>✨ Criar Conta</h2>
+        <div class="form-group">
+            <label>Nome completo</label>
+            <input type="text" id="reg-name" placeholder="Seu nome completo">
+        </div>
+        <div class="form-group">
+            <label>Email</label>
+            <input type="email" id="reg-email" placeholder="seu@email.com">
+        </div>
+        <div class="form-group">
+            <label>Telefone</label>
+            <input type="tel" id="reg-phone" placeholder="(61) 99999-9999">
+        </div>
+        <div class="form-group">
+            <label>Senha (mínimo 6 caracteres)</label>
+            <input type="password" id="reg-password" placeholder="Sua senha">
+        </div>
+        <div class="form-error" id="reg-error"></div>
+        <button class="btn-primary" style="width:100%;" onclick="doRegister()">Criar Conta</button>
+        <div class="modal-footer">
+            Já tem conta? <a onclick="switchModal('login')">Faça login</a>
+        </div>
+    </div>
+</div>
+
+<script>
+const API = '';
+
+// ── Modal Helpers ──
+function openModal(type) {
+    document.getElementById(`modal-${type}`).classList.add('show');
+    document.body.style.overflow = 'hidden';
+}
+function closeAllModals() {
+    document.querySelectorAll('.modal-overlay').forEach(m => m.classList.remove('show'));
+    document.body.style.overflow = '';
+    document.getElementById('login-error').style.display = 'none';
+    document.getElementById('reg-error').style.display = 'none';
+}
+function switchModal(type) {
+    closeAllModals();
+    openModal(type);
+}
+document.querySelectorAll('.modal-overlay').forEach(overlay => {
+    overlay.addEventListener('click', function(e) {
+        if (e.target === this) closeAllModals();
+    });
+});
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeAllModals(); });
+
+// ── Login ──
+async function doLogin() {
+    const username = document.getElementById('login-user').value.trim();
+    const password = document.getElementById('login-pass').value;
+    const errEl = document.getElementById('login-error');
+    errEl.style.display = 'none';
+
+    if (!username || !password) {
+        errEl.textContent = 'Preencha todos os campos.';
+        errEl.style.display = 'block'; return;
+    }
+
+    try {
+        const resp = await fetch(`${API}/api/cliente/login`, {
+            method:'POST', headers:{'Content-Type':'application/json'},
+            body: JSON.stringify({username, password})
+        });
+        const data = await resp.json();
+        if (!resp.ok) throw new Error(data.detail || 'Erro ao fazer login');
+
+        // Salva sessão e redireciona
+        sessionStorage.setItem('hc_user', JSON.stringify(data.user));
+        window.location.href = '/dashboard';
+    } catch(e) {
+        errEl.textContent = e.message;
+        errEl.style.display = 'block';
+    }
+}
+
+// ── Register ──
+async function doRegister() {
+    const name = document.getElementById('reg-name').value.trim();
+    const email = document.getElementById('reg-email').value.trim();
+    const phone = document.getElementById('reg-phone').value.trim();
+    const password = document.getElementById('reg-password').value;
+    const errEl = document.getElementById('reg-error');
+    errEl.style.display = 'none';
+
+    if (!name || !email || !password) {
+        errEl.textContent = 'Preencha nome, email e senha.';
+        errEl.style.display = 'block'; return;
+    }
+    if (password.length < 6) {
+        errEl.textContent = 'A senha precisa ter no mínimo 6 caracteres.';
+        errEl.style.display = 'block'; return;
+    }
+
+    try {
+        const resp = await fetch(`${API}/api/users`, {
+            method:'POST', headers:{'Content-Type':'application/json'},
+            body: JSON.stringify({full_name:name, email, phone, password})
+        });
+        const data = await resp.json();
+        if (!resp.ok) throw new Error(data.detail || 'Erro ao criar conta');
+
+        alert('Conta criada com sucesso! Faça login para continuar.');
+        switchModal('login');
+    } catch(e) {
+        errEl.textContent = e.message;
+        errEl.style.display = 'block';
+    }
+}
+
+// Enter key nos campos de senha
+document.getElementById('login-pass').addEventListener('keydown', e => { if (e.key==='Enter') doLogin(); });
+document.getElementById('reg-password').addEventListener('keydown', e => { if (e.key==='Enter') doRegister(); });
+</script>
+
+<!-- Cloudflare Web Analytics --><script type='module' src='https://static.cloudflareinsights.com/beacon.min.js' data-cf-beacon='{"token": "d1a9b25d409d47f693bbb1a7f0afbc97"}'></script><!-- End Cloudflare Web Analytics -->
+</body>
+</html>

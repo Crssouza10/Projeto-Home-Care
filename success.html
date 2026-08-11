@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cuidadoso — Confirmando pagamento...</title>
+    <style>
+        * { margin:0; padding:0; box-sizing:border-box; }
+        body { 
+            font-family: system-ui, sans-serif; 
+            background: linear-gradient(135deg, #0A1128, #1a2f4a);
+            color: #fff;
+            display: flex; align-items: center; justify-content: center;
+            min-height: 100vh; text-align: center;
+        }
+        .card {
+            background: rgba(255,255,255,0.08);
+            border-radius: 16px;
+            padding: 48px 32px;
+            max-width: 420px;
+            width: 90%;
+        }
+        .spinner {
+            width: 48px; height: 48px;
+            border: 4px solid rgba(255,255,255,0.2);
+            border-top-color: #00D4FF;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+            margin: 0 auto 24px;
+        }
+        @keyframes spin { to { transform:rotate(360deg); } }
+        h1 { font-size: 1.4rem; margin-bottom: 12px; }
+        p { color: rgba(255,255,255,0.7); font-size: 0.95rem; margin-bottom: 24px; }
+        .error { color: #ff6b6b; display:none; }
+        .success { color: #51cf66; display:none; font-size: 3rem; }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <div class="spinner" id="spinner"></div>
+        <div class="success" id="success-icon">✅</div>
+        <h1 id="title">Confirmando seu pagamento...</h1>
+        <p id="message">Aguarde enquanto finalizamos sua conta.</p>
+        <p class="error" id="error"></p>
+    </div>
+
+    <script>
+        (async function() {
+            const params = new URLSearchParams(window.location.search);
+            const paymentStatus = params.get('payment');
+            const plan = params.get('plan');
+            const email = params.get('email');
+
+            const API_BASE = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
+                ? window.location.origin
+                : 'https://projeto-home-care.vercel.app';
+
+            if (paymentStatus !== 'success') {
+                document.getElementById('spinner').style.display = 'none';
+                document.getElementById('title').textContent = paymentStatus === 'pending' 
+                    ? 'Pagamento pendente' : 'Pagamento não concluído';
+                document.getElementById('message').textContent = paymentStatus === 'pending'
+                    ? 'Seu pagamento está sendo processado. Você receberá um email quando for aprovado.'
+                    : 'O pagamento não foi concluído. Tente novamente.';
+                setTimeout(() => { window.location.href = '/'; }, 5000);
+                return;
+            }
+
+            // Busca preference_id do sessionStorage
+            const preferenceId = sessionStorage.getItem('pending_preference_id');
+            if (!preferenceId) {
+                document.getElementById('spinner').style.display = 'none';
+                document.getElementById('title').textContent = 'Sessão expirada';
+                document.getElementById('message').textContent = 'Não foi possível confirmar seu cadastro. Entre em contato com o suporte.';
+                return;
+            }
+
+            try {
+                const resp = await fetch(API_BASE + '/api/register-complete', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ preference_id: preferenceId })
+                });
+                const data = await resp.json();
+
+                if (resp.ok && data.status === 'success') {
+                    sessionStorage.removeItem('pending_preference_id');
+                    sessionStorage.removeItem('pending_email');
+                    document.getElementById('spinner').style.display = 'none';
+                    document.getElementById('success-icon').style.display = 'block';
+                    document.getElementById('title').textContent = 'Conta criada!';
+                    document.getElementById('message').textContent = 'Redirecionando para o login...';
+                    setTimeout(() => {
+                        window.location.href = '/?registered=true&email=' + encodeURIComponent(email || '');
+                    }, 2000);
+                } else {
+                    throw new Error(data.detail || 'Erro ao finalizar cadastro');
+                }
+            } catch (err) {
+                document.getElementById('spinner').style.display = 'none';
+                document.getElementById('error').style.display = 'block';
+                document.getElementById('error').textContent = '❌ ' + err.message;
+                document.getElementById('title').textContent = 'Erro';
+                document.getElementById('message').textContent = 'Tente novamente ou entre em contato com o suporte.';
+            }
+        })();
+    </script>
+</body>
+</html>

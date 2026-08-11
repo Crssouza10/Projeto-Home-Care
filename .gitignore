@@ -1,24 +1,37 @@
-# Projeto-Home-Care .gitignore
-# Backups - NUNCA versionar arquivos de backup!
-*.tar.gz
-*.tar
-backups/
-
 # Python
 __pycache__/
 *.py[cod]
-*.egg-info/
-.env
+*$py.class
+*.so
+.Python
 venv/
+env/
 .venv/
+pip-log.txt
+pip-delete-this-directory.txt
 
-# Node (se houver)
-node_modules/
+# Environment
+.env
+*.env.local
+.env.*.local
 
 # IDE
 .vscode/
 .idea/
+*.swp
+*.swo
+
+# Logs
+*.log
+logs/
 
 # OS
 .DS_Store
 Thumbs.db
+
+# Vercel
+.vercel/
+.vercel
+
+landing-cuidaidoso-temp/
+
