@@ -7623,7 +7623,7 @@
             try {
                 const API_URL = window.location.hostname === 'localhost'
                     ? `http://localhost:${window.location.port || '8866'}`
-                    : 'https://web-production-46b53.up.railway.app';
+                    : window.location.origin;
 
                 const response = await fetch(`${API_URL}/api/cliente/${userId}/deactivate`, {
                     method: 'POST',
