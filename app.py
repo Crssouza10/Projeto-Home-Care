@@ -2390,6 +2390,61 @@ async def create_admin(db: Session = Depends(get_db)):
 # 🔧 ROTAS DE EDIÇÃO E EXCLUSÃO (ADICIONADAS)
 # =========================================================
 
+# --- ENCERRAMENTO DE CONTA (SOFT DELETE) ---
+
+class DeleteAccountRequest(BaseModel):
+    password: str
+
+@app.delete("/api/users/{user_id}")
+async def delete_account(
+    user_id: str,
+    body: DeleteAccountRequest,
+    db: Session = Depends(get_db)
+):
+    """Encerra a conta do usuário (soft delete). Requer senha para confirmação."""
+    try:
+        user_uuid = uuid.UUID(user_id)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="ID de usuário inválido")
+
+    user = db.query(User).filter(User.id == user_uuid).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="Usuário não encontrado")
+
+    if not bcrypt.checkpw(body.password.encode('utf-8'), user.password_hash.encode('utf-8')):
+        raise HTTPException(status_code=403, detail="Senha incorreta")
+
+    # Soft delete: desativa a conta
+    user.is_active = False
+    db.commit()
+
+    return {"status": "success", "message": "Conta encerrada com sucesso"}
+
+
+@app.put("/api/users/{user_id}/reactivate")
+async def reactivate_account(
+    user_id: str,
+    body: DeleteAccountRequest,
+    db: Session = Depends(get_db)
+):
+    """Reativa uma conta desativada. Requer senha para confirmação."""
+    try:
+        user_uuid = uuid.UUID(user_id)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="ID de usuário inválido")
+
+    user = db.query(User).filter(User.id == user_uuid).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="Usuário não encontrado")
+
+    if not bcrypt.checkpw(body.password.encode('utf-8'), user.password_hash.encode('utf-8')):
+        raise HTTPException(status_code=403, detail="Senha incorreta")
+
+    user.is_active = True
+    db.commit()
+
+    return {"status": "success", "message": "Conta reativada com sucesso"}
+
 # --- 📅 APPOINTMENTS - EDITAR E EXCLUIR ---
 
 @app.put("/api/appointments/{appt_id}")
