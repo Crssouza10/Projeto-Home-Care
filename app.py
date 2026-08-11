@@ -814,7 +814,19 @@ async def cliente_login(credentials: dict, db: Session = Depends(get_db)):
         raise HTTPException(status_code=401, detail="Usuário não encontrado")
     
     if not bcrypt.checkpw(password.encode('utf-8'), user.password_hash.encode('utf-8')):
-        raise HTTPException(status_code=401, detail="Senha incorreta")
+        # Fallback: SHA256 → bcrypt (correção automática para contas antigas)
+        if len(user.password_hash) == 64:
+            import hashlib
+            sha_hash = hashlib.sha256(password.encode('utf-8')).hexdigest()
+            if sha_hash == user.password_hash:
+                # Corrigir: atualizar para bcrypt
+                user.password_hash = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
+                db.commit()
+                # Continua — login bem-sucedido
+            else:
+                raise HTTPException(status_code=401, detail="Senha incorreta")
+        else:
+            raise HTTPException(status_code=401, detail="Senha incorreta")
     
     response = JSONResponse({
         "status": "sucesso",
@@ -4815,6 +4827,17 @@ async def register_complete(request: Request, db: Session = Depends(get_db)):
     db.commit()
 
     return {
+        "status": "success",
+        "user_id": str(db_user.id),
+        "user": {
+            "id": str(db_user.id),
+            "full_name": db_user.full_name,
+            "email": db_user.email,
+            "phone": db_user.phone,
+            "plan": db_user.plan
+        },
+        "message": "Conta criada com sucesso!"
+    }
 
 # --- ADMIN: Corrigir hash de senha (temporário) ---
 ADMIN_SECRET = os.getenv("ADMIN_SECRET", "cuidadoso-admin-2026")
@@ -4835,18 +4858,6 @@ async def fix_password(body: FixPasswordRequest, db: Session = Depends(get_db)):
     user.password_hash = bcrypt.hashpw(body.new_password.encode("utf-8"), bcrypt.gensalt()).decode("utf-8")
     db.commit()
     return {"status": "success", "message": f"Hash corrigido para {body.email}"}
-
-        "status": "success",
-        "user_id": str(db_user.id),
-        "user": {
-            "id": str(db_user.id),
-            "full_name": db_user.full_name,
-            "email": db_user.email,
-            "phone": db_user.phone,
-            "plan": db_user.plan
-        },
-        "message": "Conta criada com sucesso!"
-    }
 
 # app.py - Adicionar no final
 
