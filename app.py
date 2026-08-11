@@ -1,4 +1,5 @@
-# ===== v1.5.12 - 2026-08-10 ==========================================
+# ===== v1.5.12 - 2026-08-11 ==========================================
+# - Correção: adicionado Field no import do pydantic (NameError no deploy)
 # - Função _ask_ai() com fallback Gemini → DeepSeek (cota Gemini esgotada)
 # - support_message e ocr_allergies adaptados para usar _ask_ai()
 # - Correção CTG-032: envio de documentos usa user.email como fallback
