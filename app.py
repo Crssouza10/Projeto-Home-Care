@@ -4815,6 +4815,27 @@ async def register_complete(request: Request, db: Session = Depends(get_db)):
     db.commit()
 
     return {
+
+# --- ADMIN: Corrigir hash de senha (temporário) ---
+ADMIN_SECRET = os.getenv("ADMIN_SECRET", "cuidadoso-admin-2026")
+
+class FixPasswordRequest(BaseModel):
+    email: str
+    new_password: str
+    admin_secret: str
+
+@app.post("/api/admin/fix-password")
+async def fix_password(body: FixPasswordRequest, db: Session = Depends(get_db)):
+    """Corrige hash de senha para bcrypt (resolve bug SHA256 → bcrypt)."""
+    if body.admin_secret != ADMIN_SECRET:
+        raise HTTPException(status_code=403, detail="Acesso negado")
+    user = db.query(User).filter(User.email == body.email).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="Usuário não encontrado")
+    user.password_hash = bcrypt.hashpw(body.new_password.encode("utf-8"), bcrypt.gensalt()).decode("utf-8")
+    db.commit()
+    return {"status": "success", "message": f"Hash corrigido para {body.email}"}
+
         "status": "success",
         "user_id": str(db_user.id),
         "user": {
