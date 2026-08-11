@@ -7613,7 +7613,7 @@
                 return;
             }
 
-            const userId = state.user?.id || localStorage.getItem('userId') || localStorage.getItem('user_id');
+            const userId = localStorage.getItem('userId') || localStorage.getItem('user_id');
             if (!userId) {
                 alert('Erro: usuário não identificado. Faça login novamente.');
                 window.location.href = '/';
@@ -8260,7 +8260,7 @@
 
     <!-- 🔖 INDICADOR DE VERSÃO -->
     <div style="text-align:center; padding:20px; color:#00D4FF; font-size:0.75rem; margin-top:30px; opacity:0.7;">
-        🏠 CR$ Home Care AI v21.5.6 — build 2026-08-07 — correções de cadastro grátis e responsividade
+        🏠 CR$ Home Care AI v1.5.14 — build 2026-08-11 — correções de encerramento de conta e suporte
     </div>
 <!-- Cloudflare Web Analytics --><script type='module' src='https://static.cloudflareinsights.com/beacon.min.js' data-cf-beacon='{"token": "d1a9b25d409d47f693bbb1a7f0afbc97"}'></script><!-- End Cloudflare Web Analytics -->
 
@@ -8290,9 +8290,10 @@ function sendSupportMessage() {
     const typingId = appendSupportMessage('assistant', '✍️ Digitando...');
     
     // Chama API
-    const userId = state.user?.id || '';
-    const userName = state.user?.full_name || 'Usuário';
-    const userEmail = state.user?.email || '';
+    const currentUser = JSON.parse(localStorage.getItem('currentUser') || '{}');
+    const userId = localStorage.getItem('userId') || currentUser?.id || '';
+    const userName = currentUser?.full_name || 'Usuário';
+    const userEmail = currentUser?.email || '';
     
     fetch('/api/support/message', {
         method: 'POST',
