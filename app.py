@@ -1,5 +1,7 @@
-# ===== v1.5.12 - 2026-08-11 ==========================================
-# - Correção: adicionado Field no import do pydantic (NameError no deploy)
+# ===== v1.5.13 - 2026-08-11 ==========================================
+# - CTG-010: validação min_length=4 na rota register-subscribe
+# - Fix: rotas DELETE /api/users/{id} e PUT reativar conta (soft delete)
+# - Field adicionado ao import pydantic (NameError no deploy)
 # - Função _ask_ai() com fallback Gemini → DeepSeek (cota Gemini esgotada)
 # - support_message e ocr_allergies adaptados para usar _ask_ai()
 # - Correção CTG-032: envio de documentos usa user.email como fallback
