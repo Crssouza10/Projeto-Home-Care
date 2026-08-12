@@ -1,4 +1,4 @@
-# ===== v1.5.19 - 2026-08-12 11:49 BRT ==========================================
+# ===== v1.5.19 - 2026-08-12 11:50 BRT ==========================================
 # - CTG-010: validação min_length=4 na rota register-subscribe
 # - Fix: rotas DELETE /api/users/{id} e PUT reativar conta (soft delete)
 # - Field adicionado ao import pydantic (NameError no deploy)
@@ -3465,23 +3465,20 @@ async def check_reminders(db: Session = Depends(get_db)):
         for med in meds_due:
             user = db.query(User).filter(User.id == med.user_id).first()
             if user:
-                # Calcula se está acabando (proporcional à duração do tratamento)
+                # Calcula se está acabando (alerta fixo de 5 dias - v1.5.19)
                 msg_adicional = ""
                 if med.end_date:
                     try:
                         hoje = now.date()
                         end_date_obj = datetime.strptime(med.end_date, "%Y-%m-%d").date()
                         dias_restantes = (end_date_obj - hoje).days
-                        # Tratamentos curtos (≤14 dias): alerta nos últimos 2 dias
-                        # Tratamentos longos (>14 dias): alerta nos últimos 5 dias
-                        duracao_total = (end_date_obj - med.created_at.date()).days if med.created_at else 30
-                        limite = 2 if duracao_total <= 14 else 5
-                        if 0 <= dias_restantes <= limite:
-                            dias_texto = f"{dias_restantes} dias" if dias_restantes > 1 else "1 dia"
+                        if 0 <= dias_restantes <= 5:
                             if dias_restantes == 0:
-                                msg_adicional = " ⚠️ ESTE REMÉDIO ACABA HOJE!"
+                                msg_adicional = " 🛒 ATENÇÃO: Este remédio ACABA HOJE! Compre mais."
+                            elif dias_restantes == 1:
+                                msg_adicional = " 🛒 ATENÇÃO: Este remédio acaba AMANHÃ! Providencie nova receita."
                             else:
-                                msg_adicional = f" ⚠️ ACABANDO: Restam apenas {dias_texto} de tratamento!"
+                                msg_adicional = f" 🛒 ATENÇÃO: Restam apenas {dias_restantes} dias de tratamento! Compre mais."
                     except Exception:
                         pass
 
