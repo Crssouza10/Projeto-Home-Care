@@ -1,4 +1,4 @@
-# ===== v1.5.19 - 2026-08-12 15:30 BRT ==========================================
+# ===== v1.5.19 - 2026-08-12 16:23 BRT ==========================================
 # - CTG-010: validação min_length=4 na rota register-subscribe
 # - Fix: rotas DELETE /api/users/{id} e PUT reativar conta (soft delete)
 # - Field adicionado ao import pydantic (NameError no deploy)
@@ -1185,8 +1185,10 @@ def _get_gmail_access_token() -> str:
 
 
 def _send_email_smtp(to_email: str, subject: str, body: str, from_email: str = None) -> bool:
-    """Fallback SMTP (smtp.gmail.com:587) para envio de e-mail. Retorna True se sucesso."""
+    """Fallback SMTP (smtp.gmail.com) para envio de e-mail. Retorna True se sucesso.
+    Força IPv4 e tenta porta 587 (TLS) e depois 465 (SSL)."""
     import smtplib
+    import socket
     from email.mime.text import MIMEText
     
     smtp_server = os.getenv("SMTP_SERVER", "smtp.gmail.com")
@@ -1205,11 +1207,41 @@ def _send_email_smtp(to_email: str, subject: str, body: str, from_email: str = N
     msg["To"] = to_email
     msg["Subject"] = subject
     
-    with smtplib.SMTP(smtp_server, smtp_port, timeout=20) as server:
-        server.starttls()
-        server.login(smtp_user, smtp_pass)
-        server.sendmail(from_email, [to_email], msg.as_string())
-    return True
+    # Resolve o IPv4 do servidor explicitamente (Railway pode falhar com IPv6 → "Network is unreachable")
+    host_ip = smtp_server
+    try:
+        infos = socket.getaddrinfo(smtp_server, smtp_port, socket.AF_INET, socket.SOCK_STREAM)
+        if infos:
+            host_ip = infos[0][4][0]
+    except Exception:
+        pass  # mantém o hostname original
+    
+    last_err = None
+    # Tenta porta principal (587/TLS) e depois 465/SSL
+    portas = [smtp_port] if smtp_port == 465 else [smtp_port, 465]
+    for porta in portas:
+        try:
+            if porta == 465:
+                server = smtplib.SMTP_SSL(host_ip, porta, timeout=25)
+            else:
+                server = smtplib.SMTP(host_ip, porta, timeout=25)
+                server.starttls()
+            server.login(smtp_user, smtp_pass)
+            server.sendmail(from_email, [to_email], msg.as_string())
+            try:
+                server.quit()
+            except Exception:
+                pass
+            print(f"✅ [EMAIL] SMTP enviado com sucesso via {host_ip}:{porta}")
+            return True
+        except Exception as e:
+            last_err = e
+            try:
+                server.close()
+            except Exception:
+                pass
+    
+    raise last_err if last_err else RuntimeError("Falha SMTP")
 
 
 def _send_email_via_gmail_api(to_email: str, subject: str, body: str, from_email: str = None) -> bool:
