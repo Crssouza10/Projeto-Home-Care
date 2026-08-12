@@ -1,4 +1,4 @@
-# ===== v1.5.16 - 2026-08-11 ==========================================
+# ===== v1.5.17 - 2026-08-11 ==========================================
 # - CTG-010: validação min_length=4 na rota register-subscribe
 # - Fix: rotas DELETE /api/users/{id} e PUT reativar conta (soft delete)
 # - Field adicionado ao import pydantic (NameError no deploy)
@@ -3167,7 +3167,10 @@ def verificar_e_enviar_alerta_compra(db: Session):
                 dias_restantes = (end_date_obj - hoje).days
                 
                 # Alerta a partir do 55º dia (quando faltam 5 ou menos dias para acabar, até a data final)
-                if 0 <= dias_restantes <= 5:
+                # Limite: 2 dias para tratamentos curtos, 5 para longos
+                duracao_total = (end_date_obj - med.created_at.date()).days if med.created_at else 30
+                limite = 2 if duracao_total <= 14 else 5
+                if 0 <= dias_restantes <= limite:
                     user = db.query(User).filter(User.id == med.user_id).first()
                     if not user:
                         continue
@@ -3234,7 +3237,10 @@ async def get_low_supply_medications(user_id: str, db: Session = Depends(get_db)
         try:
             end_date_obj = datetime.strptime(med.end_date, "%Y-%m-%d").date()
             dias_restantes = (end_date_obj - hoje).days
-            if 0 <= dias_restantes <= 5:
+            # Limite proporcional: 2 dias para curtos, 5 para longos
+            duracao_total = (end_date_obj - med.created_at.date()).days if med.created_at else 30
+            limite = 2 if duracao_total <= 14 else 5
+            if 0 <= dias_restantes <= limite:
                 resultado.append({
                     "id": str(med.id),
                     "name": med.name,
@@ -3449,14 +3455,18 @@ async def check_reminders(db: Session = Depends(get_db)):
         for med in meds_due:
             user = db.query(User).filter(User.id == med.user_id).first()
             if user:
-                # Calcula se está acabando (faltando 5 ou menos dias para acabar)
+                # Calcula se está acabando (proporcional à duração do tratamento)
                 msg_adicional = ""
                 if med.end_date:
                     try:
                         hoje = now.date()
                         end_date_obj = datetime.strptime(med.end_date, "%Y-%m-%d").date()
                         dias_restantes = (end_date_obj - hoje).days
-                        if 0 <= dias_restantes <= 5:
+                        # Tratamentos curtos (≤14 dias): alerta nos últimos 2 dias
+                        # Tratamentos longos (>14 dias): alerta nos últimos 5 dias
+                        duracao_total = (end_date_obj - med.created_at.date()).days if med.created_at else 30
+                        limite = 2 if duracao_total <= 14 else 5
+                        if 0 <= dias_restantes <= limite:
                             dias_texto = f"{dias_restantes} dias" if dias_restantes > 1 else "1 dia"
                             if dias_restantes == 0:
                                 msg_adicional = " ⚠️ ESTE REMÉDIO ACABA HOJE!"
