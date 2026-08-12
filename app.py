@@ -1,4 +1,4 @@
-# ===== v1.5.17 - 2026-08-11 ==========================================
+# ===== v1.5.18 - 2026-08-11 ==========================================
 # - CTG-010: validação min_length=4 na rota register-subscribe
 # - Fix: rotas DELETE /api/users/{id} e PUT reativar conta (soft delete)
 # - Field adicionado ao import pydantic (NameError no deploy)
@@ -3168,8 +3168,7 @@ def verificar_e_enviar_alerta_compra(db: Session):
                 
                 # Alerta a partir do 55º dia (quando faltam 5 ou menos dias para acabar, até a data final)
                 # Limite: 2 dias para tratamentos curtos, 5 para longos
-                duracao_total = (end_date_obj - med.created_at.date()).days if med.created_at else 30
-                limite = 2 if duracao_total <= 14 else 5
+                limite = 5
                 if 0 <= dias_restantes <= limite:
                     user = db.query(User).filter(User.id == med.user_id).first()
                     if not user:
