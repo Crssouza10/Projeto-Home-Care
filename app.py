@@ -27,6 +27,8 @@ from sqlalchemy import create_engine, Column, String, DateTime, Boolean, Time, D
 from sqlalchemy.orm import sessionmaker, declarative_base, Session
 from sqlalchemy.dialects.postgresql import UUID, JSONB
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.exceptions import RequestValidationError
+from fastapi.responses import JSONResponse
 from pydantic import BaseModel, EmailStr, ConfigDict, Field
 from typing import Optional, List
 from datetime import datetime, time, date, timedelta, timezone
@@ -95,6 +97,32 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# ===== TRADUÇÃO DE ERROS DE VALIDAÇÃO (CTG-010) =====
+@app.exception_handler(RequestValidationError)
+async def validation_exception_handler(request, exc):
+    traducoes = {
+        "string_too_short": "deve ter pelo menos {limit} caracteres",
+        "value_error.missing": "é obrigatório",
+        "type_error.integer": "deve ser um número inteiro",
+        "type_error.str": "deve ser um texto",
+        "value_error.email": "deve ser um e-mail válido",
+    }
+    erros = []
+    for err in exc.errors():
+        msg = err.get("msg", "")
+        for chave, traducao in traducoes.items():
+            if chave in msg:
+                campo = err.get("loc", ["campo"])[-1]
+                limit = err.get("ctx", {}).get("limit", "?")
+                erros.append(f"'{campo}' {traducao.format(limit=limit)}")
+                break
+        else:
+            erros.append(msg)
+    return JSONResponse(
+        status_code=422,
+        content={"detail": erros if erros else ["Erro de validação"]}
+    )
 
 # ===== ARQUIVOS ESTÁTICOS =====
 # Na Vercel, filesystem é read-only — estáticos são servidos pelo próprio deploy
@@ -2172,6 +2200,19 @@ async def create_appointment(user_id: str, appt: AppointmentCreate, db: Session 
     except ValueError:
         raise HTTPException(status_code=400, detail="ID de usuário inválido")
     
+    # Valida conflito de horário (CTG-096): mesma data + mesmo horário
+    conflito = db.query(Appointment).filter(
+        Appointment.user_id == user_uuid,
+        Appointment.appointment_date == appt.appointment_date,
+        Appointment.appointment_time == appt.appointment_time,
+        Appointment.status != "cancelled"
+    ).first()
+    if conflito:
+        raise HTTPException(
+            status_code=409, 
+            detail=f"Já existe uma consulta marcada para {appt.appointment_date} às {appt.appointment_time} ({conflito.doctor_name} - {conflito.specialty})."
+        )
+    
     nova_appt = Appointment(
         user_id=user_uuid,
         doctor_name=appt.doctor_name,
@@ -2596,7 +2637,11 @@ async def update_medication(
     if hasattr(med, 'is_continuous') and med.is_continuous:
         medication.end_date = None
         medication.is_continuous = True
-        medication.continuous_months = getattr(med, 'continuous_months', 6) or 6
+        # Se duration_days foi informado junto com is_continuous, usar ele como limite
+        if hasattr(med, 'duration_days') and med.duration_days and med.duration_days > 0:
+            medication.continuous_months = max(1, med.duration_days // 30)
+        else:
+            medication.continuous_months = getattr(med, 'continuous_months', 6) or 6
     elif hasattr(med, 'duration_days') and med.duration_days is not None and med.duration_days > 0:
         medication.end_date = (actual_start + timedelta(days=med.duration_days - 1)).strftime("%Y-%m-%d")
         medication.is_continuous = False
