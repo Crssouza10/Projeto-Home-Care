@@ -4697,7 +4697,16 @@
             // ==========================================
             if (status === 'not_taken') {
                 return `<button disabled style="width:100%; margin-top:10px; padding:14px; background:#ef4444; color:white; border:none; border-radius:12px; font-weight:800; font-size:1.1rem; cursor:default;">
-                    âŒ Não tomou às ${horaMed}
+                    ❌ Não tomou às ${horaMed}
+                </button>`;
+            }
+            
+            // ==========================================
+            // 2.6⃣ ESTADO: CANCELADO (v1.5.19 — feedback deleção "Só Hoje")
+            // ==========================================
+            if (status === 'cancelled') {
+                return `<button disabled style="width:100%; margin-top:10px; padding:14px; background:rgba(148,163,184,0.1); color:#64748b; border:1px dashed rgba(148,163,184,0.5); border-radius:12px; font-weight:600; font-size:1rem; cursor:default;">
+                    🚫 Dose cancelada — era às ${horaMed}
                 </button>`;
             }
             

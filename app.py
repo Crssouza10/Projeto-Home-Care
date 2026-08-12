@@ -1,4 +1,4 @@
-# ===== v1.5.19 - 2026-08-12 09:19 BRT ==========================================
+# ===== v1.5.19 - 2026-08-12 10:12 BRT ==========================================
 # - CTG-010: validação min_length=4 na rota register-subscribe
 # - Fix: rotas DELETE /api/users/{id} e PUT reativar conta (soft delete)
 # - Field adicionado ao import pydantic (NameError no deploy)
@@ -1751,6 +1751,10 @@ async def create_medication(user_id: str, med: MedicationCreate, db: Session = D
         end_date = None  # Contínuo não tem data final
     elif hasattr(med, 'duration_days') and med.duration_days is not None and med.duration_days > 0:
         end_date = (actual_start + timedelta(days=med.duration_days - 1)).strftime("%Y-%m-%d")
+    else:
+        # Fallback: se não é contínuo e não tem duration_days válido,
+        # assume 30 dias para evitar end_date=None (bug v1.5.19: segunda leitura OCR)
+        end_date = (actual_start + timedelta(days=29)).strftime("%Y-%m-%d")
     
     # 4. 🛡️ Distribuir horário para evitar intoxicação (múltiplos medicamentos no mesmo horário)
     adjusted_time = distribute_time(user_uuid, med.time, db)
