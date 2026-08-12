@@ -1,4 +1,4 @@
-# ===== v1.5.19 - 2026-08-12 11:43 BRT ==========================================
+# ===== v1.5.19 - 2026-08-12 11:49 BRT ==========================================
 # - CTG-010: validação min_length=4 na rota register-subscribe
 # - Fix: rotas DELETE /api/users/{id} e PUT reativar conta (soft delete)
 # - Field adicionado ao import pydantic (NameError no deploy)
@@ -3180,8 +3180,7 @@ def verificar_e_enviar_alerta_compra(db: Session):
                 end_date_obj = datetime.strptime(med.end_date, "%Y-%m-%d").date()
                 dias_restantes = (end_date_obj - hoje).days
                 
-                # Alerta a partir do 55º dia (quando faltam 5 ou menos dias para acabar, até a data final)
-                # Limite: 2 dias para tratamentos curtos, 5 para longos
+                # Alerta fixo de 5 dias para compra (v1.5.19)
                 limite = 5
                 if 0 <= dias_restantes <= limite:
                     user = db.query(User).filter(User.id == med.user_id).first()
@@ -3250,10 +3249,8 @@ async def get_low_supply_medications(user_id: str, db: Session = Depends(get_db)
         try:
             end_date_obj = datetime.strptime(med.end_date, "%Y-%m-%d").date()
             dias_restantes = (end_date_obj - hoje).days
-            # Limite proporcional: 2 dias para curtos, 5 para longos
-            duracao_total = (end_date_obj - med.created_at.date()).days if med.created_at else 30
-            limite = 2 if duracao_total <= 14 else 5
-            if 0 <= dias_restantes <= limite:
+            # Alerta fixo de 5 dias (v1.5.19)
+            if 0 <= dias_restantes <= 5:
                 resultado.append({
                     "id": str(med.id),
                     "name": med.name,
