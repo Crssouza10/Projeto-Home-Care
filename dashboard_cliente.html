@@ -6676,7 +6676,9 @@
                     
                     if (!response.ok) {
                         const errorData = await response.json().catch(() => ({}));
-                        throw new Error(errorData.detail || `Erro ao salvar no horário ${t}`);
+                        const detail = errorData.detail;
+                        const msg = (typeof detail === 'string') ? detail : (detail?.message || `Erro ao salvar no horário ${t}`);
+                        throw new Error(msg);
                     }
                 }
                 
@@ -8352,9 +8354,11 @@
                     // Opcional: remover o card após salvar para não duplicar
                     // event.target.closest('.med-card')?.remove();
                 } else {
-                    // CTG-109-01: mostra a mensagem específica (ex: conflito de horário)
+                    // CTG-109-01 / CTG-121-01: trata detail string OU objeto
                     const errData = await response.json().catch(() => ({}));
-                    showToast("❌ " + (errData.detail || "Erro ao salvar medicamento"), "error");
+                    const detail = errData.detail;
+                    const msg = (typeof detail === 'string') ? detail : (detail?.message || "Erro ao salvar medicamento");
+                    showToast("❌ " + msg, "error");
                 }
             } catch (error) {
                 showToast("âŒ Erro na conexão", "error");
