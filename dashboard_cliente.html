@@ -193,6 +193,59 @@
             margin-bottom: 20px;
         }
         
+        /* v1.5.19: Banner de alerta de medicamentos acabando */
+        .low-supply-banner {
+            display: none;
+            background: linear-gradient(135deg, rgba(239,68,68,0.15), rgba(245,158,11,0.1));
+            border: 1px solid rgba(239,68,68,0.4);
+            border-radius: 14px;
+            padding: 16px 20px;
+            margin-bottom: 16px;
+            animation: slideDown 0.4s ease;
+        }
+        .low-supply-banner.active {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .low-supply-banner .alert-icon {
+            font-size: 1.5rem;
+            flex-shrink: 0;
+        }
+        .low-supply-banner .alert-text {
+            flex: 1;
+            color: #fca5a5;
+            font-size: 0.95rem;
+            font-weight: 600;
+            line-height: 1.5;
+        }
+        .low-supply-banner .alert-text strong {
+            color: #ef4444;
+        }
+        @keyframes slideDown {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .med-card.ending-soon {
+            border-left: 3px solid #ef4444 !important;
+            background: rgba(239,68,68,0.05) !important;
+        }
+        .med-ending-badge {
+            display: inline-block;
+            background: rgba(239,68,68,0.2);
+            color: #ef4444;
+            font-size: 0.7rem;
+            font-weight: 700;
+            padding: 3px 8px;
+            border-radius: 6px;
+            margin-left: 8px;
+            animation: pulse 1.5s infinite;
+        }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.6; }
+        }
+        
         .section-title {
             font-size: 1.1rem;
             font-weight: 700;
@@ -1582,6 +1635,12 @@
                     🗓 Minha agenda para hoje dia: 20/junho/2026
                 </h3>
                 
+                <!-- 🔴 v1.5.19: Banner de alerta — medicamentos acabando -->
+                <div id="low-supply-banner" class="low-supply-banner">
+                    <span class="alert-icon">🛒</span>
+                    <span class="alert-text" id="low-supply-text"></span>
+                </div>
+                
                 <!-- 💊 MEDICAMENTOS -->
                 <div id="screen-medications" class="screen">
                     <div class="section-header-btn" style="display:flex; justify-content:space-between; align-items:center;" onclick="scrollToSection('medications')">
@@ -2455,6 +2514,9 @@
                 // ✅ Chama renderCurrentScreen APÓS carregar dados
                 renderCurrentScreen();
                 
+                // 🔴 v1.5.19: Verifica medicamentos acabando
+                checkLowSupplyMedications();
+                
             } catch (error) {
                 console.error('âŒ Erro ao carregar dados:', error);
             }
@@ -2566,8 +2628,64 @@
                 if (contactsRes.ok) contactsData = await contactsRes.json();
                 
                 refreshCurrentView();
+                
+                // 🔴 v1.5.19: Verifica medicamentos acabando
+                checkLowSupplyMedications();
             } catch (error) {
-                console.error('âŒ Erro ao recarregar dados da API:', error);
+                console.error('❌ Erro ao recarregar dados da API:', error);
+            }
+        }
+        
+        // ============================================
+        // 🔴 v1.5.19: Verifica medicamentos com estoque baixo (alerta de compra)
+        // ============================================
+        async function checkLowSupplyMedications() {
+            try {
+                if (!userId) return;
+                const resp = await fetch(`${API_URL}/api/cliente/${userId}/medications/low-supply`);
+                if (!resp.ok) return;
+                const data = await resp.json();
+                
+                const banner = document.getElementById('low-supply-banner');
+                const textEl = document.getElementById('low-supply-text');
+                if (!banner || !textEl) return;
+                
+                if (data.count > 0) {
+                    const medsText = data.medications.map(m => {
+                        const dias = m.days_remaining;
+                        const diasTexto = dias === 0 ? 'acaba HOJE' : 
+                                         dias === 1 ? 'falta 1 dia' : 
+                                         `faltam ${dias} dias`;
+                        return `<strong>${m.name}</strong> (${diasTexto})`;
+                    }).join(' e ');
+                    
+                    textEl.innerHTML = `⚠️ ${medsText}. <strong>Providencie nova receita!</strong>`;
+                    banner.classList.add('active');
+                    
+                    // Marca cards com classe ending-soon
+                    const endingIds = new Set(data.medications.map(m => m.id));
+                    document.querySelectorAll('.med-card').forEach(card => {
+                        const onclickAttr = card.querySelector('[onclick*="deleteMedication"]')?.getAttribute('onclick');
+                        const medId = onclickAttr?.match(/'([^']+)'/)?.[1];
+                        if (medId && endingIds.has(medId)) {
+                            card.classList.add('ending-soon');
+                            if (!card.querySelector('.med-ending-badge')) {
+                                const nameEl = card.querySelector('.med-name');
+                                if (nameEl) {
+                                    const badge = document.createElement('span');
+                                    badge.className = 'med-ending-badge';
+                                    badge.textContent = '🔴 Acabando';
+                                    nameEl.appendChild(badge);
+                                }
+                            }
+                        }
+                    });
+                } else {
+                    banner.classList.remove('active');
+                    textEl.innerHTML = '';
+                }
+            } catch (err) {
+                console.error('Erro ao verificar medicamentos acabando:', err);
             }
         }
         // ============================================
