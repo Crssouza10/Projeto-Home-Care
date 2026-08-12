@@ -1674,7 +1674,16 @@ async function handleRegister(e) {
                 document.getElementById('username').value = email;
                 document.getElementById('password').focus();
             } else {
-                throw new Error(data.detail || 'Erro ao criar conta.');
+                // Trata erros de validação (422) onde detail é um array
+                let errorMsg = 'Erro ao criar conta.';
+                if (data.detail) {
+                    if (Array.isArray(data.detail)) {
+                        errorMsg = data.detail.map(e => e.msg).join('. ');
+                    } else if (typeof data.detail === 'string') {
+                        errorMsg = data.detail;
+                    }
+                }
+                throw new Error(errorMsg);
             }
         } else {
             // Planos Básico e Pro — redireciona para Mercado Pago

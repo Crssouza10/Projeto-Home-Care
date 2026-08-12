@@ -4703,10 +4703,23 @@
             
             if (status === 'pending') {
                 // Verifica se o horário do medicamento já passou (atrasado)
+                // ❗ SÓ mostra "Atrasado" se for hoje ou data passada — NUNCA para datas futuras
+                const targetDateObj = new Date(year, month - 1, day);
+                const todayObj = new Date();
+                todayObj.setHours(0, 0, 0, 0);
+                targetDateObj.setHours(0, 0, 0, 0);
+                const isTodayOrPast = targetDateObj <= todayObj;
+                
                 const minutosMed = parseInt(h) * 60 + parseInt(m);
-                if (minutosAtuais > minutosMed) {
+                if (isTodayOrPast && minutosAtuais > minutosMed) {
                     return `<button disabled style="width:100%; margin-top:10px; padding:14px; background:rgba(239,68,68,0.15); color:#ef4444; border:1px solid rgba(239,68,68,0.5); border-radius:12px; font-weight:800; font-size:1.1rem; cursor:default;">
                         ⏰ Atrasado — era às ${horaMed}
+                    </button>`;
+                }
+                // Data futura ou horário ainda não chegou: mostrar status neutro
+                if (!isTodayOrPast) {
+                    return `<button disabled style="width:100%; margin-top:10px; padding:14px; background:rgba(148,163,184,0.1); color:#94a3b8; border:1px solid rgba(148,163,184,0.3); border-radius:12px; font-weight:600; font-size:1rem; cursor:default;">
+                        📅 Agendado para ${horaMed}
                     </button>`;
                 }
                 return '';

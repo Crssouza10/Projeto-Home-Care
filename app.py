@@ -2596,12 +2596,15 @@ async def update_medication(
     if hasattr(med, 'is_continuous') and med.is_continuous:
         medication.end_date = None
         medication.is_continuous = True
+        medication.continuous_months = getattr(med, 'continuous_months', 6) or 6
     elif hasattr(med, 'duration_days') and med.duration_days is not None and med.duration_days > 0:
         medication.end_date = (actual_start + timedelta(days=med.duration_days - 1)).strftime("%Y-%m-%d")
         medication.is_continuous = False
+        medication.continuous_months = None
     else:
         medication.end_date = None
         medication.is_continuous = False
+        medication.continuous_months = None
     
     # Limpa flags globais de status do dia — NÃO devem poluir dias futuros
     medication.taken_status = "pending"
@@ -3162,6 +3165,45 @@ def verificar_e_enviar_alerta_compra(db: Session):
     except Exception as e:
         print(f"🔥 [ALERTA COMPRA] Erro geral: {e}")
 
+
+@app.get("/api/cliente/{user_id}/medications/low-supply")
+async def get_low_supply_medications(user_id: str, db: Session = Depends(get_db)):
+    """Retorna medicamentos com 5 ou menos dias restantes (CTG-064)."""
+    try:
+        user_uuid = uuid.UUID(user_id)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="ID de usuário inválido")
+    
+    from datetime import timezone, timedelta
+    brasilia_tz = timezone(timedelta(hours=-3))
+    hoje = datetime.now(brasilia_tz).date()
+    
+    meds = db.query(Medication).filter(
+        Medication.user_id == user_uuid,
+        Medication.is_active == True,
+        Medication.end_date.isnot(None)
+    ).all()
+    
+    resultado = []
+    for med in meds:
+        try:
+            end_date_obj = datetime.strptime(med.end_date, "%Y-%m-%d").date()
+            dias_restantes = (end_date_obj - hoje).days
+            if 0 <= dias_restantes <= 5:
+                resultado.append({
+                    "id": str(med.id),
+                    "name": med.name,
+                    "dosage": med.dosage,
+                    "end_date": med.end_date,
+                    "days_remaining": dias_restantes,
+                    "status": "acabando" if dias_restantes > 0 else "acaba_hoje"
+                })
+        except (ValueError, TypeError):
+            continue
+    
+    return {"status": "ok", "medications": resultado, "count": len(resultado)}
+
+
 def verificar_e_enviar_relatorios(db: Session):
     """
     Verifica se existem relatorios diarios de medicamentos para enviar
@@ -3461,6 +3503,8 @@ async def upload_prescription(file: UploadFile = File(...)):
                 mime_type = 'image/png'
             elif filename.endswith('.webp'):
                 mime_type = 'image/webp'
+            elif filename.endswith('.jpeg') or filename.endswith('.jpg'):
+                mime_type = 'image/jpeg'
             else:
                 mime_type = 'image/jpeg'
             
@@ -3589,6 +3633,8 @@ async def ocr_allergies(user_id: str, file: UploadFile = File(...)):
                 mime_type = 'image/png'
             elif filename.endswith('.webp'):
                 mime_type = 'image/webp'
+            elif filename.endswith('.jpeg') or filename.endswith('.jpg'):
+                mime_type = 'image/jpeg'
             else:
                 mime_type = 'image/jpeg'
             
@@ -3649,6 +3695,8 @@ async def upload_insurance_card(user_id: str, file: UploadFile = File(...), db: 
                 mime_type = 'image/png'
             elif filename.endswith('.webp'):
                 mime_type = 'image/webp'
+            elif filename.endswith('.jpeg') or filename.endswith('.jpg'):
+                mime_type = 'image/jpeg'
             else:
                 mime_type = 'image/jpeg'
             
@@ -3797,6 +3845,8 @@ async def upload_identity_document(user_id: str, file: UploadFile = File(...), d
                 mime_type = 'image/png'
             elif filename.endswith('.webp'):
                 mime_type = 'image/webp'
+            elif filename.endswith('.jpeg') or filename.endswith('.jpg'):
+                mime_type = 'image/jpeg'
             else:
                 mime_type = 'image/jpeg'
             
