@@ -1678,7 +1678,7 @@ async function handleRegister(e) {
                 let errorMsg = 'Erro ao criar conta.';
                 if (data.detail) {
                     if (Array.isArray(data.detail)) {
-                        errorMsg = data.detail.map(e => e.msg).join('. ');
+                        errorMsg = data.detail.map(e => typeof e === 'string' ? e : (e.msg || JSON.stringify(e))).join('. ');
                     } else if (typeof data.detail === 'string') {
                         errorMsg = data.detail;
                     }
