@@ -1,4 +1,4 @@
-# ===== v1.5.19 - 2026-08-12 16:23 BRT ==========================================
+# ===== v1.5.19 - 2026-08-12 18:23 BRT ==========================================
 # - CTG-010: validação min_length=4 na rota register-subscribe
 # - Fix: rotas DELETE /api/users/{id} e PUT reativar conta (soft delete)
 # - Field adicionado ao import pydantic (NameError no deploy)
@@ -1767,6 +1767,31 @@ def check_time_conflict(user_id, time_str: str, db: Session, current_med_id=None
     return None
 
 
+def find_free_times(user_id, time_str: str, db: Session, current_med_id=None, max_suggestions: int = 4):
+    """CTG-121-01: Sugere horários livres próximos ao horário conflitante.
+    Retorna lista de strings "HH:MM" disponíveis (a cada 15 min, antes e depois)."""
+    try:
+        base = datetime.strptime(time_str, "%H:%M")
+    except (ValueError, TypeError):
+        return []
+
+    sugestoes = []
+    # Offset em minutos: +15, -15, +30, -30, +45, +60, +90, +120
+    offsets = [15, -15, 30, -30, 45, 60, -60, 90, 120]
+    for offset in offsets:
+        if len(sugestoes) >= max_suggestions:
+            break
+        candidate = base + timedelta(minutes=offset)
+        # Limites: entre 06:00 e 23:00
+        if candidate.time() < time(6, 0) or candidate.time() > time(23, 0):
+            continue
+        cand_str = candidate.strftime("%H:%M")
+        conflito = check_time_conflict(user_id, cand_str, db, current_med_id)
+        if conflito is None and cand_str not in sugestoes:
+            sugestoes.append(cand_str)
+    return sugestoes
+
+
 def distribute_time(user_id, preferred_time_str: str, db: Session, current_med_id=None) -> str:
     """
     Verifica se já existe medicamento ativo no mesmo horário para o usuário.
@@ -1853,13 +1878,20 @@ async def create_medication(user_id: str, med: MedicationCreate, db: Session = D
         # assume 30 dias para evitar end_date=None (bug v1.5.19: segunda leitura OCR)
         end_date = (actual_start + timedelta(days=29)).strftime("%Y-%m-%d")
     
-    # 4. 🚫 CTG-109-01: Bloquear cadastro se já existe medicamento no mesmo horário
+    # 4. 🚫 CTG-109-01 / CTG-121-01: Bloquear cadastro se já existe medicamento no mesmo horário,
+    #    mas retornando horários sugeridos para o usuário ajustar.
     conflito = check_time_conflict(user_uuid, med.time, db)
     if conflito:
+        sugeridos = find_free_times(user_uuid, med.time, db)
         raise HTTPException(
             status_code=409,
-            detail=f"⚠️ Já existe o medicamento '{conflito}' cadastrado neste horário ({med.time}). "
-                   f"Escolha outro horário para evitar ingestão simultânea."
+            detail={
+                "error": "conflito_horario",
+                "message": f"Já existe o medicamento '{conflito}' cadastrado neste horário ({med.time}).",
+                "conflito": conflito,
+                "horario": med.time,
+                "suggested_times": sugeridos,
+            }
         )
     adjusted_time = med.time
     
@@ -2731,13 +2763,19 @@ async def update_medication(
     h, m = map(int, med.time.split(":"))
     med_time_obj = time(h, m)
     
-    # 🚫 CTG-109-01: Bloquear se o novo horário conflitar com outro medicamento ativo
+    # 🚫 CTG-109-01 / CTG-121-01: Bloquear se o novo horário conflitar com outro medicamento ativo
     conflito = check_time_conflict(medication.user_id, med.time, db, current_med_id=medication.id)
     if conflito:
+        sugeridos = find_free_times(medication.user_id, med.time, db, current_med_id=medication.id)
         raise HTTPException(
             status_code=409,
-            detail=f"⚠️ Já existe o medicamento '{conflito}' cadastrado neste horário ({med.time}). "
-                   f"Escolha outro horário para evitar ingestão simultânea."
+            detail={
+                "error": "conflito_horario",
+                "message": f"Já existe o medicamento '{conflito}' cadastrado neste horário ({med.time}).",
+                "conflito": conflito,
+                "horario": med.time,
+                "suggested_times": sugeridos,
+            }
         )
     
     # ✅ Campos de identidade (nome, dosagem) são permanentes e afetam todos os dias

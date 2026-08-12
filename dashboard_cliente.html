@@ -20,6 +20,9 @@
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Inter', sans-serif; }
         
+        /* CTG-122: previne overflow horizontal em imagens/tabelas no mobile */
+        img, video, iframe, table, canvas, svg { max-width: 100%; }
+        
         html, body {
             width: 100%;
             max-width: 100%;
@@ -5686,7 +5689,15 @@
                 
                 if (!response.ok) {
                     const errorData = await response.json().catch(() => ({}));
-                    throw new Error(errorData.detail || 'Erro ao salvar');
+                    const detail = errorData.detail;
+                    // CTG-121-01: conflito de horário → mostra dialog com sugestões
+                    if (detail && typeof detail === 'object' && detail.error === 'conflito_horario') {
+                        btn.disabled = false;
+                        btn.textContent = originalText;
+                        showTimeConflictDialog(detail);
+                        return;
+                    }
+                    throw new Error((typeof detail === 'string') ? detail : (detail?.message || 'Erro ao salvar'));
                 }
                 
                 showToast(id ? '✅ Medicamento atualizado!' : '✅ Medicamento adicionado!');
@@ -5700,6 +5711,79 @@
                 btn.textContent = originalText;
             }
         }
+
+        // ============================================
+        // ⏰ CTG-121-01: Dialog de conflito de horário (ajustar/cancelar/salvar)
+        // ============================================
+        function showTimeConflictDialog(detail) {
+            const existing = document.getElementById('time-conflict-dialog');
+            if (existing) existing.remove();
+
+            const overlay = document.createElement('div');
+            overlay.id = 'time-conflict-dialog';
+            overlay.style.cssText = 'position: fixed; inset: 0; background: rgba(0,0,0,0.75); display: flex; align-items: center; justify-content: center; z-index: 30000; padding: 16px;';
+
+            let sugestoesHTML = '';
+            if (detail.suggested_times && detail.suggested_times.length > 0) {
+                sugestoesHTML = detail.suggested_times.map(t => `
+                    <button onclick="window.__aplicarHorarioSugerido('${t}')" style="
+                        padding: 12px 18px; background: rgba(0,212,255,0.15); color: #00D4FF;
+                        border: 1px solid rgba(0,212,255,0.5); border-radius: 10px;
+                        font-size: 1.1rem; font-weight: 700; cursor: pointer;
+                        min-width: 90px;
+                    ">${t}</button>
+                `).join('');
+            } else {
+                sugestoesHTML = '<p style="color:#94a3b8; font-size:0.9rem;">Nenhum horário livre próximo. Ajuste manualmente.</p>';
+            }
+
+            overlay.innerHTML = `
+                <div style="background:#1e293b; border:2px solid #f59e0b; border-radius:16px; padding:24px; max-width:420px; width:100%; text-align:center; box-sizing:border-box;">
+                    <div style="font-size:2.2rem; margin-bottom:8px;">⏰</div>
+                    <h3 style="color:#fff; margin-bottom:10px; font-size:1.2rem;">Conflito de horário</h3>
+                    <p style="color:#fca5a5; margin-bottom:16px; font-size:0.95rem;">${detail.message}</p>
+                    <p style="color:#cbd5e1; font-size:0.9rem; margin-bottom:10px;">Escolha um horário livre sugerido:</p>
+                    <div style="display:flex; flex-wrap:wrap; gap:8px; justify-content:center; margin-bottom:20px;">
+                        ${sugestoesHTML}
+                    </div>
+                    <div style="display:flex; gap:10px; justify-content:center; flex-wrap:wrap;">
+                        <button onclick="window.__ajustarHorarioManual()" style="
+                            padding: 12px 20px; background: rgba(0,212,255,0.15); color: #00D4FF;
+                            border: 1px solid rgba(0,212,255,0.4); border-radius: 10px;
+                            font-weight: 700; cursor: pointer; font-size: 0.95rem;
+                        ">✏️ Ajustar horário</button>
+                        <button onclick="window.__cancelarCadastroRemedio()" style="
+                            padding: 12px 20px; background: rgba(239,68,68,0.2); color: #fca5a5;
+                            border: 1px solid rgba(239,68,68,0.5); border-radius: 10px;
+                            font-weight: 700; cursor: pointer; font-size: 0.95rem;
+                        ">❌ Cancelar</button>
+                    </div>
+                </div>
+            `;
+            document.body.appendChild(overlay);
+        }
+
+        // Aplica um horário sugerido e reenvia o formulário
+        window.__aplicarHorarioSugerido = function(t) {
+            fillTimeGrid(t);
+            const dialog = document.getElementById('time-conflict-dialog');
+            if (dialog) dialog.remove();
+            const form = document.getElementById('form-medication');
+            if (form) form.dispatchEvent(new Event('submit', { cancelable: true }));
+        };
+
+        // Fecha o dialog e mantém o modal aberto para ajuste manual do horário
+        window.__ajustarHorarioManual = function() {
+            const dialog = document.getElementById('time-conflict-dialog');
+            if (dialog) dialog.remove();
+        };
+
+        // Cancela tudo: fecha dialog e o modal de medicamento
+        window.__cancelarCadastroRemedio = function() {
+            const dialog = document.getElementById('time-conflict-dialog');
+            if (dialog) dialog.remove();
+            closeModal('modal-medication');
+        };
 
         async function saveAppointment(e) {
             e.preventDefault();
