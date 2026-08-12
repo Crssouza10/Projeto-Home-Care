@@ -8268,7 +8268,9 @@
                     // Opcional: remover o card após salvar para não duplicar
                     // event.target.closest('.med-card')?.remove();
                 } else {
-                    showToast("âŒ Erro ao salvar medicamento", "error");
+                    // CTG-109-01: mostra a mensagem específica (ex: conflito de horário)
+                    const errData = await response.json().catch(() => ({}));
+                    showToast("❌ " + (errData.detail || "Erro ao salvar medicamento"), "error");
                 }
             } catch (error) {
                 showToast("âŒ Erro na conexão", "error");

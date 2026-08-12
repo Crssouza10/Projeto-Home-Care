@@ -1,4 +1,4 @@
-# ===== v1.5.19 - 2026-08-12 11:50 BRT ==========================================
+# ===== v1.5.19 - 2026-08-12 15:30 BRT ==========================================
 # - CTG-010: validação min_length=4 na rota register-subscribe
 # - Fix: rotas DELETE /api/users/{id} e PUT reativar conta (soft delete)
 # - Field adicionado ao import pydantic (NameError no deploy)
@@ -1184,8 +1184,37 @@ def _get_gmail_access_token() -> str:
     return token_resp.json()["access_token"]
 
 
+def _send_email_smtp(to_email: str, subject: str, body: str, from_email: str = None) -> bool:
+    """Fallback SMTP (smtp.gmail.com:587) para envio de e-mail. Retorna True se sucesso."""
+    import smtplib
+    from email.mime.text import MIMEText
+    
+    smtp_server = os.getenv("SMTP_SERVER", "smtp.gmail.com")
+    smtp_port = int(os.getenv("SMTP_PORT", "587"))
+    smtp_user = os.getenv("SMTP_USERNAME")
+    smtp_pass = os.getenv("SMTP_PASSWORD")
+    
+    if not smtp_user or not smtp_pass:
+        raise RuntimeError("Credenciais SMTP não configuradas")
+    
+    if not from_email:
+        from_email = smtp_user
+    
+    msg = MIMEText(body, "plain", "utf-8")
+    msg["From"] = from_email
+    msg["To"] = to_email
+    msg["Subject"] = subject
+    
+    with smtplib.SMTP(smtp_server, smtp_port, timeout=20) as server:
+        server.starttls()
+        server.login(smtp_user, smtp_pass)
+        server.sendmail(from_email, [to_email], msg.as_string())
+    return True
+
+
 def _send_email_via_gmail_api(to_email: str, subject: str, body: str, from_email: str = None) -> bool:
-    """Envia e-mail simples (sem anexos) via Gmail API REST. Retorna True se sucesso."""
+    """Envia e-mail simples (sem anexos) via Gmail API REST. Retorna True se sucesso.
+    Fallback: se Gmail OAuth falhar, tenta SMTP."""
     import base64
     from email.mime.text import MIMEText
     
@@ -1198,16 +1227,25 @@ def _send_email_via_gmail_api(to_email: str, subject: str, body: str, from_email
     msg["Subject"] = subject
     
     raw_msg = base64.urlsafe_b64encode(msg.as_bytes()).decode("utf-8")
-    access_token = _get_gmail_access_token()
     
-    gmail_url = "https://gmail.googleapis.com/gmail/v1/users/me/messages/send"
-    headers = {
-        "Authorization": f"Bearer {access_token}",
-        "Content-Type": "application/json"
-    }
-    resp = requests.post(gmail_url, headers=headers, json={"raw": raw_msg}, timeout=30)
-    resp.raise_for_status()
-    return True
+    try:
+        access_token = _get_gmail_access_token()
+        
+        gmail_url = "https://gmail.googleapis.com/gmail/v1/users/me/messages/send"
+        headers = {
+            "Authorization": f"Bearer {access_token}",
+            "Content-Type": "application/json"
+        }
+        resp = requests.post(gmail_url, headers=headers, json={"raw": raw_msg}, timeout=30)
+        resp.raise_for_status()
+        return True
+    except Exception as gmail_err:
+        print(f"⚠️ [EMAIL] Gmail API falhou ({gmail_err}) — tentando fallback SMTP...")
+        try:
+            return _send_email_smtp(to_email, subject, body, from_email)
+        except Exception as smtp_err:
+            print(f"🔥 [EMAIL] SMTP também falhou: {smtp_err}")
+            raise
 
 
 # ══════════════════════════════════════════════════════════════
@@ -1673,6 +1711,30 @@ def _calc_duration_days(start_str: str, end_str: str) -> int:
         return None
 
 # ===== DISTRIBUIÇÃO DE HORÁRIOS PARA EVITAR INTOXICAÇÃO (v2.3.1 - 30min) =====
+def check_time_conflict(user_id, time_str: str, db: Session, current_med_id=None):
+    """CTG-109-01: Verifica se já existe medicamento ATIVO no mesmo horário.
+    Retorna o nome do medicamento conflitante, ou None se estiver livre."""
+    try:
+        base_time = datetime.strptime(time_str, "%H:%M").time()
+    except (ValueError, TypeError):
+        return None
+
+    query = db.query(Medication).filter(
+        Medication.user_id == user_id,
+        Medication.time == base_time,
+        Medication.is_active == True,
+        # Medicamento ativo: sem end_date OU end_date >= hoje
+        (Medication.end_date == None) | (Medication.end_date >= hoje_brasilia().strftime("%Y-%m-%d"))
+    )
+    if current_med_id:
+        query = query.filter(Medication.id != current_med_id)
+
+    existing = query.first()
+    if existing:
+        return existing.name
+    return None
+
+
 def distribute_time(user_id, preferred_time_str: str, db: Session, current_med_id=None) -> str:
     """
     Verifica se já existe medicamento ativo no mesmo horário para o usuário.
@@ -1680,6 +1742,9 @@ def distribute_time(user_id, preferred_time_str: str, db: Session, current_med_i
     
     Regra de segurança: evita múltiplos medicamentos no mesmo minuto
     para prevenir intoxicação por ingestão simultânea.
+    
+    ⚠️ DEPRECATED (v1.5.19): CTG-109-01 agora BLOQUEIA o cadastro.
+    Mantido apenas por compatibilidade.
     """
     from datetime import timedelta
     
@@ -1756,8 +1821,15 @@ async def create_medication(user_id: str, med: MedicationCreate, db: Session = D
         # assume 30 dias para evitar end_date=None (bug v1.5.19: segunda leitura OCR)
         end_date = (actual_start + timedelta(days=29)).strftime("%Y-%m-%d")
     
-    # 4. 🛡️ Distribuir horário para evitar intoxicação (múltiplos medicamentos no mesmo horário)
-    adjusted_time = distribute_time(user_uuid, med.time, db)
+    # 4. 🚫 CTG-109-01: Bloquear cadastro se já existe medicamento no mesmo horário
+    conflito = check_time_conflict(user_uuid, med.time, db)
+    if conflito:
+        raise HTTPException(
+            status_code=409,
+            detail=f"⚠️ Já existe o medicamento '{conflito}' cadastrado neste horário ({med.time}). "
+                   f"Escolha outro horário para evitar ingestão simultânea."
+        )
+    adjusted_time = med.time
     
     # 5. Criar o medicamento
     nova_med = Medication(
@@ -2626,6 +2698,15 @@ async def update_medication(
     
     h, m = map(int, med.time.split(":"))
     med_time_obj = time(h, m)
+    
+    # 🚫 CTG-109-01: Bloquear se o novo horário conflitar com outro medicamento ativo
+    conflito = check_time_conflict(medication.user_id, med.time, db, current_med_id=medication.id)
+    if conflito:
+        raise HTTPException(
+            status_code=409,
+            detail=f"⚠️ Já existe o medicamento '{conflito}' cadastrado neste horário ({med.time}). "
+                   f"Escolha outro horário para evitar ingestão simultânea."
+        )
     
     # ✅ Campos de identidade (nome, dosagem) são permanentes e afetam todos os dias
     medication.name = med.name
