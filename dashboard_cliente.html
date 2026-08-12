@@ -6623,21 +6623,21 @@
         }
 
         // Salvar no backend (chama a API existente de medicamentos)
-        async function salvarRemedioReceita(encodedMed, buttonEl, tempId) {
+        async function salvarRemedioReceita(encodedMed, buttonEl, tempId, timeOverride) {
             const med = JSON.parse(decodeURIComponent(encodedMed));
             const currentUserId = localStorage.getItem('userId') || userId;
             if (!currentUserId) {
-                showToast('âŒ Usuário não identificado. Faça login novamente.', true);
+                showToast('❌ Usuário não identificado. Faça login novamente.', true);
                 return;
             }
             
             if (buttonEl) {
                 buttonEl.disabled = true;
-                buttonEl.textContent = 'â³ Salvando...';
+                buttonEl.textContent = '⏳ Salvando...';
             }
             
             try {
-                const times = (med.times && med.times.length > 0) ? med.times : ['08:00'];
+                const times = timeOverride ? [timeOverride] : (med.times && med.times.length > 0 ? med.times : ['08:00']);
                 const days = [0, 1, 2, 3, 4, 5, 6]; // Todos os dias da semana por padrão
                 const isContinuous = !med.duration_days;
                 const durationDays = med.duration_days || null;
@@ -6677,6 +6677,15 @@
                     if (!response.ok) {
                         const errorData = await response.json().catch(() => ({}));
                         const detail = errorData.detail;
+                        // CTG-121-01: conflito → dialog com "Alterar e salvar" + "Cancelar"
+                        if (detail && typeof detail === 'object' && detail.error === 'conflito_horario') {
+                            if (buttonEl) {
+                                buttonEl.disabled = false;
+                                buttonEl.textContent = '✅ Confirmar e Salvar';
+                            }
+                            showReceitaConflictDialog(detail, encodedMed, tempId);
+                            return;
+                        }
                         const msg = (typeof detail === 'string') ? detail : (detail?.message || `Erro ao salvar no horário ${t}`);
                         throw new Error(msg);
                     }
@@ -6697,7 +6706,7 @@
                 }
                 
             } catch (error) {
-                showToast('âŒ ' + error.message, true);
+                showToast('❌ ' + error.message, true);
                 console.error('Erro ao salvar medicamento da receita:', error);
                 if (buttonEl) {
                     buttonEl.disabled = false;
@@ -6705,6 +6714,88 @@
                 }
             }
         }
+
+        // =====================================================
+        // ⏰ CTG-121-01: Dialog de conflito para leitura de receita
+        // =====================================================
+        function showReceitaConflictDialog(detail, encodedMed, tempId) {
+            const existing = document.getElementById('receita-conflict-dialog');
+            if (existing) existing.remove();
+
+            const overlay = document.createElement('div');
+            overlay.id = 'receita-conflict-dialog';
+            overlay.style.cssText = 'position: fixed; inset: 0; background: rgba(0,0,0,0.75); display: flex; align-items: center; justify-content: center; z-index: 30000; padding: 16px;';
+
+            let sugestoesHTML = '';
+            if (detail.suggested_times && detail.suggested_times.length > 0) {
+                sugestoesHTML = detail.suggested_times.map(t => `
+                    <button onclick="window.__salvarReceitaHorarioSugerido('${encodedMed}', '${t}', '${tempId}')" style="
+                        padding: 12px 18px; background: rgba(0,212,255,0.15); color: #00D4FF;
+                        border: 1px solid rgba(0,212,255,0.5); border-radius: 10px;
+                        font-size: 1.1rem; font-weight: 700; cursor: pointer; min-width: 90px;
+                    ">${t}</button>
+                `).join('');
+            } else {
+                sugestoesHTML = '<p style="color:#94a3b8; font-size:0.9rem;">Nenhum horário livre próximo.</p>';
+            }
+
+            overlay.innerHTML = `
+                <div style="background:#1e293b; border:2px solid #f59e0b; border-radius:16px; padding:24px; max-width:420px; width:100%; text-align:center; box-sizing:border-box;">
+                    <div style="font-size:2.2rem; margin-bottom:8px;">⏰</div>
+                    <h3 style="color:#fff; margin-bottom:10px; font-size:1.2rem;">Conflito de horário</h3>
+                    <p style="color:#fca5a5; margin-bottom:16px; font-size:0.95rem;">${detail.message}</p>
+                    <p style="color:#cbd5e1; font-size:0.9rem; margin-bottom:10px;">Escolha um horário livre para <strong>alterar e salvar</strong>:</p>
+                    <div style="display:flex; flex-wrap:wrap; gap:8px; justify-content:center; margin-bottom:16px;">
+                        ${sugestoesHTML}
+                    </div>
+                    <div style="border-top:1px solid rgba(148,163,184,0.2); padding-top:14px; margin-bottom:14px;">
+                        <label style="color:#94a3b8; font-size:0.85rem; display:block; margin-bottom:8px;">Ou digite outro horário:</label>
+                        <input type="time" id="receita-novo-horario" style="
+                            background:#0f172a; border:1px solid rgba(0,212,255,0.3); border-radius:8px;
+                            color:#fff; padding:10px 14px; font-size:1.1rem; width:140px; text-align:center;
+                        ">
+                        <button onclick="window.__alterarESalvarReceita('${encodedMed}', '${tempId}')" style="
+                            display:block; margin:10px auto 0; padding:12px 20px; background:#f59e0b; color:#fff;
+                            border:none; border-radius:10px; font-weight:700; cursor:pointer; font-size:1rem;
+                        ">✏️ Alterar e salvar</button>
+                    </div>
+                    <button onclick="window.__fecharReceitaConflict()" style="
+                        width:100%; padding:12px 20px; background: rgba(239,68,68,0.2); color: #fca5a5;
+                        border: 1px solid rgba(239,68,68,0.5); border-radius: 10px;
+                        font-weight: 700; cursor: pointer; font-size: 0.95rem;
+                    ">❌ Cancelar</button>
+                </div>
+            `;
+            document.body.appendChild(overlay);
+        }
+
+        // Salva a receita com um horário sugerido (fecha dialog e reenvia)
+        window.__salvarReceitaHorarioSugerido = function(encodedMed, t, tempId) {
+            const overlay = document.getElementById('receita-conflict-dialog');
+            if (overlay) overlay.remove();
+            salvarRemedioReceita(encodedMed, null, tempId, t);
+        };
+
+        // Altera para o horário digitado no input e salva
+        window.__alterarESalvarReceita = function(encodedMed, tempId) {
+            const input = document.getElementById('receita-novo-horario');
+            const novoHorario = input ? input.value : null;
+            if (!novoHorario) {
+                alert('⚠️ Selecione um horário.');
+                return;
+            }
+            const overlay = document.getElementById('receita-conflict-dialog');
+            if (overlay) overlay.remove();
+            salvarRemedioReceita(encodedMed, null, tempId, novoHorario);
+        };
+
+        // Fecha o dialog de conflito da receita (cancela a operação)
+        window.__fecharReceitaConflict = function() {
+            const overlay = document.getElementById('receita-conflict-dialog');
+            if (overlay) overlay.remove();
+        };
+
+
         // =====================================================
         // 🗓️ LÓGICA DO CALENDÃRIO INDIVIDUAL DO MEDICAMENTO
         // =====================================================

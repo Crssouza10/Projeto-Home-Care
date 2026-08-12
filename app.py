@@ -1,4 +1,4 @@
-# ===== v1.5.19 - 2026-08-12 18:40 BRT ==========================================
+# ===== v1.5.19 - 2026-08-12 20:05 BRT ==========================================
 # - CTG-010: validação min_length=4 na rota register-subscribe
 # - Fix: rotas DELETE /api/users/{id} e PUT reativar conta (soft delete)
 # - Field adicionado ao import pydantic (NameError no deploy)
