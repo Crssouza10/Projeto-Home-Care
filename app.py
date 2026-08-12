@@ -1,4 +1,4 @@
-# ===== v1.5.18 - 2026-08-12 ==========================================
+# ===== v1.5.19 - 2026-08-12 09:19 BRT ==========================================
 # - CTG-010: validação min_length=4 na rota register-subscribe
 # - Fix: rotas DELETE /api/users/{id} e PUT reativar conta (soft delete)
 # - Field adicionado ao import pydantic (NameError no deploy)
@@ -1635,6 +1635,8 @@ async def get_client_medications(user_id: str, date: str = None, db: Session = D
             "start_date": med.start_date,
             "created_at": med.created_at.strftime("%Y-%m-%d") if med.created_at else None,
             "end_date": med.end_date.isoformat() if hasattr(med.end_date, 'isoformat') else (str(med.end_date) if med.end_date else None),
+            # v1.5.19: Calcula duration_days (não armazenado no banco) para o frontend usar na edição
+            "duration_days": _calc_duration_days(med.start_date, med.end_date) if (med.start_date and med.end_date and not med.is_continuous) else None,
             "last_taken_date": med.last_taken_date.isoformat() if med.last_taken_date else None,
             "box_image": med.box_image,
             # Revisão para medicamentos contínuos
@@ -1660,6 +1662,15 @@ def get_actual_start_date(start_date: date, days_of_week: list) -> date:
         if custom_day in days_of_week:
             return candidate
     return start_date
+
+def _calc_duration_days(start_str: str, end_str: str) -> int:
+    """Calcula duração em dias a partir de start_date e end_date (v1.5.19)."""
+    try:
+        sd = datetime.strptime(start_str, "%Y-%m-%d").date()
+        ed = datetime.strptime(end_str, "%Y-%m-%d").date()
+        return (ed - sd).days + 1
+    except Exception:
+        return None
 
 # ===== DISTRIBUIÇÃO DE HORÁRIOS PARA EVITAR INTOXICAÇÃO (v2.3.1 - 30min) =====
 def distribute_time(user_id, preferred_time_str: str, db: Session, current_med_id=None) -> str:
@@ -2646,10 +2657,9 @@ async def update_medication(
         medication.end_date = (actual_start + timedelta(days=med.duration_days - 1)).strftime("%Y-%m-%d")
         medication.is_continuous = False
         medication.continuous_months = None
-    else:
-        medication.end_date = None
-        medication.is_continuous = False
-        medication.continuous_months = None
+    # else: NÃO sobrescrever end_date/is_continuous — mantém valores atuais do banco
+    # (Corrige bug v1.5.18: edições sem duration_days apagavam end_date causando
+    #  medicamento aparecer em todos os dias do calendário para sempre)
     
     # Limpa flags globais de status do dia — NÃO devem poluir dias futuros
     medication.taken_status = "pending"
