@@ -1,8 +1,9 @@
-# ===== v1.6.2 - 2026-08-13 17:01 BRT ==========================================
+# ===== v1.6.3 - 2026-08-13 17:50 BRT ==========================================
 # - CTG-107: Restauração dos emojis nos botões de notificações push
 # - CTG-104: Envio de e-mail com passo a passo de primeiro acesso no cadastro e suporte
 # - CTG-104: Forçar classificação como complexa para desaparecimento de medicamento
 # - CTG-028: Envio real de e-mail de redefinição e fluxo de redefinição no frontend
+# - CTG-028: Editar e-mail de recuperação diretamente na Ficha Médica (Plano Grátis)
 # - CTG-130: bloqueio temporário de login (10 tentativas -> 15 min) + colunas no banco
 # - CTG-109: reagendamento valida conflito de horário; alertas separados por medicamento
 # - CTG-112: re-verifica medicamentos ao voltar para a aba (visibilitychange/focus)
@@ -96,7 +97,7 @@ load_dotenv(override=True)
 app = FastAPI(
     title="CR$ HOME CARE AI",
     description="Sistema de Cuidado Domiciliar Inteligente",
-    version="1.6.2"
+    version="1.6.3"
 )
 
 # ===== CORS =====
@@ -2763,6 +2764,45 @@ async def reactivate_account(
     db.commit()
 
     return {"status": "success", "message": "Conta reativada com sucesso"}
+
+
+class UpdateEmailRequest(BaseModel):
+    email: str
+
+@app.put("/api/users/{user_id}/email")
+async def update_user_email(
+    user_id: str,
+    body: UpdateEmailRequest,
+    db: Session = Depends(get_db)
+):
+    """Atualiza o e-mail de recuperação de senha do usuário."""
+    try:
+        user_uuid = uuid.UUID(user_id)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="ID de usuário inválido")
+
+    user = db.query(User).filter(User.id == user_uuid).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="Usuário não encontrado")
+
+    new_email = body.email.strip().lower()
+    if not new_email or "@" not in new_email:
+        raise HTTPException(status_code=400, detail="E-mail inválido")
+
+    # Verifica duplicidade
+    existing = db.query(User).filter(User.email == new_email, User.id != user_uuid).first()
+    if existing:
+        raise HTTPException(status_code=400, detail="Este e-mail já está em uso por outra conta")
+
+    user.email = new_email
+    db.commit()
+    db.refresh(user)
+
+    return {
+        "status": "success",
+        "message": "E-mail de recuperação atualizado com sucesso",
+        "email": user.email
+    }
 
 # --- 📅 APPOINTMENTS - EDITAR E EXCLUIR ---
 
