@@ -1,8 +1,8 @@
-# ===== v1.6.0 - 2026-08-13 14:13 BRT ==========================================
+# ===== v1.6.1 - 2026-08-13 16:18 BRT ==========================================
 # - CTG-107: Restauração dos emojis nos botões de notificações push
-# - CTG-104: Envio de e-mail com passo a passo de primeiro acesso no cadastro
+# - CTG-104: Envio de e-mail com passo a passo de primeiro acesso no cadastro e suporte
 # - CTG-104: Forçar classificação como complexa para desaparecimento de medicamento
-# - CTG-028: Integração e exibição do fluxo de esqueci minha senha no frontend
+# - CTG-028: Envio real de e-mail de redefinição e fluxo de redefinição no frontend
 # - CTG-130: bloqueio temporário de login (10 tentativas -> 15 min) + colunas no banco
 # - CTG-109: reagendamento valida conflito de horário; alertas separados por medicamento
 # - CTG-112: re-verifica medicamentos ao voltar para a aba (visibilitychange/focus)
@@ -96,7 +96,7 @@ load_dotenv(override=True)
 app = FastAPI(
     title="CR$ HOME CARE AI",
     description="Sistema de Cuidado Domiciliar Inteligente",
-    version="1.6.0"
+    version="1.6.1"
 )
 
 # ===== CORS =====
