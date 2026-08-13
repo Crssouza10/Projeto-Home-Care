@@ -1,4 +1,4 @@
-# ===== v1.6.3 - 2026-08-13 17:50 BRT ==========================================
+# ===== v1.6.4 - 2026-08-13 18:05 BRT ==========================================
 # - CTG-107: Restauração dos emojis nos botões de notificações push
 # - CTG-104: Envio de e-mail com passo a passo de primeiro acesso no cadastro e suporte
 # - CTG-104: Forçar classificação como complexa para desaparecimento de medicamento
@@ -97,7 +97,7 @@ load_dotenv(override=True)
 app = FastAPI(
     title="CR$ HOME CARE AI",
     description="Sistema de Cuidado Domiciliar Inteligente",
-    version="1.6.3"
+    version="1.6.4"
 )
 
 # ===== CORS =====
