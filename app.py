@@ -286,6 +286,8 @@ class User(Base):
     identity_document = Column(String(100), nullable=True)
     identity_document_file = Column(Text, nullable=True)
     report_time = Column(String(5), nullable=True)
+    failed_login_attempts = Column(Integer, default=0, nullable=False)
+    locked_until = Column(DateTime, nullable=True)
 
 class Medication(Base):
     __tablename__ = "medications"
@@ -841,7 +843,19 @@ async def cliente_login(credentials: dict, db: Session = Depends(get_db)):
     if not user:
         raise HTTPException(status_code=401, detail="Usuário não encontrado")
     
-    if not bcrypt.checkpw(password.encode('utf-8'), user.password_hash.encode('utf-8')):
+    # Verificar se a conta está bloqueada
+    if user.locked_until and user.locked_until > datetime.utcnow():
+        minutos_restantes = int((user.locked_until - datetime.utcnow()).total_seconds() / 60) + 1
+        raise HTTPException(
+            status_code=423,
+            detail=f"Sua conta está temporariamente bloqueada devido a excesso de tentativas de login incorretas. Tente novamente em {minutos_restantes} minuto(s)."
+        )
+    
+    password_correct = False
+    
+    if bcrypt.checkpw(password.encode('utf-8'), user.password_hash.encode('utf-8')):
+        password_correct = True
+    else:
         # Fallback: SHA256 → bcrypt (correção automática para contas antigas)
         if len(user.password_hash) == 64:
             import hashlib
@@ -849,12 +863,32 @@ async def cliente_login(credentials: dict, db: Session = Depends(get_db)):
             if sha_hash == user.password_hash:
                 # Corrigir: atualizar para bcrypt
                 user.password_hash = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
-                db.commit()
-                # Continua — login bem-sucedido
-            else:
-                raise HTTPException(status_code=401, detail="Senha incorreta")
+                password_correct = True
+
+    if password_correct:
+        # Login bem-sucedido: zera o contador e limpa o bloqueio
+        user.failed_login_attempts = 0
+        user.locked_until = None
+        db.commit()
+    else:
+        # Login falhou: incrementa contador
+        attempts = (user.failed_login_attempts or 0) + 1
+        user.failed_login_attempts = attempts
+        
+        if attempts >= 10:
+            user.locked_until = datetime.utcnow() + timedelta(minutes=15)
+            db.commit()
+            raise HTTPException(
+                status_code=423,
+                detail="Sua conta foi temporariamente bloqueada por 15 minutos devido a 10 tentativas incorretas de login."
+            )
         else:
-            raise HTTPException(status_code=401, detail="Senha incorreta")
+            db.commit()
+            tentativas_restantes = 10 - attempts
+            raise HTTPException(
+                status_code=401,
+                detail=f"Senha incorreta. Você tem mais {tentativas_restantes} tentativa(s) antes do bloqueio da conta."
+            )
     
     response = JSONResponse({
         "status": "sucesso",

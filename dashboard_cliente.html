@@ -867,6 +867,10 @@
             .calendar-day {
                 font-size: 0.7rem;
                 border-radius: 8px;
+                min-width: 0 !important;
+                min-height: 0 !important;
+                width: 100% !important;
+                aspect-ratio: 1 / 1 !important;
             }
             
             .calendar-day.today,
@@ -1367,7 +1371,7 @@
             
             /* Calendário - MAIOR para dedos */
             .calendar-container { padding: 10px; }
-            .calendar-day { font-size: 0.85rem; min-width: 36px; min-height: 36px; }
+            .calendar-day { font-size: 0.85rem; min-width: 0 !important; min-height: 0 !important; width: 100% !important; aspect-ratio: 1 / 1 !important; }
             .calendar-day-header { font-size: 0.7rem; }
             .calendar-btn { width: 36px; height: 36px; font-size: 1.2rem; }
             
@@ -1405,7 +1409,7 @@
                 height: 40px; 
                 font-size: 1rem; 
             }
-            .calendar-day { font-size: 0.8rem; min-width: 32px; min-height: 32px; }
+            .calendar-day { font-size: 0.8rem; min-width: 0 !important; min-height: 0 !important; }
         }
 
         /* Melhor toque */
@@ -8641,7 +8645,7 @@
 
     <!-- 🔖 INDICADOR DE VERSÃO -->
     <div style="text-align:center; padding:20px; color:#00D4FF; font-size:0.75rem; margin-top:30px; opacity:0.7;">
-        🏠 CR$ Home Care AI v1.5.14 — build 2026-08-11 — correções de encerramento de conta e suporte
+        🏠 CR$ Home Care AI v1.5.19 — build 2026-08-13 — bloqueio de login e responsividade
     </div>
 <!-- Cloudflare Web Analytics --><script type='module' src='https://static.cloudflareinsights.com/beacon.min.js' data-cf-beacon='{"token": "d1a9b25d409d47f693bbb1a7f0afbc97"}'></script><!-- End Cloudflare Web Analytics -->
 
