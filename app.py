@@ -1360,6 +1360,20 @@ async def support_message(payload: dict, db: Session = Depends(get_db)):
             except ValueError:
                 pass
         
+        # Se for uma pergunta sobre primeiro acesso/cadastro/passo a passo e o e-mail estiver informado,
+        # envia as instruções diretamente por e-mail (ajuda usuários que acham a letra do celular pequena).
+        msg_lc = message.lower()
+        if any(w in msg_lc for w in ["passo a passo", "primeiro acesso", "como cadastrar", "como criar conta", "processo de cadastramento", "cadrastamento"]):
+            if user_email:
+                try:
+                    _enviar_email_boas_vindas(user_name or "Visitante", user_email)
+                    return {
+                        "status": "answered",
+                        "ia_response": f"Claro! Já enviei um e-mail para **{user_email}** com o passo a passo completo do processo de cadastramento e primeiro acesso. Como as letras no celular podem ser pequenas, você poderá acompanhar com mais conforto no seu e-mail!"
+                    }
+                except Exception as mail_err:
+                    print(f"⚠️ [SUPORTE] Erro ao enviar e-mail com passo a passo: {mail_err}")
+        
         # 1. Classificar a intenção com IA (Gemini → fallback DeepSeek)
         faq_prompt = (
             "Você é o Maximus, assistente virtual oficial do Cuidadoso (cuidaidoso.ia.br), "
@@ -4444,6 +4458,24 @@ async def forgot_password(req: ForgotPasswordRequest, db: Session = Depends(get_
         # Em produção: enviar por e-mail/SMS. Por enquanto, loga no console.
         print(f"🔐 [FORGOT-PASSWORD] Usuário: {user.full_name} | Token: {reset_token} | Senha temporária: {temp_pass}")
         
+        # Envia e-mail de recuperação real se o usuário tiver e-mail
+        if user.email:
+            subject = "Recuperação de Senha - Cuidadoso"
+            body = (
+                f"Olá, {user.full_name}!\n\n"
+                f"Recebemos uma solicitação de redefinição de senha para sua conta no Cuidadoso.\n\n"
+                f"Sua senha temporária é: {temp_pass}\n\n"
+                f"Use esta senha temporária para acessar o sistema e altere-a após fazer o login nas configurações.\n\n"
+                f"Qualquer dúvida, estamos à disposição!\n\n"
+                f"Abraços,\n"
+                f"Equipe CR$ Home Care AI"
+            )
+            try:
+                _send_email_via_gmail_api(to_email=user.email, subject=subject, body=body)
+                print(f"📧 [FORGOT-PASSWORD] E-mail de redefinição enviado para {user.email}")
+            except Exception as mail_err:
+                print(f"⚠️ [FORGOT-PASSWORD] Erro ao enviar e-mail de recuperação para {user.email}: {mail_err}")
+
         return {
             "status": "sucesso",
             "detail": "Se o contato informado estiver cadastrado, uma nova senha foi enviada. Verifique seu e-mail ou telefone."
