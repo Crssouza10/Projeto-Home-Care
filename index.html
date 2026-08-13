@@ -1302,7 +1302,7 @@ footer p { font-size:0.9rem; line-height:1.6 }
           <div class="form-group">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
               <label class="form-label" style="margin-bottom: 0;">Senha</label>
-              <a href="javascript:void(0)" onclick="alert('Recuperação de senha indisponível temporariamente.')" style="color: var(--green-700); font-size: 0.8rem; text-decoration: none; font-weight: 500;">Esqueci a Senha</a>
+              <a href="javascript:void(0)" onclick="showForgotPasswordView()" style="color: var(--green-700); font-size: 0.8rem; text-decoration: none; font-weight: 500;">Esqueci a Senha</a>
             </div>
             <div class="password-wrapper">
               <input type="password" class="form-input" id="password" placeholder="Digite sua senha" autocomplete="current-password" required>
@@ -1339,6 +1339,31 @@ footer p { font-size:0.9rem; line-height:1.6 }
         
         <p style="text-align: center; color: var(--gray-500); font-size: 0.85rem; margin-top: 15px;">
           Não tem conta? <a href="javascript:void(0)" onclick="showRegisterView()" style="color: var(--green-700); text-decoration: none; font-weight: 600;">Criar Conta Básica</a>
+        </p>
+      </div>
+
+      <!-- Forgot Password View -->
+      <div id="forgot-password-view" style="display: none;">
+        <div class="modal-header">
+          <span class="modal-icon">🔑</span>
+          <h3 class="modal-title">Recuperar Senha</h3>
+          <p class="modal-subtitle">Insira o e-mail cadastrado abaixo</p>
+        </div>
+        
+        <div class="error-msg" id="forgot-error"></div>
+        <div id="forgot-success" style="display: none; padding: 10px; background: rgba(16,185,129,0.15); border: 1px solid rgba(16,185,129,0.3); border-radius: 8px; text-align: center; font-size: 0.85rem; color: #10b981; margin-bottom: 15px;"></div>
+        
+        <form id="forgot-form" onsubmit="handleForgotPassword(event)">
+          <div class="form-group">
+            <label class="form-label">E-mail Cadastrado</label>
+            <input type="email" class="form-input" id="forgot-email" placeholder="seu-email@exemplo.com" required>
+          </div>
+          
+          <button type="submit" class="btn-submit" id="forgot-btn">Enviar instruções</button>
+        </form>
+        
+        <p style="text-align: center; color: var(--gray-500); font-size: 0.85rem; margin-top: 15px;">
+          Lembrou a senha? <a href="javascript:void(0)" onclick="showLoginView()" style="color: var(--green-700); text-decoration: none; font-weight: 600;">Voltar ao login</a>
         </p>
       </div>
 
@@ -1521,6 +1546,9 @@ function closeLogin() {
 function showRegisterView() {
     document.getElementById('login-view').style.display = 'none';
     document.getElementById('register-view').style.display = 'block';
+    if (document.getElementById('forgot-password-view')) {
+        document.getElementById('forgot-password-view').style.display = 'none';
+    }
 
     // Atualiza o título do cadastro de acordo com o plano
     const planKey = window._selectedPlan || 'trial';
@@ -1540,6 +1568,58 @@ function showRegisterView() {
 function showLoginView() {
     document.getElementById('login-view').style.display = 'block';
     document.getElementById('register-view').style.display = 'none';
+    if (document.getElementById('forgot-password-view')) {
+        document.getElementById('forgot-password-view').style.display = 'none';
+    }
+}
+
+function showForgotPasswordView() {
+    document.getElementById('login-view').style.display = 'none';
+    document.getElementById('register-view').style.display = 'none';
+    const fView = document.getElementById('forgot-password-view');
+    if (fView) {
+        fView.style.display = 'block';
+    }
+    document.getElementById('forgot-email').value = '';
+    document.getElementById('forgot-error').textContent = '';
+    document.getElementById('forgot-success').style.display = 'none';
+}
+
+async function handleForgotPassword(event) {
+    event.preventDefault();
+    const emailInput = document.getElementById('forgot-email');
+    const contact = emailInput.value.trim();
+    const errorDiv = document.getElementById('forgot-error');
+    const successDiv = document.getElementById('forgot-success');
+    const btn = document.getElementById('forgot-btn');
+    
+    errorDiv.textContent = '';
+    successDiv.style.display = 'none';
+    btn.disabled = true;
+    btn.textContent = 'Enviando...';
+    
+    try {
+        const response = await fetch(`${API_BASE}/api/forgot-password`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ contact })
+        });
+        
+        const data = await response.json();
+        
+        // Sempre exibe mensagem de sucesso genérica para anti-enumeração (exemplo: "Se o e-mail estiver cadastrado, enviaremos instruções.")
+        successDiv.textContent = 'Se o e-mail estiver cadastrado, enviaremos instruções.';
+        successDiv.style.display = 'block';
+        emailInput.value = '';
+    } catch (err) {
+        console.error(err);
+        errorDiv.textContent = 'Erro ao processar solicitação. Tente novamente.';
+    } finally {
+        btn.disabled = false;
+        btn.textContent = 'Enviar instruções';
+    }
 }
 
 function togglePassword() {

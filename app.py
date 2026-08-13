@@ -1,4 +1,8 @@
 # ===== v1.6.0 - 2026-08-13 14:13 BRT ==========================================
+# - CTG-107: Restauração dos emojis nos botões de notificações push
+# - CTG-104: Envio de e-mail com passo a passo de primeiro acesso no cadastro
+# - CTG-104: Forçar classificação como complexa para desaparecimento de medicamento
+# - CTG-028: Integração e exibição do fluxo de esqueci minha senha no frontend
 # - CTG-130: bloqueio temporário de login (10 tentativas -> 15 min) + colunas no banco
 # - CTG-109: reagendamento valida conflito de horário; alertas separados por medicamento
 # - CTG-112: re-verifica medicamentos ao voltar para a aba (visibilitychange/focus)
@@ -92,7 +96,7 @@ load_dotenv(override=True)
 app = FastAPI(
     title="CR$ HOME CARE AI",
     description="Sistema de Cuidado Domiciliar Inteligente",
-    version="1.0.5"
+    version="1.6.0"
 )
 
 # ===== CORS =====
@@ -1380,22 +1384,27 @@ async def support_message(payload: dict, db: Session = Depends(get_db)):
             f"Mensagem: {message}"
         )
         
-        try:
-            raw_text = _ask_ai(faq_prompt)
-        except Exception as e:
-            # Fallback: IA indisponível → encaminha para humano (se tiver e-mail)
-            protocolo = _gerar_protocolo()
-            if user_email:
-                _enviar_email_suporte(protocolo, user_name, user_email, message, history)
-                ia_msg = f"Obrigado, {user_name}! Sua mensagem foi registrada com o protocolo {protocolo}. Nossa equipe analisará e responderá em até 2h no e-mail cadastrado."
-            else:
-                ia_msg = f"Obrigado, {user_name}! Sua mensagem foi registrada com o protocolo {protocolo}. Entre em contato pelo e-mail crs.home.care.ai@gmail.com mencionando este protocolo."
-            return {
-                "status": "forwarded",
-                "protocolo": protocolo,
-                "message": f"Recebemos sua mensagem! Protocolo: {protocolo}.",
-                "ia_response": ia_msg
-            }
+        # Forçar classificação complexa para problemas de desaparecimento/sumiço de medicamentos/dados
+        msg_lower = message.lower()
+        if any(w in msg_lower for w in ["sumiu", "sumiram", "desapareceu", "desapareceram", "perdi", "excluiu", "apagou"]):
+            raw_text = '{"tipo":"complexa","resposta":"Lamentamos muito pelo inconveniente. Identificamos um relato de desaparecimento de medicamento do calendário, o que é tratado como uma questão de alta prioridade. Registramos este caso para verificação imediata pela nossa equipe técnica.","assunto":"Medicamento sumiu do calendário"}'
+        else:
+            try:
+                raw_text = _ask_ai(faq_prompt)
+            except Exception as e:
+                # Fallback: IA indisponível → encaminha para humano (se tiver e-mail)
+                protocolo = _gerar_protocolo()
+                if user_email:
+                    _enviar_email_suporte(protocolo, user_name, user_email, message, history)
+                    ia_msg = f"Obrigado, {user_name}! Sua mensagem foi registrada com o protocolo {protocolo}. Nossa equipe analisará e responderá em até 2h no e-mail cadastrado."
+                else:
+                    ia_msg = f"Obrigado, {user_name}! Sua mensagem foi registrada com o protocolo {protocolo}. Entre em contato pelo e-mail crs.home.care.ai@gmail.com mencionando este protocolo."
+                return {
+                    "status": "forwarded",
+                    "protocolo": protocolo,
+                    "message": f"Recebemos sua mensagem! Protocolo: {protocolo}.",
+                    "ia_response": ia_msg
+                }
         
         # 2. Parse da resposta JSON
         import json as json_lib
@@ -1521,6 +1530,33 @@ def _enviar_email_suporte(protocolo: str, user_name: str, user_email: str, messa
             print(f"📧 [SUPORTE] Confirmação enviada para usuário: {user_email}")
     except Exception as e:
         print(f"⚠️ [SUPORTE] Erro ao enviar e-mail: {e}")
+
+
+def _enviar_email_boas_vindas(user_name: str, user_email: str):
+    """Envia e-mail de boas-vindas com o passo a passo do primeiro acesso."""
+    if not user_email:
+        return
+    subject = "Bem-vindo ao Cuidadoso! Seu passo a passo de primeiro acesso"
+    body = (
+        f"Olá, {user_name}!\n\n"
+        f"Bem-vindo ao Cuidadoso, sua plataforma de Home Care inteligente.\n\n"
+        f"Aqui está o passo a passo do processo de cadastramento e primeiro acesso:\n"
+        f"1. Acesse https://cuidaidoso.ia.br/ e entre com sua conta (e-mail e senha).\n"
+        f"2. No painel principal, clique em '+ Nova Pessoa Cuidada' para cadastrar seu familiar ou paciente.\n"
+        f"3. Acesse a aba 'Medicamentos' e clique em '+ Adicionar Medicamento' para registrar a rotina e horários.\n"
+        f"4. Se tiver a receita em mãos, use nossa IA para escanear e preencher os dados automaticamente.\n"
+        f"5. Acesse a aba 'Consultas' para agendar consultas e exames.\n"
+        f"6. Na aba 'Conexão Familiar', convide outros cuidadores ou parentes para acompanhar em tempo real.\n\n"
+        f"Estamos muito felizes em ajudar você a cuidar de quem você ama!\n\n"
+        f"Qualquer dúvida, fale com nosso suporte no painel clicando em 'Falar com a Equipe'.\n\n"
+        f"Abraços,\n"
+        f"Equipe CR$ Home Care AI"
+    )
+    try:
+        _send_email_via_gmail_api(to_email=user_email, subject=subject, body=body)
+        print(f"📧 [CADASTRO] E-mail de primeiro acesso enviado para {user_email}")
+    except Exception as e:
+        print(f"⚠️ [CADASTRO] Erro ao enviar e-mail de boas-vindas para {user_email}: {e}")
 
 
 @app.get("/api/cliente/{user_id}/view-document")
@@ -2626,6 +2662,7 @@ async def create_user(user: UserCreate, db: Session = Depends(get_db)):
     db.add(db_user)
     db.commit()
     db.refresh(db_user)
+    _enviar_email_boas_vindas(db_user.full_name, db_user.email)
     return db_user
 
 @app.get("/api/users/{user_id}", response_model=UserResponse)
@@ -5150,6 +5187,7 @@ async def register_complete(request: Request, db: Session = Depends(get_db)):
     # Remove registro pendente
     db.execute(text("DELETE FROM pending_registrations WHERE preference_id = :pid"), {"pid": preference_id})
     db.commit()
+    _enviar_email_boas_vindas(db_user.full_name, db_user.email)
 
     return {
         "status": "success",
