@@ -1,4 +1,9 @@
-# ===== v1.5.19 - 2026-08-12 20:05 BRT ==========================================
+# ===== v1.6.0 - 2026-08-13 14:13 BRT ==========================================
+# - CTG-130: bloqueio temporário de login (10 tentativas -> 15 min) + colunas no banco
+# - CTG-109: reagendamento valida conflito de horário; alertas separados por medicamento
+# - CTG-112: re-verifica medicamentos ao voltar para a aba (visibilitychange/focus)
+# - CTG-135: mensagens de erro de rede em pt-BR + listeners offline/online
+# - CTG-122: calendário responsivo (sem corte de botões/sábado) + swipe horizontal
 # - CTG-010: validação min_length=4 na rota register-subscribe
 # - Fix: rotas DELETE /api/users/{id} e PUT reativar conta (soft delete)
 # - Field adicionado ao import pydantic (NameError no deploy)
@@ -286,6 +291,8 @@ class User(Base):
     identity_document = Column(String(100), nullable=True)
     identity_document_file = Column(Text, nullable=True)
     report_time = Column(String(5), nullable=True)
+
+    # CTG-130: segurança de login (bloqueio temporário após tentativas falhas)
     failed_login_attempts = Column(Integer, default=0, nullable=False)
     locked_until = Column(DateTime, nullable=True)
 
@@ -843,9 +850,10 @@ async def cliente_login(credentials: dict, db: Session = Depends(get_db)):
     if not user:
         raise HTTPException(status_code=401, detail="Usuário não encontrado")
     
-    # Verificar se a conta está bloqueada
-    if user.locked_until and user.locked_until > datetime.utcnow():
-        minutos_restantes = int((user.locked_until - datetime.utcnow()).total_seconds() / 60) + 1
+    # CTG-130: verificar se a conta está bloqueada
+    agora = datetime.utcnow()
+    if user.locked_until and user.locked_until > agora:
+        minutos_restantes = int((user.locked_until - agora).total_seconds() / 60) + 1
         raise HTTPException(
             status_code=423,
             detail=f"Sua conta está temporariamente bloqueada devido a excesso de tentativas de login incorretas. Tente novamente em {minutos_restantes} minuto(s)."
@@ -876,7 +884,8 @@ async def cliente_login(credentials: dict, db: Session = Depends(get_db)):
         user.failed_login_attempts = attempts
         
         if attempts >= 10:
-            user.locked_until = datetime.utcnow() + timedelta(minutes=15)
+            user.locked_until = agora + timedelta(minutes=15)
+            user.failed_login_attempts = 0  # reseta para permitir novo ciclo após o bloqueio
             db.commit()
             raise HTTPException(
                 status_code=423,
@@ -2177,6 +2186,23 @@ async def reschedule_medication(med_id: str, new_time: str, date: Optional[str] 
         h, m = map(int, new_time.split(":"))
         if not (0 <= h <= 23 and 0 <= m <= 59):
             raise ValueError("Horário inválido")
+        
+        novo_horario_str = f"{h:02d}:{m:02d}"
+        
+        # CTG-109: bloqueia reagendamento para horário já ocupado por outro medicamento ativo
+        conflito = check_time_conflict(med.user_id, novo_horario_str, db, current_med_id=med.id)
+        if conflito:
+            sugeridos = find_free_times(med.user_id, novo_horario_str, db, current_med_id=med.id)
+            raise HTTPException(
+                status_code=409,
+                detail={
+                    "error": "conflito_horario",
+                    "message": f"Já existe o medicamento '{conflito}' neste horário ({novo_horario_str}).",
+                    "conflito": conflito,
+                    "horario": novo_horario_str,
+                    "suggested_times": sugeridos,
+                }
+            )
             
         if date:
             try:
@@ -2211,6 +2237,8 @@ async def reschedule_medication(med_id: str, new_time: str, date: Optional[str] 
         db.commit()
         
         return {"status": "success", "new_time": f"{h:02d}:{m:02d}"}
+    except HTTPException:
+        raise
     except Exception as e:
         db.rollback()
         raise HTTPException(400 if "inválido" in str(e) else 500, str(e))

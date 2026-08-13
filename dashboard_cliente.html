@@ -645,18 +645,25 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
+            gap: 12px;
             margin-bottom: 20px;
+            flex-wrap: nowrap;
         }
 
         .calendar-title {
             font-weight: 700;
             font-size: 1rem;
             color: #FFFFFF;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            min-width: 0;
         }
 
         .calendar-nav {
             display: flex;
             gap: 8px;
+            flex-shrink: 0;
         }
 
         .calendar-btn {
@@ -673,6 +680,7 @@
             transition: all 0.2s;
             font-size: 1.2rem;
             line-height: 1;
+            flex-shrink: 0;
         }
 
         .calendar-btn:hover {
@@ -687,9 +695,10 @@
         /* Grid do calendário */
         .calendar-grid {
             display: grid;
-            grid-template-columns: repeat(7, 1fr);
+            grid-template-columns: repeat(7, minmax(0, 1fr));
             gap: 4px;
             text-align: center;
+            width: 100%;
         }
 
         .calendar-day-header {
@@ -714,7 +723,7 @@
             transition: all 0.2s;
             color: #FFFFFF;
             background: rgba(0, 212, 255, 0.05);
-            min-width: 40px;
+            min-width: 0;
             min-height: 40px;
         }
 
@@ -2525,7 +2534,10 @@
                 checkLowSupplyMedications();
                 
             } catch (error) {
-                console.error('âŒ Erro ao carregar dados:', error);
+                console.error('Erro ao carregar dados:', error);
+                if (!navigator.onLine && typeof showToast === 'function') {
+                    showToast('Sem conexão com a internet. Tente novamente.', 'error');
+                }
             }
         }
         // ============================================
@@ -3231,6 +3243,34 @@
             }
             generateCalendar();
         }
+
+        // ============================================
+        // ↔️ CTG-122: Swipe horizontal para trocar de mês no calendário
+        // (com limiar para não disparar ações indesejadas)
+        // ============================================
+        let calendarTouchStartX = 0;
+        let calendarTouchStartY = 0;
+
+        function initCalendarSwipe() {
+            const cal = document.getElementById('calendar');
+            if (!cal) return;
+            cal.addEventListener('touchstart', (e) => {
+                const t = e.changedTouches[0];
+                calendarTouchStartX = t.clientX;
+                calendarTouchStartY = t.clientY;
+            }, { passive: true });
+            cal.addEventListener('touchend', (e) => {
+                const t = e.changedTouches[0];
+                const dx = t.clientX - calendarTouchStartX;
+                const dy = t.clientY - calendarTouchStartY;
+                // Só troca de mês se for um swipe claramente horizontal
+                if (Math.abs(dx) > 60 && Math.abs(dx) > Math.abs(dy) * 1.5) {
+                    if (dx < 0) changeMonth(1);   // deslizou p/ esquerda → próximo mês
+                    else changeMonth(-1);          // deslizou p/ direita → mês anterior
+                }
+            }, { passive: true });
+        }
+        document.addEventListener('DOMContentLoaded', initCalendarSwipe);
     
         // Variável global para controlar se está vendo um dia específico
         let viewingSpecificDate = null;
@@ -3787,7 +3827,7 @@
                 }
             } catch (error) {
                 console.error("Erro ao enviar documentos por e-mail:", error);
-                showToast("âŒ Erro de conexão com o servidor", true);
+                showToast("Sem conexão com a internet. Tente novamente.", true);
             }
         }
 
@@ -4968,13 +5008,27 @@
                     // 🔄 CRÍTICO: Recarrega a página para mostrar o botão "Reagendado"
                     // Isso garante que o card leia o novo status do banco de dados
                     setTimeout(() => reloadAndRefresh(), 1000); 
+                } else if (action === 'reschedule') {
+                    // CTG-109: conflito de horário no reagendamento
+                    let detail = null;
+                    try { detail = await response.json(); } catch(e) {}
+                    const info = detail?.detail;
+                    if (info && typeof info === 'object' && info.error === 'conflito_horario') {
+                        let msg = info.message || 'Já existe outro medicamento neste horário.';
+                        if (info.suggested_times && info.suggested_times.length > 0) {
+                            msg += ' Horários livres: ' + info.suggested_times.join(', ') + '.';
+                        }
+                        alert(msg);
+                    } else {
+                        alert((typeof info === 'string' ? info : '') || 'Não foi possível reagendar para este horário.');
+                    }
                 } else {
                     alert(' Erro ao registrar ação. Tente novamente.');
                 }
 
             } catch (error) {
                 console.error(error);
-                alert('âŒ Erro de conexão.');
+                alert('Sem conexão com a internet.');
             }
         }
         // =====================================================================
@@ -6541,7 +6595,7 @@
                 }
             } catch (err) {
                 console.error(err);
-                showToast('âŒ Falha na conexão', true);
+                showToast('Sem conexão com a internet.', true);
             } finally {
                 document.getElementById('receita-loading').style.display = 'none';
             }
@@ -7442,6 +7496,9 @@
 
                 console.log(`â° Verificando ${medicamentos.length} medicamentos às ${horaAtual}`);
 
+                // CTG-109: coleta medicamentos que precisam de confirmação para exibir alertas separados
+                const medsParaConfirmar = [];
+
                 for (const med of medicamentos) {
                     if (!med) continue; // Pula nulos/undefined
                     
@@ -7475,6 +7532,19 @@
                     // 🎯 CASO 1: HORA EXATA (diff = 0)
                     if (diffMinutos === 0 && status !== 'taken' && status !== 'not_taken') {
                         console.log(`🔔 HORA EXATA: ${med.name} às ${horaAtual} (status: ${status})`);
+                        // CTG-109: notificação do sistema separada por medicamento (tag única, não mesclada)
+                        if ('Notification' in window && Notification.permission === 'granted') {
+                            try {
+                                new Notification('⏰ Hora do Medicamento!', {
+                                    body: `${med.name} - ${med.dosage}`,
+                                    icon: '/icon-192x192.png',
+                                    tag: `med-${med.id}`,
+                                    requireInteraction: true
+                                });
+                            } catch (notifErr) {
+                                console.error('Erro ao exibir notificação do sistema:', notifErr);
+                            }
+                        }
                         tocarAlertaMedicamento(med.name, med.dosage, "lembrete", med.time);
                         
                         const card = document.querySelector(`#card-med-${med.id} .med-actions-container`);
@@ -7491,7 +7561,7 @@
                         const medState = monitoringState.notifiedMeds[med.id];
                         if (!medState?.secondAlert) {
                             console.log(`â“ +5 MIN: ${med.name} - Acionando modal`);
-                            mostrarModalConfirmacao(med);
+                            medsParaConfirmar.push(med);
                             
                             if (!monitoringState.notifiedMeds[med.id]) {
                                 monitoringState.notifiedMeds[med.id] = {};
@@ -7512,6 +7582,11 @@
                     }
                 }
                 
+                // CTG-109: exibe um modal com todos os medicamentos do horário (botões individuais)
+                if (medsParaConfirmar.length > 0) {
+                    mostrarModalConfirmacao(medsParaConfirmar);
+                }
+
                 monitoringState.lastCheck = Date.now();
             } catch (error) {
                 console.error('âŒ Erro na verificação:', error);
@@ -7570,27 +7645,42 @@
         // ============================================
         // 📱 MODAL DE CONFIRMAÇÃO COM VOZ
         // ============================================
-        async function mostrarModalConfirmacao(med) {
+        async function mostrarModalConfirmacao(meds) {
+            // CTG-109: aceita um medicamento OU uma lista (alertas separados, não mesclados)
+            if (!Array.isArray(meds)) meds = [meds];
+            meds = meds.filter(m => m && m.id);
+            if (meds.length === 0) return;
+
             if (activeVoiceRecognition) {
                 try { activeVoiceRecognition.abort(); } catch(e) {}
                 activeVoiceRecognition = null;
             }
 
             document.querySelectorAll('.modal-overlay').forEach(el => el.remove());
-            
+
+            const med = meds[0]; // usado para compatibilidade de áudio/voz
+
+            // Lista de medicamentos com botões individuais (o usuário responde a cada um)
+            const medsHTML = meds.map(m => `
+                <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:14px;margin-bottom:12px;text-align:left;">
+                    <div style="font-weight:700;color:#333;font-size:17px;margin-bottom:4px;">${m.name}</div>
+                    <div style="color:#666;font-size:15px;margin-bottom:10px;">${m.dosage}</div>
+                    <div style="display:flex;gap:10px;">
+                        <button onclick="confirmarTomada('${m.id}', true)" style="flex:1;padding:12px;background:#10b981;color:white;border:none;border-radius:10px;font-size:15px;font-weight:600;cursor:pointer;">✅ TOMEI</button>
+                        <button onclick="confirmarTomada('${m.id}', false)" style="flex:1;padding:12px;background:#ef4444;color:white;border:none;border-radius:10px;font-size:15px;font-weight:600;cursor:pointer;">❌ NÃO TOMEI</button>
+                    </div>
+                </div>
+            `).join('');
+
             const modal = document.createElement('div');
             modal.className = 'modal-overlay';
             modal.innerHTML = `
-                <div style="position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.7);display:flex;align-items:center;justify-content:center;z-index:10000;animation:fadeIn 0.3s ease;">
-                    <div style="background:white;padding:40px;border-radius:20px;max-width:500px;width:90%;text-align:center;box-shadow:0 10px 40px rgba(0,0,0,0.5);color:#333;">
-                        <h2 style="color:#ff6b6b;margin:0 0 20px 0;font-size:28px;">â° VOCÊ TOMOU O REMÉDIO?</h2>
-                        <h3 style="color:#333;margin:0 0 10px 0;font-weight:600;">${med.name}</h3>
-                        <p style="color:#666;font-size:18px;margin:0 0 20px 0;">${med.dosage}</p>
-                        <div style="display:flex;gap:15px;justify-content:center;flex-wrap:wrap;margin-bottom:20px;">
-                            <button onclick="confirmarTomada('${med.id}', true)" style="flex:1;min-width:140px;padding:18px;background:#10b981;color:white;border:none;border-radius:12px;font-size:18px;font-weight:600;cursor:pointer;">✅ TOMEI</button>
-                            <button onclick="confirmarTomada('${med.id}', false)" style="flex:1;min-width:140px;padding:18px;background:#ef4444;color:white;border:none;border-radius:12px;font-size:18px;font-weight:600;cursor:pointer;">âŒ NÃO TOMEI</button>
-                        </div>
-                        <div id="voice-status-${med.id}" style="font-size:16px;color:#666;background:#f3f4f6;padding:12px;border-radius:10px;display:flex;align-items:center;justify-content:center;gap:8px;">
+                <div style="position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.7);display:flex;align-items:center;justify-content:center;z-index:10000;animation:fadeIn 0.3s ease;padding:16px;">
+                    <div style="background:white;padding:32px;border-radius:20px;max-width:520px;width:100%;text-align:center;box-shadow:0 10px 40px rgba(0,0,0,0.5);color:#333;max-height:90vh;overflow-y:auto;">
+                        <h2 style="color:#ff6b6b;margin:0 0 12px 0;font-size:24px;">⏰ VOCÊ TOMOU O REMÉDIO?</h2>
+                        ${meds.length > 1 ? `<p style="color:#666;font-size:14px;margin:0 0 16px 0;">${meds.length} medicamentos agendados neste horário. Responda para cada um:</p>` : ''}
+                        ${medsHTML}
+                        <div id="voice-status-${med.id}" style="font-size:15px;color:#666;background:#f3f4f6;padding:12px;border-radius:10px;display:flex;align-items:center;justify-content:center;gap:8px;">
                             <span>🔊 Reproduzindo áudio...</span>
                         </div>
                     </div>
@@ -7600,14 +7690,19 @@
 
             const statusEl = document.getElementById(`voice-status-${med.id}`);
 
-            // 1. Toca o áudio de pergunta e aguarda terminar
+            // 1. Toca o áudio de pergunta
             const audioTocando = await tocarAlertaMedicamento(med.name, med.dosage, "pergunta", med.time);
             if (!audioTocando) {
-                if (statusEl) statusEl.innerHTML = "âŒ Não foi possível tocar o áudio do alerta.";
+                if (statusEl) statusEl.innerHTML = "❌ Não foi possível tocar o áudio do alerta.";
+            }
+
+            // 2. Para múltiplos medicamentos, mantém apenas os botões (sem reconhecimento de voz ambíguo)
+            if (meds.length > 1) {
+                if (statusEl) statusEl.innerHTML = "Escolha tocando nos botões acima para cada medicamento.";
                 return;
             }
 
-            // 2. Inicia reconhecimento de voz
+            // 3. Reconhecimento de voz (apenas para um único medicamento)
             const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
             if (!SpeechRecognition) {
                 if (statusEl) statusEl.innerHTML = "⚠ Reconhecimento de voz não suportado.";
@@ -7628,7 +7723,7 @@
             rec.onresult = function(event) {
                 const text = event.results[0][0].transcript.toLowerCase();
                 console.log('🎙 Reconhecido no modal de confirmação:', text);
-                
+
                 if (statusEl) statusEl.innerHTML = `💬 Entendi: "${text}"`;
 
                 const simKeywords = ["sim", "tomei", "já", "confirmar", "confirmado", "ok", "certo", "toma", "tome"];
@@ -7638,15 +7733,11 @@
                 const matchesNao = naoKeywords.some(kw => text.includes(kw));
 
                 if (matchesNao) {
-                    setTimeout(() => {
-                        confirmarTomada(med.id, false);
-                    }, 1000);
+                    setTimeout(() => { confirmarTomada(med.id, false); }, 1000);
                 } else if (matchesSim) {
-                    setTimeout(() => {
-                        confirmarTomada(med.id, true);
-                    }, 1000);
+                    setTimeout(() => { confirmarTomada(med.id, true); }, 1000);
                 } else {
-                    if (statusEl) statusEl.innerHTML = `â“ Não entendi. Responda 'Sim' ou 'Não'.`;
+                    if (statusEl) statusEl.innerHTML = `❓ Não entendi. Responda 'Sim' ou 'Não'.`;
                 }
             };
 
@@ -7662,13 +7753,10 @@
             try {
                 rec.start();
             } catch (err) {
-                console.error('âŒ Falha ao iniciar reconhecimento:', err);
+                console.error('❌ Falha ao iniciar reconhecimento:', err);
             }
         }
 
-        // ============================================
-        // ✅/âŒ CONFIRMAÇÃO DE TOMADA
-        // ============================================
         async function confirmarTomada(medId, tomou) {
             if (activeVoiceRecognition) {
                 try { activeVoiceRecognition.abort(); } catch(e) {}
@@ -7826,9 +7914,8 @@
                     { method: 'PUT', headers: { 'Content-Type': 'application/json' } }
                 );
                 
-                const data = await response.json();
-                
-                if (response.ok && data.status === 'success') {
+                if (response.ok) {
+                    const data = await response.json();
                     showToast(`✅ Reagendado para ${novoHorario}!`);
                     updateLocalState(medId, 'rescheduled', { newTime: novoHorario });
                     if (monitoringState.notifiedMeds[medId]) {
@@ -7837,11 +7924,23 @@
                     document.querySelectorAll('.modal-overlay').forEach(el => el.remove());
                     setTimeout(() => reloadAndRefresh(), 1000);
                 } else {
-                    throw new Error(data.detail || 'Erro ao reagendar');
+                    // CTG-109: conflito de horário → avisa e sugere horários livres
+                    let detail = null;
+                    try { detail = await response.json(); } catch(e) {}
+                    const info = detail?.detail;
+                    if (info && typeof info === 'object' && info.error === 'conflito_horario') {
+                        let msg = info.message || 'Já existe outro medicamento neste horário.';
+                        if (info.suggested_times && info.suggested_times.length > 0) {
+                            msg += ' Horários livres: ' + info.suggested_times.join(', ') + '.';
+                        }
+                        alert(msg);
+                    } else {
+                        alert((typeof info === 'string' ? info : '') || 'Não foi possível reagendar para este horário.');
+                    }
                 }
             } catch (error) {
-                console.error('âŒ Erro ao reagendar:', error);
-                showToast('âŒ Erro: ' + error.message, true);
+                console.error('Erro ao reagendar:', error);
+                showToast('Sem conexão com a internet. Tente novamente.', true);
             }
         }
 
@@ -8031,6 +8130,34 @@
         }
 
         // ============================================
+        // 🔄 CTG-112: re-verifica ao voltar para a aba (background/outra aba)
+        // ============================================
+        document.addEventListener('visibilitychange', () => {
+            if (!document.hidden) {
+                if (typeof verificarMedicamentos === 'function') verificarMedicamentos();
+                if (typeof verificarLembretesConsultas === 'function') verificarLembretesConsultas();
+            }
+        });
+        window.addEventListener('focus', () => {
+            if (typeof verificarMedicamentos === 'function') verificarMedicamentos();
+        });
+        window.addEventListener('pageshow', (e) => {
+            if (e.persisted && typeof verificarMedicamentos === 'function') verificarMedicamentos();
+        });
+
+        // ============================================
+        // 📶 CTG-135: tratamento de perda/retomada de conexão (offline/online)
+        // ============================================
+        window.addEventListener('offline', () => {
+            if (typeof showToast === 'function') showToast('📴 Sem conexão com a internet.', 'error');
+        });
+        window.addEventListener('online', () => {
+            if (typeof showToast === 'function') showToast('✅ Conexão restabelecida! Atualizando dados...', 'success');
+            if (typeof loadAllData === 'function') loadAllData();
+            if (typeof verificarMedicamentos === 'function') verificarMedicamentos();
+        });
+
+        // ============================================
         // ✅ CORREÇÃO: Fecha o DOMContentLoaded AQUI!
         </script>
 
@@ -8206,7 +8333,7 @@
                 }
             } catch (error) {
                 console.error(error);
-                showToast("âŒ Erro na conexão com o servidor.", "error");
+                showToast("Sem conexão com a internet.", "error");
             }
         }
 
@@ -8304,7 +8431,7 @@
                 }
             } catch (error) {
                 console.error('Erro:', error);
-                showToast("âŒ Erro na conexão com o servidor: " + error.message, "error");
+                showToast("Sem conexão com a internet.", "error");
             }
         }
 
@@ -8456,7 +8583,7 @@
                     showToast("❌ " + msg, "error");
                 }
             } catch (error) {
-                showToast("âŒ Erro na conexão", "error");
+                showToast("Sem conexão com a internet.", "error");
             }
         }
 
@@ -8645,7 +8772,7 @@
 
     <!-- 🔖 INDICADOR DE VERSÃO -->
     <div style="text-align:center; padding:20px; color:#00D4FF; font-size:0.75rem; margin-top:30px; opacity:0.7;">
-        🏠 CR$ Home Care AI v1.5.19 — build 2026-08-13 — bloqueio de login e responsividade
+        🏠 CR$ Home Care AI v1.6.0 — build 2026-08-13 — segurança de login, notificações, offline e calendário
     </div>
 <!-- Cloudflare Web Analytics --><script type='module' src='https://static.cloudflareinsights.com/beacon.min.js' data-cf-beacon='{"token": "d1a9b25d409d47f693bbb1a7f0afbc97"}'></script><!-- End Cloudflare Web Analytics -->
 
