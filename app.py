@@ -578,6 +578,10 @@ class ChatRequest(BaseModel):
 class ForgotPasswordRequest(BaseModel):
     contact: str
 
+class ChangePasswordRequest(BaseModel):
+    current_password: str
+    new_password: str = Field(..., min_length=4, description="Nova senha deve ter pelo menos 4 caracteres")
+
 class PushSubscriptionCreate(BaseModel):
     user_id: str
     endpoint: str
@@ -2875,6 +2879,35 @@ async def update_user_email(
         "status": "success",
         "message": "E-mail de recuperação atualizado com sucesso",
         "email": user.email
+    }
+
+@app.put("/api/users/{user_id}/password")
+async def update_user_password(
+    user_id: str,
+    body: ChangePasswordRequest,
+    db: Session = Depends(get_db)
+):
+    """Atualiza a senha do usuário validando a senha atual."""
+    try:
+        user_uuid = uuid.UUID(user_id)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="ID de usuário inválido")
+
+    user = db.query(User).filter(User.id == user_uuid).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="Usuário não encontrado")
+
+    # Verifica se a senha atual está correta
+    if not bcrypt.checkpw(body.current_password.encode('utf-8'), user.password_hash.encode('utf-8')):
+        raise HTTPException(status_code=400, detail="Senha atual incorreta")
+
+    # Grava a nova senha criptografada
+    user.password_hash = bcrypt.hashpw(body.new_password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
+    db.commit()
+
+    return {
+        "status": "success",
+        "message": "Senha atualizada com sucesso"
     }
 
 # --- 📅 APPOINTMENTS - EDITAR E EXCLUIR ---
