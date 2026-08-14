@@ -2341,6 +2341,53 @@
         </div>
     </div>
 
+    <!-- MODAL DE UPGRADE DE PLANO (MERCADO PAGO) -->
+    <div class="modal" id="modal-upgrade-plan">
+        <div class="modal-content" style="max-width: 500px; background: linear-gradient(135deg, #101e33, #060b18); border: 1.5px solid rgba(0, 212, 255, 0.4);">
+            <div class="modal-header">
+                <h3 class="modal-title" style="color: #fff; display: flex; align-items: center; gap: 8px;">⭐ Escolha Seu Plano</h3>
+                <button class="modal-close" onclick="closeModal('modal-upgrade-plan')">&times;</button>
+            </div>
+            <p style="color: #cbd5e1; font-size: 0.95rem; text-align: center; margin-bottom: 20px;">
+                Desbloqueie todos os recursos inteligentes e gerencie a saúde da sua família sem limites.
+            </p>
+            
+            <div style="display: flex; flex-direction: column; gap: 16px;">
+                <!-- PLANO BÁSICO -->
+                <div style="background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 16px; padding: 18px; display: flex; justify-content: space-between; align-items: center; transition: all 0.3s;">
+                    <div>
+                        <h4 style="margin: 0; color: #00D4FF; font-size: 1.15rem; font-weight: 700;">🔹 Plano Básico</h4>
+                        <p style="margin: 4px 0 0; color: #8A9BB5; font-size: 0.85rem;">Até 3 pessoas cuidadas • Notificações</p>
+                        <div style="margin-top: 8px; font-weight: 800; color: #fff; font-size: 1.25rem;">R$ 49,90<span style="font-size: 0.85rem; font-weight: 400; color: #8A9BB5;">/mês</span></div>
+                    </div>
+                    <button onclick="iniciarUpgrade('basico_mensal')" style="background: linear-gradient(135deg, #00d4ff 0%, #0099ff 100%); color: #0A1128; border: none; border-radius: 10px; padding: 12px 18px; font-weight: 700; cursor: pointer; transition: transform 0.2s;">
+                        Assinar
+                    </button>
+                </div>
+                
+                <!-- PLANO PRO -->
+                <div style="background: rgba(139, 92, 246, 0.05); border: 1.5px solid rgba(139, 92, 246, 0.4); border-radius: 16px; padding: 18px; display: flex; justify-content: space-between; align-items: center; position: relative;">
+                    <span style="position: absolute; top: -10px; right: 20px; background: #8b5cf6; color: white; font-size: 0.65rem; padding: 2px 8px; border-radius: 20px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;">Mais Popular</span>
+                    <div>
+                        <h4 style="margin: 0; color: #c084fc; font-size: 1.15rem; font-weight: 700;">⭐ Plano Pró</h4>
+                        <p style="margin: 4px 0 0; color: #cbd5e1; font-size: 0.85rem;">Até 5 pessoas cuidadas • IA Avançada</p>
+                        <div style="margin-top: 8px; font-weight: 800; color: #fff; font-size: 1.25rem;">R$ 89,90<span style="font-size: 0.85rem; font-weight: 400; color: #cbd5e1;">/mês</span></div>
+                    </div>
+                    <button onclick="iniciarUpgrade('pro_mensal')" style="background: linear-gradient(135deg, #a855f7 0%, #7c3aed 100%); color: white; border: none; border-radius: 10px; padding: 12px 18px; font-weight: 700; cursor: pointer; transition: transform 0.2s;">
+                        Assinar
+                    </button>
+                </div>
+            </div>
+            
+            <div style="margin-top: 20px; text-align: center;">
+                <p style="margin: 0 0 16px; font-size: 0.75rem; color: #8A9BB5; display: flex; align-items: center; justify-content: center; gap: 4px;">
+                    🔒 Pagamento 100% seguro processado pelo Mercado Pago.
+                </p>
+                <button onclick="closeModal('modal-upgrade-plan')" style="padding:10px 24px; background:rgba(138,155,181,0.15); border:1px solid rgba(138,155,181,0.25); border-radius:10px; color:#8A9BB5; cursor:pointer; font-weight:600; width: 100%;">Voltar ao Sistema</button>
+            </div>
+        </div>
+    </div>
+
     <!-- FAB -->
     <button class="fab" id="fab-btn" onclick="handleFabClick()">+</button>
     
@@ -2845,7 +2892,7 @@
                 upgradeBadge.textContent = `⭐ Fazer Upgrade`;
                 upgradeBadge.style.display = 'inline-block';
                 upgradeBadge.onclick = function() {
-                    window.location.href = '/?upgrade=pro';
+                    openModal('modal-upgrade-plan');
                 };
             }
             
@@ -5654,6 +5701,35 @@
 
         function closeModal(modalId) {
             document.getElementById(modalId).classList.remove('active');
+        }
+        
+        async function iniciarUpgrade(planKey) {
+            try {
+                showToast("⏳ Conectando ao Mercado Pago...");
+                
+                const response = await fetch(`${API_URL}/api/subscribe`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        user_id: userId,
+                        email: currentUser ? currentUser.email : '',
+                        plan: planKey
+                    })
+                });
+                
+                const data = await response.json();
+                if (response.ok && data.checkout_url) {
+                    showToast("🚀 Redirecionando para pagamento...");
+                    setTimeout(() => {
+                        window.location.href = data.checkout_url;
+                    }, 800);
+                } else {
+                    showToast(`❌ Erro: ${data.detail || 'Não foi possível gerar a assinatura'}`, true);
+                }
+            } catch (error) {
+                console.error("Erro no upgrade de plano:", error);
+                showToast("❌ Sem conexão com o servidor. Tente novamente.", true);
+            }
         }
         
         // Fechar modal ao clicar fora
