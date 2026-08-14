@@ -1,4 +1,6 @@
-# ===== v1.6.4 - 2026-08-13 18:05 BRT ==========================================
+# ===== v1.6.5 - 2026-08-14 16:25 BRT ==========================================
+# - Fix: Ajuste de timezone do scheduler para fuso de Brasília (UTC-3)
+# - Build: Integração de variáveis de produção (Resend API e WhatsApp Meta API)
 # - CTG-107: Restauração dos emojis nos botões de notificações push
 # - CTG-104: Envio de e-mail com passo a passo de primeiro acesso no cadastro e suporte
 # - CTG-104: Forçar classificação como complexa para desaparecimento de medicamento
