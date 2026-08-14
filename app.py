@@ -5415,7 +5415,7 @@ def verificar_medicamentos_sincrono():
         verificar_e_enviar_relatorios(db)
         marcar_nao_tomados_fim_do_dia(db)
         
-        agora = datetime.now()
+        agora = datetime.now(TZ_BRASILIA)
         hora_atual = agora.strftime("%H:%M")
         
         print(f"🔔 [SCHEDULER] Verificando medicamentos para {hora_atual}")
