@@ -1002,7 +1002,10 @@ async def send_documents_email(user_id: str, payload: dict, db: Session = Depend
         gmail_refresh_token = os.getenv("GMAIL_REFRESH_TOKEN")
         gmail_user = os.getenv("SMTP_USERNAME")  # email remetente (ex: crs.home.care.ai@gmail.com)
         
-        is_mock = not gmail_refresh_token or not gmail_client_id or not gmail_client_secret
+        resend_api_key = os.getenv("RESEND_API_KEY")
+        has_resend = resend_api_key and "seu_" not in resend_api_key
+        
+        is_mock = (not gmail_refresh_token or not gmail_client_id or not gmail_client_secret) and not has_resend
         
         # Cria a mensagem
         from email.mime.multipart import MIMEMultipart
@@ -1024,6 +1027,7 @@ async def send_documents_email(user_id: str, payload: dict, db: Session = Depend
         msg.attach(MIMEText(corpo, 'plain'))
         
         attachments_info = []
+        attachments_resend = []
         
         # Função auxiliar para anexar arquivos base64
         def anexar_base64(data_uri, default_filename):
@@ -1044,6 +1048,12 @@ async def send_documents_email(user_id: str, payload: dict, db: Session = Depend
                     ext = ".gif"
                     
                 filename = default_filename + ext
+                
+                # Para o Resend:
+                attachments_resend.append({
+                    "content": base64_data,
+                    "filename": filename
+                })
                 
                 part = MIMEBase('application', 'octet-stream')
                 part.set_payload(file_bytes)
@@ -1094,8 +1104,39 @@ async def send_documents_email(user_id: str, payload: dict, db: Session = Depend
         if not anexou_id and not anexou_card:
             raise HTTPException(status_code=400, detail="O usuário não possui nenhum documento cadastrado para envio.")
             
-        # Envio via Gmail API (REST — porta HTTPS/443, funciona no Railway)
+        # --- ENVIO REAL (RESEND OU GMAIL API) ---
         
+        # 1. Tentar via Resend se configurado
+        if has_resend:
+            try:
+                resend_url = "https://api.resend.com/emails"
+                headers = {
+                    "Authorization": f"Bearer {resend_api_key}",
+                    "Content-Type": "application/json"
+                }
+                sender = "onboarding@resend.dev"
+                if gmail_user and not gmail_user.endswith("@gmail.com"):
+                    sender = gmail_user
+                    
+                payload_resend = {
+                    "from": f"CR$ Home Care <{sender}>",
+                    "to": destinatario,
+                    "subject": f"📋 Documentos Médicos/Identificação - Paciente: {user.full_name}",
+                    "text": corpo,
+                    "attachments": attachments_resend
+                }
+                resend_resp = requests.post(resend_url, headers=headers, json=payload_resend, timeout=30)
+                resend_resp.raise_for_status()
+                
+                print(f"✅ E-mail de documentos enviado com sucesso para {destinatario} (Resend API)")
+                return {
+                    "status": "success",
+                    "message": "E-mail enviado com sucesso!"
+                }
+            except Exception as resend_err:
+                print(f"⚠️ Erro na Resend API: {resend_err} — tentando fallback Gmail API...")
+
+        # 2. Tentar via Gmail API (REST)
         try:
             # 1. Obter access token via OAuth refresh
             token_url = "https://oauth2.googleapis.com/token"
@@ -1129,7 +1170,8 @@ async def send_documents_email(user_id: str, payload: dict, db: Session = Depend
             }
         except Exception as gmail_err:
             print(f"❌ Erro na Gmail API: {gmail_err}")
-            raise HTTPException(status_code=502, detail=f"Erro ao enviar e-mail via Gmail API: {str(gmail_err)}")
+            raise HTTPException(status_code=502, detail=f"Erro ao enviar e-mail via Gmail API ou Resend: {str(gmail_err)}")
+
             
     except HTTPException as http_ex:
         raise http_ex
@@ -1293,11 +1335,41 @@ def _send_email_smtp(to_email: str, subject: str, body: str, from_email: str = N
 
 
 def _send_email_via_gmail_api(to_email: str, subject: str, body: str, from_email: str = None) -> bool:
-    """Envia e-mail simples (sem anexos) via Gmail API REST. Retorna True se sucesso.
-    Fallback: se Gmail OAuth falhar, tenta SMTP."""
+    """Envia e-mail simples (sem anexos) via Gmail API REST ou Resend API.
+    Se RESEND_API_KEY estiver configurado, tenta Resend primeiro.
+    Caso contrário ou em caso de erro, tenta Gmail API REST e, por fim, fallback SMTP."""
     import base64
     from email.mime.text import MIMEText
     
+    # --- 1. TENTA RESEND SE CONFIGURADO (Ótimo para Railway) ---
+    resend_api_key = os.getenv("RESEND_API_KEY")
+    if resend_api_key and "seu_" not in resend_api_key:
+        try:
+            resend_url = "https://api.resend.com/emails"
+            headers = {
+                "Authorization": f"Bearer {resend_api_key}",
+                "Content-Type": "application/json"
+            }
+            # Se o remetente não estiver configurado ou for um Gmail genérico (sem domínio cadastrado no Resend),
+            # o Resend exige o uso do remetente padrão de teste: "onboarding@resend.dev"
+            sender = "onboarding@resend.dev"
+            if from_email and not from_email.endswith("@gmail.com"):
+                sender = from_email
+                
+            payload = {
+                "from": f"CR$ Home Care <{sender}>",
+                "to": to_email,
+                "subject": subject,
+                "text": body
+            }
+            resp = requests.post(resend_url, headers=headers, json=payload, timeout=20)
+            resp.raise_for_status()
+            print(f"✅ [EMAIL] E-mail enviado com sucesso via Resend API para {to_email}")
+            return True
+        except Exception as resend_err:
+            print(f"⚠️ [EMAIL] Resend API falhou ({resend_err}) — tentando outros métodos...")
+
+    # --- 2. GMAIL API / SMTP FALLBACK ---
     if not from_email:
         from_email = os.getenv("SMTP_USERNAME", "sistema@homecare.com.br")
     
@@ -1326,6 +1398,7 @@ def _send_email_via_gmail_api(to_email: str, subject: str, body: str, from_email
         except Exception as smtp_err:
             print(f"🔥 [EMAIL] SMTP também falhou: {smtp_err}")
             raise
+
 
 
 # ══════════════════════════════════════════════════════════════

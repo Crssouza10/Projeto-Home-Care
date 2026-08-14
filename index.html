@@ -1609,13 +1609,17 @@ async function handleForgotPassword(event) {
         
         const data = await response.json();
         
+        if (!response.ok) {
+            throw new Error(data.detail || 'Erro ao processar solicitação.');
+        }
+        
         // Sempre exibe mensagem de sucesso genérica para anti-enumeração (exemplo: "Se o e-mail estiver cadastrado, enviaremos instruções.")
         successDiv.textContent = 'Se o e-mail estiver cadastrado, enviaremos instruções.';
         successDiv.style.display = 'block';
         emailInput.value = '';
     } catch (err) {
         console.error(err);
-        errorDiv.textContent = 'Erro ao processar solicitação. Tente novamente.';
+        errorDiv.textContent = err.message || 'Erro ao processar solicitação. Tente novamente.';
     } finally {
         btn.disabled = false;
         btn.textContent = 'Enviar instruções';
