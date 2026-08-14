@@ -71,3 +71,16 @@ O layout do aplicativo foi refinado para garantir que funcione perfeitamente em 
 
 - **Fim dos Cortes Horizontais**: Todas as margens de visualização (`max-width: 100%`, `overflow-x: hidden`) foram rigidamente testadas para garantir que nenhuma barra de rolagem horizontal apareça no mobile.
 - **Aproximação de Botões**: Os botões de ação do card (Câmera 📷, Calendário 📅, Editar ✏️ e Excluir 🗑️) foram movidos para a esquerda, colados ao badge de horário. Isso resolveu definitivamente os cortes no botão de excluir (Lixeira) em celulares de telas estreitas.
+
+---
+
+## 5. 📧 Envio de E-mails via Resend API (v2.2.1)
+
+Para contornar o bloqueio de portas SMTP padrão (587 e 465) imposto por provedores de nuvem como o Railway, foi adicionado suporte nativo ao envio de e-mails transacionais (como recuperação de senha e documentos) via **Resend API (HTTPS - Porta 443)**.
+
+### Como configurar:
+1. Obtenha uma chave de API gratuita em [Resend.com](https://resend.com/).
+2. Defina a variável de ambiente:
+   * `RESEND_API_KEY`: A chave da API do Resend (ex: `re_...`).
+3. O sistema detectará automaticamente a presença da chave e priorizará o envio seguro via API HTTPS.
+
