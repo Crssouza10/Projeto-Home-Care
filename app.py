@@ -1,27 +1,7 @@
-# ===== v1.6.5 - 2026-08-14 16:25 BRT ==========================================
-# - Fix: Ajuste de timezone do scheduler para fuso de Brasília (UTC-3)
-# - Build: Integração de variáveis de produção (Resend API e WhatsApp Meta API)
-# - CTG-107: Restauração dos emojis nos botões de notificações push
-# - CTG-104: Envio de e-mail com passo a passo de primeiro acesso no cadastro e suporte
-# - CTG-104: Forçar classificação como complexa para desaparecimento de medicamento
-# - CTG-028: Envio real de e-mail de redefinição e fluxo de redefinição no frontend
-# - CTG-028: Editar e-mail de recuperação diretamente na Ficha Médica (Plano Grátis)
-# - CTG-130: bloqueio temporário de login (10 tentativas -> 15 min) + colunas no banco
-# - CTG-109: reagendamento valida conflito de horário; alertas separados por medicamento
-# - CTG-112: re-verifica medicamentos ao voltar para a aba (visibilitychange/focus)
-# - CTG-135: mensagens de erro de rede em pt-BR + listeners offline/online
-# - CTG-122: calendário responsivo (sem corte de botões/sábado) + swipe horizontal
-# - CTG-010: validação min_length=4 na rota register-subscribe
-# - Fix: rotas DELETE /api/users/{id} e PUT reativar conta (soft delete)
-# - Field adicionado ao import pydantic (NameError no deploy)
-# - Função _ask_ai() com fallback Gemini → DeepSeek (cota Gemini esgotada)
-# - support_message e ocr_allergies adaptados para usar _ask_ai()
-# - Correção CTG-032: envio de documentos usa user.email como fallback
-# - Correção suporte: classificação de dúvidas de pagamento como 'simples'
-# - Correção suporte: mensagem sem e-mail na landing page não menciona envio
-# - Correção landing: botões de pricing com onclick inline (trial/basico/pro)
-# - Manual do Produto: preços atualizados v1.5 (R$49,90 / R$89,90)
-# - Frontend: protocolo de suporte sem menção a 'retornaremos por e-mail'
+# ===== v1.6.6 - 2026-08-14 22:08 BRT ==========================================
+# - CTG-126: autorização por recurso (verify_resource_owner) — bloqueia ID tampering/IDOR
+# - CTG-009.2: removida chamada automática de registerPush()/requestPermission() (user gesture)
+# - Histórico anterior: v1.6.5 (timezone scheduler UTC-3, Resend API, WhatsApp Meta API)
 import sys
 # Garante codificação UTF-8 para evitar erros de unicode no console (especialmente no Windows)
 if sys.platform.startswith('win'):
@@ -624,6 +604,23 @@ def get_current_user(request: Request, db: Session = Depends(get_db)):
     
     return user
 
+
+def verify_resource_owner(user_id: str, current_user: User):
+    """CTG-126: garante que o user_id da URL pertence ao usuário autenticado.
+
+    Bloqueia acesso a dados de outro usuário (ID tampering / IDOR).
+    Levanta HTTPException 400 se user_id inválido, 403 se não pertence ao usuário logado.
+    Retorna o UUID do recurso caso a validação passe.
+    """
+    try:
+        user_uuid = uuid.UUID(user_id)
+    except (ValueError, AttributeError):
+        raise HTTPException(status_code=400, detail="ID de usuário inválido")
+    if current_user.id != user_uuid:
+        raise HTTPException(status_code=403, detail="Acesso negado: você não tem permissão para acessar estes dados.")
+    return user_uuid
+
+
 # ==================== FUNÇÕES AUXILIARES ====================
 
 def _get_periodo(time_val):
@@ -753,8 +750,8 @@ async def get_medication_history(user_id: str, date: str, db: Session = Depends(
     """
     Retorna medicamentos agendados para uma data específica
     """
+    user_uuid = verify_resource_owner(user_id, current_user)
     try:
-        user_uuid = uuid.UUID(user_id)
         target_date = datetime.strptime(date, "%Y-%m-%d").date()
         
         # Converte para dia da semana (0=Dom, 6=Sáb)
@@ -934,10 +931,7 @@ async def cliente_login(credentials: dict, db: Session = Depends(get_db)):
 
 @app.get("/api/cliente/{user_id}/clinical-info")
 async def get_clinical_info(user_id: str, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
-    try:
-        user_uuid = uuid.UUID(user_id)
-    except ValueError:
-        raise HTTPException(status_code=400, detail="ID de usuário inválido")
+    user_uuid = verify_resource_owner(user_id, current_user)
     
     user = db.query(User).filter(User.id == user_uuid).first()
     if not user:
@@ -961,10 +955,7 @@ async def get_clinical_info(user_id: str, db: Session = Depends(get_db), current
 
 @app.put("/api/cliente/{user_id}/clinical-info")
 async def update_clinical_info(user_id: str, info: ClinicalInfoUpdate, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
-    try:
-        user_uuid = uuid.UUID(user_id)
-    except ValueError:
-        raise HTTPException(status_code=400, detail="ID de usuário inválido")
+    user_uuid = verify_resource_owner(user_id, current_user)
     
     user = db.query(User).filter(User.id == user_uuid).first()
     if not user:
@@ -1821,10 +1812,7 @@ def marcar_nao_tomados_fim_do_dia(db: Session):
 async def get_client_medications(user_id: str, date: str = None, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     """Lista medicamentos com schedules de uma data específica (ou hoje, se não informada)"""
     marcar_nao_tomados_fim_do_dia(db)
-    try:
-        user_uuid = uuid.UUID(user_id)
-    except ValueError:
-        raise HTTPException(status_code=400, detail="ID de usuário inválido")
+    user_uuid = verify_resource_owner(user_id, current_user)
     
     brasilia_tz = timezone(timedelta(hours=-3))
     # ⚙️ v2.3.4: Aceita ?date=YYYY-MM-DD para consultar schedules de qualquer dia
@@ -2024,10 +2012,7 @@ def distribute_time(user_id, preferred_time_str: str, db: Session, current_med_i
 
 @app.post("/api/cliente/{user_id}/medications", status_code=status.HTTP_201_CREATED)
 async def create_medication(user_id: str, med: MedicationCreate, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
-    try:
-        user_uuid = uuid.UUID(user_id)
-    except ValueError:
-        raise HTTPException(status_code=400, detail="ID de usuário inválido")
+    user_uuid = verify_resource_owner(user_id, current_user)
     
     # 1. Determinar a data de início com base no start_date recebido (ou hoje se nulo)
     start_dt = hoje_brasilia()
@@ -2509,10 +2494,7 @@ async def notify_responsible_async(medication_id: uuid.UUID):
 
 @app.get("/api/cliente/{user_id}/appointments")
 async def get_client_appointments(user_id: str, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
-    try:
-        user_uuid = uuid.UUID(user_id)
-    except ValueError:
-        raise HTTPException(status_code=400, detail="ID de usuário inválido")
+    user_uuid = verify_resource_owner(user_id, current_user)
     
     cutoff_date = hoje_brasilia() - timedelta(days=7)
     
@@ -5100,10 +5082,7 @@ async def cancelar_assinatura(user_id: str, db: Session = Depends(get_db)):
 @app.post("/api/cliente/{user_id}/deactivate")
 async def desativar_conta(user_id: str, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     """Desativa a conta do usuário (soft delete). Os dados são preservados para possível reativação."""
-    try:
-        user_uuid = uuid.UUID(user_id)
-    except ValueError:
-        raise HTTPException(status_code=400, detail="user_id inválido")
+    user_uuid = verify_resource_owner(user_id, current_user)
 
     user = db.query(User).filter(User.id == user_uuid, User.is_active == True).first()
     if not user:
