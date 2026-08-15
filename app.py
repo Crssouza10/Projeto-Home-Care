@@ -1,4 +1,4 @@
-# ===== v1.6.7 - 2026-08-15 17:50 BRT ==========================================
+# ===== v1.6.7 - 2026-08-15 18:05 BRT ==========================================
 # - CTG-126 (ampliação): autenticação + autorização por recurso em TODOS os endpoints /api/*/{user_id}
 #   (appointments, responsibles, emergency-contacts, uploads, view-document/insurance,
 #    low-supply, review-needed, ocr-allergies, send-documents-email, /api/chat, /api/subscribe,
@@ -140,7 +140,7 @@ print(f"DATABASE_URL: {'Configurada' if DATABASE_URL else 'NAO CONFIGURADA'}")
 MERCADO_PAGO_ACCESS_TOKEN = os.getenv("MERCADO_PAGO_ACCESS_TOKEN")
 MERCADO_PAGO_PUBLIC_KEY = os.getenv("MERCADO_PAGO_PUBLIC_KEY")
 mp_sdk = None
-if MERCADO_PAGO_ACCESS_TOKEN:
+if MERCADO_PAGO_ACCESS_TOKEN and MERCADO_PAGO_ACCESS_TOKEN != "seu_access_token_mercadopago":
     try:
         import mercadopago
         mp_sdk = mercadopago.SDK(MERCADO_PAGO_ACCESS_TOKEN)
@@ -148,7 +148,23 @@ if MERCADO_PAGO_ACCESS_TOKEN:
     except ImportError:
         print("⚠️ pacote 'mercadopago' não instalado. Execute: pip install mercadopago")
 else:
-    print("ℹ️ MERCADO_PAGO_ACCESS_TOKEN não configurado — rotas de pagamento retornarão 503")
+    # Cria mock simples do SDK do Mercado Pago caso não configurado, para fins de teste na homologação
+    print("ℹ️ MERCADO_PAGO_ACCESS_TOKEN não configurado com credenciais válidas. Usando MOCK Sandbox para homologação (CTG-084)")
+    class DummyPreference:
+        def create(self, data):
+            # Gera URL mockada usando o link de success configurado
+            user_id = data.get("external_reference", "dummy_user")
+            # Redireciona de volta como se o Mercado Pago tivesse aprovado
+            return {
+                "response": {
+                    "id": "mock_preference_id",
+                    "sandbox_init_point": f"/success?payment_id=12345&status=approved&merchant_order_id=67890&preference_id=mock_preference_id&external_reference={user_id}"
+                }
+            }
+    class DummySDK:
+        def preference(self):
+            return DummyPreference()
+    mp_sdk = DummySDK()
 
 engine = create_engine(DATABASE_URL)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
