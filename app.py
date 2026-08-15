@@ -604,6 +604,19 @@ def get_current_user(request: Request, db: Session = Depends(get_db)):
     if not user:
         raise HTTPException(status_code=401, detail="Usuário não encontrado ou inativo.")
     
+    # CTG-086: Bloqueio de acesso após expiração do trial (14 dias)
+    plan_lower = (user.plan or "trial").lower()
+    is_trial = plan_lower == "trial" or plan_lower == "gratis" or plan_lower == "free"
+    if is_trial and user.created_at:
+        # Se a conta tem mais de 14 dias, o trial expirou
+        from datetime import datetime, timedelta
+        limit_date = user.created_at + timedelta(days=14)
+        if datetime.utcnow() > limit_date:
+            raise HTTPException(
+                status_code=403,
+                detail="Período de teste (trial) expirado. Por favor, faça o upgrade do seu plano para continuar."
+            )
+            
     return user
 
 

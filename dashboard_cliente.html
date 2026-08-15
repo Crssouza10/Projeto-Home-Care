@@ -2576,6 +2576,20 @@
                     endpoints.map(url => fetch(url))
                 );
                 
+                // CTG-086: Se alguma resposta for 403, significa que o trial expirou
+                if (medsRes.status === 403 || apptsRes.status === 403 || respRes.status === 403 || contRes.status === 403) {
+                    console.log('🔒 Trial expirado detectado via API 403. Bloqueando acesso...');
+                    const modalUpgrade = document.getElementById('modal-upgrade-plan');
+                    if (modalUpgrade) {
+                        modalUpgrade.style.display = 'flex';
+                        const closeBtn = modalUpgrade.querySelector('.modal-close');
+                        if (closeBtn) closeBtn.style.display = 'none';
+                        const backSystemBtn = modalUpgrade.querySelector('button[onclick*="closeModal"]');
+                        if (backSystemBtn) backSystemBtn.style.display = 'none';
+                    }
+                    return;
+                }
+                
                 medicationsData = await medsRes.json();
                 appointmentsData = await apptsRes.json();
                 responsiblesData = await respRes.json();
@@ -2882,8 +2896,35 @@
                         } catch(e) { console.error('Error parsing created_at:', e); }
                     }
                     
-                    trialBadge.textContent = `Plano Grátis | ⏳ ${daysLeft} dias restantes`;
-                    trialBadge.style.display = 'inline-block';
+                    if (daysLeft <= 0) {
+                        // Trial Expirado
+                        trialBadge.textContent = `Plano Expirado | ❌ 0 dias restantes`;
+                        trialBadge.style.background = '#dc2626';
+                        trialBadge.style.color = '#ffffff';
+                        trialBadge.style.display = 'inline-block';
+                        
+                        // Bloquear ações de fechar o modal e forçar exibição dele
+                        const modalUpgrade = document.getElementById('modal-upgrade-plan');
+                        if (modalUpgrade) {
+                            modalUpgrade.style.display = 'flex';
+                            // Ocultar botão de fechar e botão "Voltar ao Sistema"
+                            const closeBtn = modalUpgrade.querySelector('.modal-close');
+                            if (closeBtn) closeBtn.style.display = 'none';
+                            const backSystemBtn = modalUpgrade.querySelector('button[onclick*="closeModal"]');
+                            if (backSystemBtn) backSystemBtn.style.display = 'none';
+                        }
+                    } else if (daysLeft <= 3) {
+                        // Urgência: <= 3 dias
+                        trialBadge.textContent = `Urgente: apenas ${daysLeft} ${daysLeft === 1 ? 'dia' : 'dias'}`;
+                        trialBadge.style.background = '#dc2626'; // Vermelho vivo
+                        trialBadge.style.color = '#ffffff';
+                        trialBadge.style.display = 'inline-block';
+                    } else {
+                        trialBadge.textContent = `Plano Grátis | ⏳ ${daysLeft} dias restantes`;
+                        trialBadge.style.background = '#ef4444'; // Manter cor original caso contrário
+                        trialBadge.style.color = 'white';
+                        trialBadge.style.display = 'inline-block';
+                    }
                 } else {
                     // Contas básicas e pro: oculta badge de trial
                     trialBadge.style.display = 'none';
