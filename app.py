@@ -1,7 +1,9 @@
-# ===== v1.6.6 - 2026-08-14 22:08 BRT ==========================================
-# - CTG-126: autorização por recurso (verify_resource_owner) — bloqueia ID tampering/IDOR
-# - CTG-009.2: removida chamada automática de registerPush()/requestPermission() (user gesture)
-# - Histórico anterior: v1.6.5 (timezone scheduler UTC-3, Resend API, WhatsApp Meta API)
+# ===== v1.6.7 - 2026-08-14 22:23 BRT ==========================================
+# - CTG-126 (ampliação): autenticação + autorização por recurso em TODOS os endpoints /api/*/{user_id}
+#   (appointments, responsibles, emergency-contacts, uploads, view-document/insurance,
+#    low-supply, review-needed, ocr-allergies, send-documents-email, /api/chat, /api/subscribe,
+#    subscription status/activate/cancel, /api/users/{id} GET/email). Webhook Mercado Pago permanece público.
+# - Histórico anterior: v1.6.6 (CTG-126 base + CTG-009.2 push user gesture)
 import sys
 # Garante codificação UTF-8 para evitar erros de unicode no console (especialmente no Windows)
 if sys.platform.startswith('win'):
@@ -978,10 +980,10 @@ async def update_clinical_info(user_id: str, info: ClinicalInfoUpdate, db: Sessi
     }
 
 @app.post("/api/cliente/{user_id}/send-documents-email")
-async def send_documents_email(user_id: str, payload: dict, db: Session = Depends(get_db)):
+async def send_documents_email(user_id: str, payload: dict, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     """Envia os documentos do usuário (Identidade e Carteirinha) por e-mail"""
+    user_uuid = verify_resource_owner(user_id, current_user)
     try:
-        user_uuid = uuid.UUID(user_id)
         user = db.query(User).filter(User.id == user_uuid).first()
         if not user:
             raise HTTPException(status_code=404, detail="Usuário não encontrado")
@@ -1645,11 +1647,8 @@ def _enviar_email_boas_vindas(user_name: str, user_email: str):
 
 
 @app.get("/api/cliente/{user_id}/view-document")
-async def view_document(user_id: str, db: Session = Depends(get_db)):
-    try:
-        user_uuid = uuid.UUID(user_id)
-    except ValueError:
-        raise HTTPException(status_code=400, detail="ID de usuário inválido")
+async def view_document(user_id: str, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    user_uuid = verify_resource_owner(user_id, current_user)
     
     user = db.query(User).filter(User.id == user_uuid).first()
     if not user or not user.identity_document_file:
@@ -1690,11 +1689,8 @@ async def view_document(user_id: str, db: Session = Depends(get_db)):
             raise HTTPException(status_code=404, detail="Arquivo local não encontrado")
 
 @app.get("/api/cliente/{user_id}/view-insurance")
-async def view_insurance(user_id: str, db: Session = Depends(get_db)):
-    try:
-        user_uuid = uuid.UUID(user_id)
-    except ValueError:
-        raise HTTPException(status_code=400, detail="ID de usuário inválido")
+async def view_insurance(user_id: str, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    user_uuid = verify_resource_owner(user_id, current_user)
     
     user = db.query(User).filter(User.id == user_uuid).first()
     if not user or not user.health_insurance_card:
@@ -2519,11 +2515,8 @@ async def get_client_appointments(user_id: str, db: Session = Depends(get_db), c
     return resultado
 
 @app.post("/api/cliente/{user_id}/appointments", status_code=status.HTTP_201_CREATED)
-async def create_appointment(user_id: str, appt: AppointmentCreate, db: Session = Depends(get_db)):
-    try:
-        user_uuid = uuid.UUID(user_id)
-    except ValueError:
-        raise HTTPException(status_code=400, detail="ID de usuário inválido")
+async def create_appointment(user_id: str, appt: AppointmentCreate, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    user_uuid = verify_resource_owner(user_id, current_user)
     
     # Valida conflito de horário (CTG-096): mesma data + mesmo horário
     conflito = db.query(Appointment).filter(
@@ -2560,11 +2553,8 @@ async def create_appointment(user_id: str, appt: AppointmentCreate, db: Session 
 # =========================================================
 
 @app.get("/api/cliente/{user_id}/responsibles", response_model=List[ClienteResponsibleResponse])
-async def get_client_responsibles(user_id: str, db: Session = Depends(get_db)):
-    try:
-        user_uuid = uuid.UUID(user_id)
-    except ValueError:
-        raise HTTPException(status_code=400, detail="ID de usuário inválido")
+async def get_client_responsibles(user_id: str, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    user_uuid = verify_resource_owner(user_id, current_user)
     
     responsibles = db.query(Responsible).filter(Responsible.user_id == user_uuid).all()
     
@@ -2581,11 +2571,8 @@ async def get_client_responsibles(user_id: str, db: Session = Depends(get_db)):
     ]
 
 @app.post("/api/cliente/{user_id}/responsibles", status_code=status.HTTP_201_CREATED)
-async def create_responsible(user_id: str, resp: ResponsibleCreate, db: Session = Depends(get_db)):
-    try:
-        user_uuid = uuid.UUID(user_id)
-    except ValueError:
-        raise HTTPException(status_code=400, detail="ID de usuário inválido")
+async def create_responsible(user_id: str, resp: ResponsibleCreate, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    user_uuid = verify_resource_owner(user_id, current_user)
     
     # Verifica limite de responsáveis por plano
     user = db.query(User).filter(User.id == user_uuid).first()
@@ -2621,11 +2608,8 @@ async def create_responsible(user_id: str, resp: ResponsibleCreate, db: Session 
 # =========================================================
 
 @app.get("/api/cliente/{user_id}/emergency-contacts")
-async def get_emergency_contacts(user_id: str, db: Session = Depends(get_db)):
-    try:
-        user_uuid = uuid.UUID(user_id)
-    except ValueError:
-        raise HTTPException(status_code=400, detail="ID inválido")
+async def get_emergency_contacts(user_id: str, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    user_uuid = verify_resource_owner(user_id, current_user)
     
     contacts = db.query(EmergencyContact).filter(
         EmergencyContact.user_id == user_uuid
@@ -2643,11 +2627,8 @@ async def get_emergency_contacts(user_id: str, db: Session = Depends(get_db)):
     ]
 
 @app.post("/api/cliente/{user_id}/emergency-contacts", status_code=201)
-async def create_emergency_contact(user_id: str, contact: EmergencyContactCreate, db: Session = Depends(get_db)):
-    try:
-        user_uuid = uuid.UUID(user_id)
-    except ValueError:
-        raise HTTPException(status_code=400, detail="ID inválido")
+async def create_emergency_contact(user_id: str, contact: EmergencyContactCreate, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    user_uuid = verify_resource_owner(user_id, current_user)
     
     new_contact = EmergencyContact(
         user_id=user_uuid,
@@ -2742,8 +2723,9 @@ async def create_user(user: UserCreate, db: Session = Depends(get_db)):
     return db_user
 
 @app.get("/api/users/{user_id}", response_model=UserResponse)
-async def get_user(user_id: uuid.UUID, db: Session = Depends(get_db)):
-    user = db.query(User).filter(User.id == user_id).first()
+async def get_user(user_id: str, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    user_uuid = verify_resource_owner(user_id, current_user)
+    user = db.query(User).filter(User.id == user_uuid).first()
     if not user:
         raise HTTPException(status_code=404, detail="Usuário não encontrado")
     return user
@@ -2834,13 +2816,11 @@ class UpdateEmailRequest(BaseModel):
 async def update_user_email(
     user_id: str,
     body: UpdateEmailRequest,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
 ):
     """Atualiza o e-mail de recuperação de senha do usuário."""
-    try:
-        user_uuid = uuid.UUID(user_id)
-    except ValueError:
-        raise HTTPException(status_code=400, detail="ID de usuário inválido")
+    user_uuid = verify_resource_owner(user_id, current_user)
 
     user = db.query(User).filter(User.id == user_uuid).first()
     if not user:
@@ -3095,15 +3075,12 @@ async def update_medication(
 
 # ==================== ROTA: ALERTA DE REVISÃO (REGRA 5c) ====================
 @app.get("/api/medications/review-needed")
-async def get_review_needed_medications(user_id: str = None, db: Session = Depends(get_db)):
+async def get_review_needed_medications(user_id: str = None, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     """
     Retorna medicamentos contínuos que já passaram do prazo de revisão.
     
     Parâmetro opcional:
-        user_id: filtra por usuário específico
-    
-    Retorna:
-        Lista de medicamentos com is_review_needed=true e review_date
+        user_id: filtra por usuário específico (só aceita o próprio usuário logado)
     """
     query = db.query(Medication).filter(
         Medication.is_continuous == True,
@@ -3111,12 +3088,12 @@ async def get_review_needed_medications(user_id: str = None, db: Session = Depen
         Medication.start_date != None
     )
     
+    # CTG-126: sempre restringe ao usuário logado (ou valida o user_id informado)
     if user_id:
-        try:
-            user_uuid = uuid.UUID(user_id)
-            query = query.filter(Medication.user_id == user_uuid)
-        except ValueError:
-            raise HTTPException(status_code=400, detail="ID de usuário inválido")
+        user_uuid = verify_resource_owner(user_id, current_user)
+    else:
+        user_uuid = current_user.id
+    query = query.filter(Medication.user_id == user_uuid)
     
     all_continuous = query.all()
     
@@ -3262,11 +3239,12 @@ async def update_responsible(
     user_id: str,
     resp_id: str,
     resp: ResponsibleCreate,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
 ):
     """Editar um responsável existente"""
+    user_uuid = verify_resource_owner(user_id, current_user)
     try:
-        user_uuid = uuid.UUID(user_id)
         resp_uuid = uuid.UUID(resp_id)
     except ValueError:
         raise HTTPException(status_code=400, detail="ID inválido")
@@ -3295,10 +3273,10 @@ async def update_responsible(
 
 
 @app.delete("/api/cliente/{user_id}/responsibles/{resp_id}")
-async def delete_responsible(user_id: str, resp_id: str, db: Session = Depends(get_db)):
+async def delete_responsible(user_id: str, resp_id: str, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     """Excluir um responsável"""
+    user_uuid = verify_resource_owner(user_id, current_user)
     try:
-        user_uuid = uuid.UUID(user_id)
         resp_uuid = uuid.UUID(resp_id)
     except ValueError:
         raise HTTPException(status_code=400, detail="ID inválido")
@@ -3621,12 +3599,9 @@ def verificar_e_enviar_alerta_compra(db: Session):
 
 
 @app.get("/api/cliente/{user_id}/medications/low-supply")
-async def get_low_supply_medications(user_id: str, db: Session = Depends(get_db)):
+async def get_low_supply_medications(user_id: str, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     """Retorna medicamentos com 5 ou menos dias restantes (CTG-064)."""
-    try:
-        user_uuid = uuid.UUID(user_id)
-    except ValueError:
-        raise HTTPException(status_code=400, detail="ID de usuário inválido")
+    user_uuid = verify_resource_owner(user_id, current_user)
     
     from datetime import timezone, timedelta
     brasilia_tz = timezone(timedelta(hours=-3))
@@ -3741,10 +3716,10 @@ def verificar_e_enviar_relatorios(db: Session):
         traceback.print_exc()
 
 @app.get("/api/teste-relatorio/{user_id}")
-async def test_report(user_id: str, db: Session = Depends(get_db)):
+async def test_report(user_id: str, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     """Rota de teste para enviar o relatorio diario manualmente e ver como fica"""
+    user_uuid = verify_resource_owner(user_id, current_user)
     try:
-        user_uuid = uuid.UUID(user_id)
         user = db.query(User).filter(User.id == user_uuid).first()
         if not user:
             raise HTTPException(status_code=404, detail="Usuario nao encontrado")
@@ -4075,7 +4050,8 @@ async def upload_prescription(file: UploadFile = File(...)):
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/api/cliente/{user_id}/ocr-allergies")
-async def ocr_allergies(user_id: str, file: UploadFile = File(...)):
+async def ocr_allergies(user_id: str, file: UploadFile = File(...), db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    user_uuid = verify_resource_owner(user_id, current_user)
     try:
         import base64
         import os
@@ -4131,12 +4107,12 @@ async def ocr_allergies(user_id: str, file: UploadFile = File(...)):
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/api/cliente/{user_id}/upload-insurance-card")
-async def upload_insurance_card(user_id: str, file: UploadFile = File(...), db: Session = Depends(get_db)):
+async def upload_insurance_card(user_id: str, file: UploadFile = File(...), db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    user_uuid = verify_resource_owner(user_id, current_user)
     try:
         import base64
         import os
         
-        user_uuid = uuid.UUID(user_id)
         user = db.query(User).filter(User.id == user_uuid).first()
         if not user:
             raise HTTPException(status_code=404, detail="Usuario nao encontrado")
@@ -4280,12 +4256,12 @@ async def serve_uploaded_file(filename: str):
     return FileResponse(filepath, media_type=media_type, headers=headers)
 
 @app.post("/api/cliente/{user_id}/upload-identity-document")
-async def upload_identity_document(user_id: str, file: UploadFile = File(...), db: Session = Depends(get_db)):
+async def upload_identity_document(user_id: str, file: UploadFile = File(...), db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    user_uuid = verify_resource_owner(user_id, current_user)
     try:
         import base64
         import os
         
-        user_uuid = uuid.UUID(user_id)
         user = db.query(User).filter(User.id == user_uuid).first()
         if not user:
             raise HTTPException(status_code=404, detail="Usuario nao encontrado")
@@ -4395,16 +4371,14 @@ async def upload_identity_document(user_id: str, file: UploadFile = File(...), d
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/api/chat")
-async def chat_assistant(req: ChatRequest, db: Session = Depends(get_db)):
+async def chat_assistant(req: ChatRequest, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     try:
         user_id = req.user_id
         message = req.message
         history = req.history or []
         
-        try:
-            user_uuid = uuid.UUID(user_id)
-        except ValueError:
-            raise HTTPException(status_code=400, detail="ID de usuário inválido")
+        # CTG-126: o user_id deve pertencer ao usuário logado
+        user_uuid = verify_resource_owner(user_id, current_user)
             
         user = db.query(User).filter(User.id == user_uuid).first()
         if not user:
@@ -4910,13 +4884,15 @@ async def listar_planos():
 
 
 @app.post("/api/subscribe")
-async def criar_assinatura(request: Request, db: Session = Depends(get_db)):
+async def criar_assinatura(request: Request, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     """Cria uma preferência de pagamento no Mercado Pago e retorna link de checkout"""
     if not mp_sdk:
         raise HTTPException(status_code=503, detail="Mercado Pago não configurado")
 
     body = await request.json()
     user_id = body.get("user_id")
+    # CTG-126: o user_id do body deve pertencer ao usuário logado
+    user_uuid = verify_resource_owner(user_id, current_user)
     payer_email = body.get("email")
     plan_key = body.get("plan", "basico_mensal")
 
@@ -4965,7 +4941,7 @@ async def criar_assinatura(request: Request, db: Session = Depends(get_db)):
             raise HTTPException(status_code=502, detail="Mercado Pago não retornou URL de checkout")
 
         subscription = Subscription(
-            user_id=uuid.UUID(user_id),
+            user_id=user_uuid,
             plan=plan_key,
             mp_preference_id=mp_preference_id,
             checkout_url=checkout_url,
@@ -4988,12 +4964,9 @@ async def criar_assinatura(request: Request, db: Session = Depends(get_db)):
 
 
 @app.get("/api/subscription/{user_id}")
-async def status_assinatura(user_id: str, db: Session = Depends(get_db)):
+async def status_assinatura(user_id: str, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     """Retorna status da assinatura do usuário"""
-    try:
-        user_uuid = uuid.UUID(user_id)
-    except ValueError:
-        raise HTTPException(status_code=400, detail="user_id inválido")
+    user_uuid = verify_resource_owner(user_id, current_user)
 
     subscription = db.query(Subscription).filter(
         Subscription.user_id == user_uuid
@@ -5022,12 +4995,9 @@ async def status_assinatura(user_id: str, db: Session = Depends(get_db)):
 
 
 @app.post("/api/subscription/{user_id}/activate")
-async def ativar_assinatura(user_id: str, db: Session = Depends(get_db)):
+async def ativar_assinatura(user_id: str, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     """Ativa assinatura manualmente (para teste/desenvolvimento)"""
-    try:
-        user_uuid = uuid.UUID(user_id)
-    except ValueError:
-        raise HTTPException(status_code=400, detail="user_id inválido")
+    user_uuid = verify_resource_owner(user_id, current_user)
 
     subscription = db.query(Subscription).filter(
         Subscription.user_id == user_uuid
@@ -5051,12 +5021,9 @@ async def ativar_assinatura(user_id: str, db: Session = Depends(get_db)):
 
 
 @app.post("/api/subscription/{user_id}/cancel")
-async def cancelar_assinatura(user_id: str, db: Session = Depends(get_db)):
+async def cancelar_assinatura(user_id: str, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     """Cancela a assinatura do usuário"""
-    try:
-        user_uuid = uuid.UUID(user_id)
-    except ValueError:
-        raise HTTPException(status_code=400, detail="user_id inválido")
+    user_uuid = verify_resource_owner(user_id, current_user)
 
     subscription = db.query(Subscription).filter(
         Subscription.user_id == user_uuid,
