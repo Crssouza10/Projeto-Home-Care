@@ -10,8 +10,17 @@ self.addEventListener('activate', event => {
 });
 
 self.addEventListener('fetch', event => {
-    // Pass-through: não intercepta requisições
-    event.respondWith(fetch(event.request));
+    // Pass-through com fallback de erro suave
+    event.respondWith(
+        fetch(event.request).catch(error => {
+            console.warn('[SW] Falha na rede para:', event.request.url);
+            return new Response('Erro de Conexão ou Servidor Indisponível (503)', {
+                status: 503,
+                statusText: 'Service Unavailable',
+                headers: { 'Content-Type': 'text/plain; charset=utf-8' }
+            });
+        })
+    );
 });
 
 // Listener para receber notificações Push mesmo com a aplicação fechada
