@@ -1,4 +1,4 @@
-# ===== v1.6.7 - 2026-08-15 18:05 BRT ==========================================
+# ===== v1.6.8 - 2026-08-16 19:00 BRT ==========================================
 # - CTG-126 (ampliação): autenticação + autorização por recurso em TODOS os endpoints /api/*/{user_id}
 #   (appointments, responsibles, emergency-contacts, uploads, view-document/insurance,
 #    low-supply, review-needed, ocr-allergies, send-documents-email, /api/chat, /api/subscribe,
