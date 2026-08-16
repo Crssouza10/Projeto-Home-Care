@@ -1,9 +1,9 @@
-# ===== v1.6.8 - 2026-08-16 19:15 BRT ==========================================
-# - CTG-126 (ampliação): autenticação + autorização por recurso em TODOS os endpoints /api/*/{user_id}
-#   (appointments, responsibles, emergency-contacts, uploads, view-document/insurance,
-#    low-supply, review-needed, ocr-allergies, send-documents-email, /api/chat, /api/subscribe,
-#    subscription status/activate/cancel, /api/users/{id} GET/email). Webhook Mercado Pago permanece público.
-# - Histórico anterior: v1.6.6 (CTG-126 base + CTG-009.2 push user gesture)
+# ===== v1.6.9 - 2026-08-16 19:51 BRT ==========================================
+# - FIX (upgrade/pagamento): lê a variável MERCADOPAGO_* (nome correto no Railway) com fallback
+#   MERCADO_PAGO_*; adiciona notification_url no checkout para o webhook ativar a assinatura;
+#   webhook agora define plano 'basico' (antes só 'pro'); mock sem token ativa o upgrade na hora.
+# - Histórico anterior: v1.6.8 (2026-08-16 19:15) - CTG-126 ampliação: auth/autorização por
+#   recurso em todos os endpoints /api/*/{user_id}; webhook Mercado Pago permanece público.
 import sys
 # Garante codificação UTF-8 para evitar erros de unicode no console (especialmente no Windows)
 if sys.platform.startswith('win'):
@@ -137,9 +137,14 @@ elif DATABASE_URL.startswith("postgres://"):
 print(f"DATABASE_URL: {'Configurada' if DATABASE_URL else 'NAO CONFIGURADA'}")
 
 # ===== MERCADO PAGO =====
-MERCADO_PAGO_ACCESS_TOKEN = os.getenv("MERCADO_PAGO_ACCESS_TOKEN")
-MERCADO_PAGO_PUBLIC_KEY = os.getenv("MERCADO_PAGO_PUBLIC_KEY")
+# ⚠️ Nome correto da variável no Railway: MERCADOPAGO_ACCESS_TOKEN (sem underscore).
+# Mantemos fallback para o nome antigo (MERCADO_PAGO_*) por compatibilidade.
+MERCADO_PAGO_ACCESS_TOKEN = os.getenv("MERCADOPAGO_ACCESS_TOKEN") or os.getenv("MERCADO_PAGO_ACCESS_TOKEN")
+MERCADO_PAGO_PUBLIC_KEY = os.getenv("MERCADOPAGO_PUBLIC_KEY") or os.getenv("MERCADO_PAGO_PUBLIC_KEY")
+
 mp_sdk = None
+MP_IS_MOCK = False  # True quando não há credenciais MP reais (homologação/local)
+
 if MERCADO_PAGO_ACCESS_TOKEN and MERCADO_PAGO_ACCESS_TOKEN != "seu_access_token_mercadopago":
     try:
         import mercadopago
@@ -147,18 +152,20 @@ if MERCADO_PAGO_ACCESS_TOKEN and MERCADO_PAGO_ACCESS_TOKEN != "seu_access_token_
         print("✅ Mercado Pago SDK inicializado")
     except ImportError:
         print("⚠️ pacote 'mercadopago' não instalado. Execute: pip install mercadopago")
-else:
-    # Cria mock simples do SDK do Mercado Pago caso não configurado, para fins de teste na homologação
-    print("ℹ️ MERCADO_PAGO_ACCESS_TOKEN não configurado com credenciais válidas. Usando MOCK Sandbox para homologação (CTG-084)")
+        mp_sdk = None
+
+if mp_sdk is None:
+    # MOCK do SDK do Mercado Pago para homologação/teste sem credenciais reais (CTG-084)
+    MP_IS_MOCK = True
+    print("ℹ️ Credenciais do Mercado Pago não configuradas. Usando MOCK Sandbox para homologação (CTG-084)")
     class DummyPreference:
         def create(self, data):
-            # Gera URL mockada usando o link de success configurado
             user_id = data.get("external_reference", "dummy_user")
-            # Redireciona de volta como se o Mercado Pago tivesse aprovado
+            # URL que simula um pagamento aprovado (o handler de upgrade detecta o mock e ativa na hora)
             return {
                 "response": {
                     "id": "mock_preference_id",
-                    "sandbox_init_point": f"/success?payment_id=12345&status=approved&merchant_order_id=67890&preference_id=mock_preference_id&external_reference={user_id}"
+                    "sandbox_init_point": f"/dashboard-cliente?upgrade=mock_approved&external_reference={user_id}"
                 }
             }
     class DummySDK:
@@ -4949,11 +4956,12 @@ async def criar_assinatura(request: Request, db: Session = Depends(get_db), curr
             }],
             "payer": {"email": payer_email},
             "back_urls": {
-                "success": "https://cuidaidoso.ia.br/dashboard-cliente",
-                "failure": "https://cuidaidoso.ia.br",
-                "pending": "https://cuidaidoso.ia.br/dashboard-cliente"
+                "success": "https://cuidaidoso.ia.br/dashboard-cliente?upgrade=success",
+                "failure": "https://cuidaidoso.ia.br/dashboard-cliente?upgrade=failed",
+                "pending": "https://cuidaidoso.ia.br/dashboard-cliente?upgrade=pending"
             },
             "auto_return": "approved",
+            "notification_url": "https://cuidaidoso.ia.br/api/webhook/mercadopago",
             "external_reference": str(user_id)
         }
 
@@ -4978,6 +4986,16 @@ async def criar_assinatura(request: Request, db: Session = Depends(get_db), curr
         )
         db.add(subscription)
         db.commit()
+
+        # Modo mock (sem credenciais MP reais): simula pagamento aprovado e ativa o upgrade na hora
+        if MP_IS_MOCK:
+            subscription.status = "active"
+            subscription.start_date = datetime.utcnow()
+            user = db.query(User).filter(User.id == user_uuid).first()
+            if user:
+                user.plan = "pro" if "pro" in plan_key else "basico"
+            db.commit()
+            checkout_url = "/dashboard-cliente?upgrade=success"
 
         return {
             "status": "success",
@@ -5140,6 +5158,8 @@ async def webhook_mercadopago(request: Request, db: Session = Depends(get_db)):
                     if user:
                         if "pro" in (subscription.plan or ""):
                             user.plan = "pro"
+                        else:
+                            user.plan = "basico"
 
                     db.commit()
                     print(f"✅ Assinatura ativada para user_id={external_ref}")
@@ -5217,6 +5237,7 @@ async def register_subscribe(request: Request, db: Session = Depends(get_db)):
                 "failure": f"{os.getenv('FRONTEND_URL', 'http://localhost:3000')}/?payment=failed",
                 "pending": f"{os.getenv('FRONTEND_URL', 'http://localhost:3000')}/?payment=pending"
             },
+            "notification_url": "https://cuidaidoso.ia.br/api/webhook/mercadopago",
             "external_reference": str(temp_user_id)
         }
 
