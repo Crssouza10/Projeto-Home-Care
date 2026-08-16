@@ -1,7 +1,7 @@
-# ===== v1.6.10 - 2026-08-16 20:15 BRT =========================================
-# - FEAT: badge de plano atual no dashboard (Plano Básico / Plano Pró / Fazer Upgrade)
-# - Histórico anterior: v1.6.9 (2026-08-16 19:51) - FIX upgrade/pagamento: lê MERCADOPAGO_*,
-#   notification_url no checkout, webhook define 'basico', mock ativa upgrade na hora.
+# ===== v1.6.11 - 2026-08-16 20:19 BRT =========================================
+# - FIX: notification_url dinâmico (request.base_url) — evita perder o corpo do POST
+#   no redirect 301 de cuidaidoso.ia.br → Railway, garantindo o webhook ativar a assinatura.
+# - Histórico anterior: v1.6.10 (2026-08-16 20:15) - badge de plano atual no dashboard.
 import sys
 # Garante codificação UTF-8 para evitar erros de unicode no console (especialmente no Windows)
 if sys.platform.startswith('win'):
@@ -4959,7 +4959,7 @@ async def criar_assinatura(request: Request, db: Session = Depends(get_db), curr
                 "pending": "https://cuidaidoso.ia.br/dashboard-cliente?upgrade=pending"
             },
             "auto_return": "approved",
-            "notification_url": "https://cuidaidoso.ia.br/api/webhook/mercadopago",
+            "notification_url": f"{str(request.base_url).rstrip('/')}/api/webhook/mercadopago",
             "external_reference": str(user_id)
         }
 
@@ -5235,7 +5235,7 @@ async def register_subscribe(request: Request, db: Session = Depends(get_db)):
                 "failure": f"{os.getenv('FRONTEND_URL', 'http://localhost:3000')}/?payment=failed",
                 "pending": f"{os.getenv('FRONTEND_URL', 'http://localhost:3000')}/?payment=pending"
             },
-            "notification_url": "https://cuidaidoso.ia.br/api/webhook/mercadopago",
+            "notification_url": f"{str(request.base_url).rstrip('/')}/api/webhook/mercadopago",
             "external_reference": str(temp_user_id)
         }
 
