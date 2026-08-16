@@ -1,9 +1,7 @@
-# ===== v1.6.9 - 2026-08-16 19:51 BRT ==========================================
-# - FIX (upgrade/pagamento): lê a variável MERCADOPAGO_* (nome correto no Railway) com fallback
-#   MERCADO_PAGO_*; adiciona notification_url no checkout para o webhook ativar a assinatura;
-#   webhook agora define plano 'basico' (antes só 'pro'); mock sem token ativa o upgrade na hora.
-# - Histórico anterior: v1.6.8 (2026-08-16 19:15) - CTG-126 ampliação: auth/autorização por
-#   recurso em todos os endpoints /api/*/{user_id}; webhook Mercado Pago permanece público.
+# ===== v1.6.10 - 2026-08-16 20:15 BRT =========================================
+# - FEAT: badge de plano atual no dashboard (Plano Básico / Plano Pró / Fazer Upgrade)
+# - Histórico anterior: v1.6.9 (2026-08-16 19:51) - FIX upgrade/pagamento: lê MERCADOPAGO_*,
+#   notification_url no checkout, webhook define 'basico', mock ativa upgrade na hora.
 import sys
 # Garante codificação UTF-8 para evitar erros de unicode no console (especialmente no Windows)
 if sys.platform.startswith('win'):
