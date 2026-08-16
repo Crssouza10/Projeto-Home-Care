@@ -1,7 +1,6 @@
-# ===== v1.6.11 - 2026-08-16 20:19 BRT =========================================
-# - FIX: notification_url dinâmico (request.base_url) — evita perder o corpo do POST
-#   no redirect 301 de cuidaidoso.ia.br → Railway, garantindo o webhook ativar a assinatura.
-# - Histórico anterior: v1.6.10 (2026-08-16 20:15) - badge de plano atual no dashboard.
+# ===== v1.6.12 - 2026-08-16 20:47 BRT =========================================
+# - FIX: remove espaços acidentais do token MP (strip) + log de diagnóstico no boot
+# - Histórico anterior: v1.6.11 (2026-08-16 20:19) - notification_url dinâmico.
 import sys
 # Garante codificação UTF-8 para evitar erros de unicode no console (especialmente no Windows)
 if sys.platform.startswith('win'):
@@ -139,6 +138,12 @@ print(f"DATABASE_URL: {'Configurada' if DATABASE_URL else 'NAO CONFIGURADA'}")
 # Mantemos fallback para o nome antigo (MERCADO_PAGO_*) por compatibilidade.
 MERCADO_PAGO_ACCESS_TOKEN = os.getenv("MERCADOPAGO_ACCESS_TOKEN") or os.getenv("MERCADO_PAGO_ACCESS_TOKEN")
 MERCADO_PAGO_PUBLIC_KEY = os.getenv("MERCADOPAGO_PUBLIC_KEY") or os.getenv("MERCADO_PAGO_PUBLIC_KEY")
+# Remove espaços acidentais (ex: valor colado com espaço à esquerda/direita)
+if MERCADO_PAGO_ACCESS_TOKEN:
+    MERCADO_PAGO_ACCESS_TOKEN = MERCADO_PAGO_ACCESS_TOKEN.strip()
+    print(f"✅ MERCADOPAGO_ACCESS_TOKEN detectado: {MERCADO_PAGO_ACCESS_TOKEN[:14]}...")
+if MERCADO_PAGO_PUBLIC_KEY:
+    MERCADO_PAGO_PUBLIC_KEY = MERCADO_PAGO_PUBLIC_KEY.strip()
 
 mp_sdk = None
 MP_IS_MOCK = False  # True quando não há credenciais MP reais (homologação/local)
