@@ -10,7 +10,12 @@ self.addEventListener('activate', event => {
 });
 
 self.addEventListener('fetch', event => {
-    // Pass-through com fallback de erro suave
+    // Deixa requisições externas/terceiros (como analytics, Mercado Pago) passarem direto sem interceptação do SW
+    if (!event.request.url.startsWith(self.location.origin)) {
+        return;
+    }
+    
+    // Pass-through com fallback de erro suave para nossa própria origem
     event.respondWith(
         fetch(event.request).catch(error => {
             console.warn('[SW] Falha na rede para:', event.request.url);
