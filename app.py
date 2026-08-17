@@ -1,6 +1,6 @@
-# ===== v1.6.12 - 2026-08-16 20:47 BRT =========================================
-# - FIX: remove espaços acidentais do token MP (strip) + log de diagnóstico no boot
-# - Histórico anterior: v1.6.11 (2026-08-16 20:19) - notification_url dinâmico.
+# ===== v1.6.13 - 2026-08-16 21:03 BRT =========================================
+# - DIAG: endpoint /api/diagnostico-mp para verificar o modo (mock/real) ao vivo
+# - Histórico anterior: v1.6.12 (2026-08-16 20:47) - strip do token + log de diagnóstico.
 import sys
 # Garante codificação UTF-8 para evitar erros de unicode no console (especialmente no Windows)
 if sys.platform.startswith('win'):
@@ -4920,6 +4920,17 @@ async def listar_planos():
         }
     ]
     return {"status": "success", "plans": planos}
+
+
+@app.get("/api/diagnostico-mp")
+async def diagnostico_mp():
+    """Diagnóstico do status do Mercado Pago (não expõe valores sensíveis)."""
+    return {
+        "token_configurado": bool(MERCADO_PAGO_ACCESS_TOKEN),
+        "public_key_configurada": bool(MERCADO_PAGO_PUBLIC_KEY),
+        "modo": "mock" if MP_IS_MOCK else "real",
+        "sdk_inicializado": mp_sdk is not None,
+    }
 
 
 @app.post("/api/subscribe")
