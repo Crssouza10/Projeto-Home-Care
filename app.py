@@ -1,7 +1,8 @@
-# ===== v1.6.14 - 2026-08-17 23:15 BRT =========================================
-# - CTG-107: Web Push em background agora disparado pelo agendador do Railway
-#   (função compartilhada enviar_push_medicamento), botão "Reagendar" funcional (+15min),
-#   ícones de notificação criados, endpoints /api/diagnostico-push e /api/teste-push-web.
+# ===== v1.6.15 - 2026-08-17 23:25 BRT =========================================
+# - CTG-107 (fix): migração automática da tabela push_subscriptions (adiciona
+#   user_id e renomeia subscription_info -> keys) — schema antigo impedia o push.
+# - v1.6.14: Web Push em background no agendador, botão "Reagendar" (+15min),
+#   ícones de notificação, endpoints /api/diagnostico-push e /api/teste-push-web.
 # - Histórico anterior: v1.6.13 (2026-08-16 21:03) - DIAG modo mock/real ao vivo.
 import sys
 # Garante codificação UTF-8 para evitar erros de unicode no console (especialmente no Windows)
@@ -281,6 +282,41 @@ try:
         print("✅ Tabela subscriptions verificada/criada com sucesso.")
 except Exception as e:
     print(f"⚠️ Erro ao verificar/criar tabela subscriptions: {e}")
+
+
+# Garante que a tabela push_subscriptions existe com o schema correto (CTG-107)
+try:
+    with engine.connect() as conn:
+        conn.execute(text("""
+            CREATE TABLE IF NOT EXISTS push_subscriptions (
+                id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+                user_id UUID,
+                endpoint TEXT UNIQUE NOT NULL,
+                keys JSONB,
+                created_at TIMESTAMP DEFAULT NOW()
+            );
+        """))
+        # Migra schema antigo (que não tinha user_id e usava subscription_info no lugar de keys)
+        conn.execute(text("""
+            DO $$
+            BEGIN
+                IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='push_subscriptions' AND column_name='user_id') THEN
+                    ALTER TABLE push_subscriptions ADD COLUMN user_id UUID;
+                END IF;
+                IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='push_subscriptions' AND column_name='keys') THEN
+                    IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='push_subscriptions' AND column_name='subscription_info') THEN
+                        ALTER TABLE push_subscriptions RENAME COLUMN subscription_info TO keys;
+                    ELSE
+                        ALTER TABLE push_subscriptions ADD COLUMN keys JSONB;
+                    END IF;
+                END IF;
+            END $$;
+        """))
+        conn.execute(text("CREATE INDEX IF NOT EXISTS idx_push_subscriptions_user_id ON push_subscriptions(user_id)"))
+        conn.commit()
+        print("✅ Tabela push_subscriptions verificada/criada (colunas user_id e keys garantidas).")
+except Exception as e:
+    print(f"⚠️ Erro ao verificar/criar tabela push_subscriptions: {e}")
 
 
 # ==================== MODELOS (TABELAS) ====================
