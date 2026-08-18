@@ -57,37 +57,63 @@ self.addEventListener('push', event => {
 // Listener para quando o usuário clica na notificação ou nas ações dela
 self.addEventListener('notificationclick', event => {
     event.notification.close();
-    
-    // Se o usuário clicou no botão "Tomei"
+
+    const medId = event.notification.data?.medication_id;
+
+    // Botão "Tomei" → registra a tomada em background (sem abrir o app)
     if (event.action === 'taken') {
-        const medId = event.notification.data?.medication_id;
         if (medId) {
             event.waitUntil(
-                fetch(`/api/medications/${medId}/take`, {
-                    method: 'POST'
-                }).then(response => {
-                    console.log('Medicamento marcado como tomado via background');
-                }).catch(err => {
-                    console.error('Erro ao marcar como tomado via background:', err);
-                })
+                fetch(`/api/medications/${medId}/take`, { method: 'POST' })
+                    .then(() => console.log('[SW] Medicamento marcado como tomado (background)'))
+                    .catch(err => console.error('[SW] Erro ao marcar como tomado:', err))
             );
         }
-    } else {
-        // Se clicou na própria notificação ou em "Reagendar", abre o app
-        event.waitUntil(
-            clients.matchAll({ type: 'window' }).then(windowClients => {
-                // Se já tiver uma aba aberta, foca nela
-                for (let i = 0; i < windowClients.length; i++) {
-                    const client = windowClients[i];
-                    if (client.url.includes('/dashboard-cliente') && 'focus' in client) {
-                        return client.focus();
-                    }
-                }
-                // Senão, abre uma nova aba
-                if (clients.openWindow) {
-                    return clients.openWindow('/dashboard-cliente');
-                }
-            })
-        );
+        return;
     }
+
+    // Botão "Reagendar" (CTG-107) → adia a dose de hoje em +15 minutos via API.
+    // Se a API recusar (conflito de horário, etc.), abre o app para reagendamento manual.
+    if (event.action === 'later') {
+        if (medId) {
+            event.waitUntil(
+                (async () => {
+                    try {
+                        const now = new Date();
+                        now.setMinutes(now.getMinutes() + 15);
+                        const hh = String(now.getHours()).padStart(2, '0');
+                        const mm = String(now.getMinutes()).padStart(2, '0');
+                        const res = await fetch(
+                            `/api/medications/${medId}/reschedule?new_time=${hh}:${mm}`,
+                            { method: 'PUT' }
+                        );
+                        if (!res.ok) {
+                            console.warn('[SW] Reagendamento automático recusado, abrindo app:', res.status);
+                            return clients.openWindow('/dashboard-cliente');
+                        }
+                        console.log('[SW] Dose reagendada para +15min:', `${hh}:${mm}`);
+                    } catch (err) {
+                        console.error('[SW] Erro ao reagendar:', err);
+                        return clients.openWindow('/dashboard-cliente');
+                    }
+                })()
+            );
+            return;
+        }
+    }
+
+    // Clique no corpo da notificação → abre (ou foca) o dashboard
+    event.waitUntil(
+        clients.matchAll({ type: 'window' }).then(windowClients => {
+            for (let i = 0; i < windowClients.length; i++) {
+                const client = windowClients[i];
+                if (client.url.includes('/dashboard-cliente') && 'focus' in client) {
+                    return client.focus();
+                }
+            }
+            if (clients.openWindow) {
+                return clients.openWindow('/dashboard-cliente');
+            }
+        })
+    );
 });

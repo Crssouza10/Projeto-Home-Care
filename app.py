@@ -1,6 +1,8 @@
-# ===== v1.6.13 - 2026-08-16 21:03 BRT =========================================
-# - DIAG: endpoint /api/diagnostico-mp para verificar o modo (mock/real) ao vivo
-# - Histórico anterior: v1.6.12 (2026-08-16 20:47) - strip do token + log de diagnóstico.
+# ===== v1.6.14 - 2026-08-17 23:15 BRT =========================================
+# - CTG-107: Web Push em background agora disparado pelo agendador do Railway
+#   (função compartilhada enviar_push_medicamento), botão "Reagendar" funcional (+15min),
+#   ícones de notificação criados, endpoints /api/diagnostico-push e /api/teste-push-web.
+# - Histórico anterior: v1.6.13 (2026-08-16 21:03) - DIAG modo mock/real ao vivo.
 import sys
 # Garante codificação UTF-8 para evitar erros de unicode no console (especialmente no Windows)
 if sys.platform.startswith('win'):
@@ -3523,6 +3525,51 @@ def enviar_web_push(subscription_info: dict, message_text: str) -> bool:
         print(f"❌ Falha genérica Web Push: {e}")
         return False
 
+
+# CTG-107: envia o Web Push de "hora do medicamento" para todas as inscrições do usuário.
+# Usada tanto pelo agendador em background (Railway) quanto pelo endpoint /api/check-reminders.
+def enviar_push_medicamento(db: Session, user, med, msg_adicional: str = "") -> int:
+    """Retorna a quantidade de pushes enviados com sucesso."""
+    subs = db.query(PushSubscription).filter(PushSubscription.user_id == user.id).all()
+    if not subs:
+        return 0
+
+    # med.time é datetime.time — normaliza para "HH:MM" (evita erro de serialização JSON)
+    hora_str = med.time.strftime("%H:%M") if isinstance(med.time, time) else str(med.time or "")
+
+    body = (
+        f"Olá {user.full_name}, está na hora de tomar seu remédio {med.name} "
+        f"({med.dosage}) agendado para às {hora_str}.{msg_adicional}"
+    )
+
+    enviados = 0
+    for sub in subs:
+        sub_info = {"endpoint": sub.endpoint, "keys": sub.keys}
+        try:
+            payload = json.dumps({
+                "title": "💊 Hora do Medicamento!",
+                "body": body,
+                "icon": "/static/icons/icon-192x192.png",
+                "badge": "/static/icons/icon-72x72.png",
+                "data": {
+                    "url": "/dashboard-cliente",
+                    "medication_id": str(med.id),
+                    "medication_name": med.name,
+                    "medication_dosage": med.dosage,
+                    "medication_time": hora_str
+                }
+            })
+        except Exception as e:
+            print(f"⚠️ Erro ao montar payload de push para {med.id}: {e}")
+            continue
+
+        print(f"📤 Enviando Web Push para {user.full_name}...")
+        if enviar_web_push(sub_info, payload):
+            enviados += 1
+
+    return enviados
+
+
 @app.get("/api/push/public-key")
 async def get_push_public_key():
     pub_key = os.getenv("VAPID_PUBLIC_KEY")
@@ -3554,6 +3601,56 @@ async def subscribe_push(req: PushSubscriptionCreate, db: Session = Depends(get_
         import traceback
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=str(e))
+
+# ===== DIAGNÓSTICO E TESTE DE WEB PUSH (CTG-107) =====
+@app.get("/api/diagnostico-push")
+async def diagnostico_push(db: Session = Depends(get_db)):
+    """Diagnóstico do sistema de Web Push (não expõe valores sensíveis)."""
+    total_subs = db.query(PushSubscription).count()
+    usuarios_com_sub = db.query(PushSubscription.user_id).distinct().count()
+    pub = bool(os.getenv("VAPID_PUBLIC_KEY"))
+    priv = bool(os.getenv("VAPID_PRIVATE_KEY"))
+    return {
+        "status": "ok",
+        "vapid_public_key": "configurada" if pub else "AUSENTE",
+        "vapid_private_key": "configurada" if priv else "AUSENTE",
+        "pronto_para_push": pub and priv,
+        "total_inscricoes": total_subs,
+        "usuarios_com_inscricao": usuarios_com_sub,
+    }
+
+
+@app.get("/api/teste-push-web/{user_id}")
+async def teste_push_web(user_id: str, db: Session = Depends(get_db)):
+    """Envia um Web Push de teste para todas as inscrições do usuário (homologação)."""
+    try:
+        user_uuid = uuid.UUID(user_id)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="user_id inválido (UUID esperado)")
+
+    user = db.query(User).filter(User.id == user_uuid).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="Usuário não encontrado")
+
+    subs = db.query(PushSubscription).filter(PushSubscription.user_id == user_uuid).all()
+    if not subs:
+        return {"status": "sem_inscricoes", "msg": f"Nenhuma inscrição de push para {user.full_name}"}
+
+    enviados = 0
+    for sub in subs:
+        sub_info = {"endpoint": sub.endpoint, "keys": sub.keys}
+        payload = json.dumps({
+            "title": "🧪 Teste de Notificação",
+            "body": f"Olá {user.full_name}, este é um teste de notificação push do Cuidadoso. Se você está vendo isto, o push em segundo plano está funcionando!",
+            "icon": "/static/icons/icon-192x192.png",
+            "badge": "/static/icons/icon-72x72.png",
+            "data": {"url": "/dashboard-cliente", "medication_id": None, "medication_name": "Teste"}
+        })
+        if enviar_web_push(sub_info, payload):
+            enviados += 1
+
+    return {"status": "success", "enviados": enviados, "total_inscricoes": len(subs)}
+
 
 # 2. Endpoint para TESTE RÁPIDO DO WHATSAPP (Dispara manualmente)
 @app.api_route("/api/teste-push", methods=["GET", "POST"])
@@ -3905,30 +4002,8 @@ async def check_reminders(db: Session = Depends(get_db)):
                     print(f"⚠️ Usuário {user.full_name} sem telefone para o medicamento {med.name}")
                     failed_count += 1
                 
-                # 2. Envia Web Push
-                subs = db.query(PushSubscription).filter(PushSubscription.user_id == user.id).all()
-                for sub in subs:
-                    sub_info = {
-                        "endpoint": sub.endpoint,
-                        "keys": sub.keys
-                    }
-                    payload = json.dumps({
-                        "title": "💊 Hora do Medicamento!",
-                        "body": f"Olá {user.full_name}, está na hora de tomar seu remédio {med.name} ({med.dosage}) agendado para às {med.time}.{msg_adicional}",
-                        "icon": "/static/icons/icon-192x192.png",
-                        "badge": "/static/icons/icon-72x72.png",
-                        "data": {
-                            "url": "/dashboard-cliente",
-                            "medication_id": str(med.id),
-                            "medication_name": med.name,
-                            "medication_dosage": med.dosage,
-                            "medication_time": med.time
-                        }
-                    })
-                    print(f"📤 Enviando Web Push para {user.full_name}...")
-                    push_sucesso = enviar_web_push(sub_info, payload)
-                    if push_sucesso:
-                        push_sent_count += 1
+                # 2. Envia Web Push (função compartilhada — CTG-107)
+                push_sent_count += enviar_push_medicamento(db, user, med, msg_adicional)
             else:
                 print(f"⚠️ Usuário não encontrado para o medicamento {med.name}")
                 failed_count += 1
@@ -5442,10 +5517,13 @@ def verificar_medicamentos_sincrono():
         for med in meds:
             user = db.query(User).filter(User.id == med.user_id).first()
             
-            if user and user.phone:
-                print(f"📱 Enviando WhatsApp para {user.full_name} ({user.phone})")
-                # Chama função síncrona de envio
-                enviar_whatsapp(user.phone, med.name, med.dosage)
+            if user:
+                # 1. WhatsApp
+                if user.phone:
+                    print(f"📱 Enviando WhatsApp para {user.full_name} ({user.phone})")
+                    enviar_whatsapp(user.phone, med.name, med.dosage)
+                # 2. Web Push (CTG-107 — antes o agendador só enviava WhatsApp)
+                enviar_push_medicamento(db, user, med)
         
         print(f"✅ [SCHEDULER] Verificação concluída. {len(meds)} medicamentos verificados.")
         

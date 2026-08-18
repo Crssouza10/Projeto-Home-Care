@@ -14,6 +14,10 @@
       "use": "@vercel/static"
     },
     {
+      "src": "static/**",
+      "use": "@vercel/static"
+    },
+    {
       "src": "sw.js",
       "use": "@vercel/static"
     },
