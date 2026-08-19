@@ -7317,59 +7317,68 @@
             const micBtn = document.getElementById('chat-mic-btn');
             const inputEl = document.getElementById('chat-input');
 
-            if (!recognition) {
-                recognition = new SpeechRecognition();
-                recognition.lang = 'pt-BR';
-                recognition.continuous = false;
-                recognition.interimResults = false;
-
-                recognition.onstart = function() {
-                    isListening = true;
-                    if (micBtn) {
-                        micBtn.style.background = 'rgba(239, 68, 68, 0.2)';
-                        micBtn.style.borderColor = 'rgba(239, 68, 68, 0.5)';
-                        micBtn.style.color = '#ef4444';
-                        micBtn.style.boxShadow = '0 0 10px rgba(239, 68, 68, 0.5)';
-                        micBtn.innerHTML = '🛑';
-                    }
-                    if (inputEl) {
-                        inputEl.placeholder = 'Ouvindo... fale agora';
-                    }
-                };
-
-                recognition.onend = function() {
-                    isListening = false;
-                    if (micBtn) {
-                        micBtn.style.background = 'rgba(255,255,255,0.05)';
-                        micBtn.style.borderColor = 'rgba(255,255,255,0.1)';
-                        micBtn.style.color = '#00D4FF';
-                        micBtn.style.boxShadow = 'none';
-                        micBtn.innerHTML = '🎤';
-                    }
-                    if (inputEl) {
-                        inputEl.placeholder = 'Pergunte ao Maximus...';
-                    }
-                };
-
-                recognition.onerror = function(event) {
-                    console.error('Erro no reconhecimento de voz:', event.error);
-                    alert('Erro no reconhecimento de voz: ' + event.error);
-                };
-
-                recognition.onresult = function(event) {
-                    const transcript = event.results[0][0].transcript;
-                    if (inputEl && transcript) {
-                        inputEl.value = transcript;
-                        // Envia a mensagem automaticamente
-                        window.handleSendChatMessage();
-                    }
-                };
+            if (isListening) {
+                if (recognition) {
+                    try { recognition.stop(); } catch(e) {}
+                }
+                return;
             }
 
-            if (isListening) {
-                recognition.stop();
-            } else {
+            // Cria uma nova instância a cada gravação para evitar erros de ciclo de vida e estado ( InvalidStateError no iOS )
+            recognition = new SpeechRecognition();
+            recognition.lang = 'pt-BR';
+            recognition.continuous = false;
+            recognition.interimResults = false;
+
+            recognition.onstart = function() {
+                isListening = true;
+                if (micBtn) {
+                    micBtn.style.background = 'rgba(239, 68, 68, 0.2)';
+                    micBtn.style.borderColor = 'rgba(239, 68, 68, 0.5)';
+                    micBtn.style.color = '#ef4444';
+                    micBtn.style.boxShadow = '0 0 10px rgba(239, 68, 68, 0.5)';
+                    micBtn.innerHTML = '🛑';
+                }
+                if (inputEl) {
+                    inputEl.placeholder = 'Ouvindo... fale agora';
+                }
+            };
+
+            recognition.onend = function() {
+                isListening = false;
+                if (micBtn) {
+                    micBtn.style.background = 'rgba(255,255,255,0.05)';
+                    micBtn.style.borderColor = 'rgba(255,255,255,0.1)';
+                    micBtn.style.color = '#00D4FF';
+                    micBtn.style.boxShadow = 'none';
+                    micBtn.innerHTML = '🎤';
+                }
+                if (inputEl) {
+                    inputEl.placeholder = 'Pergunte ao Maximus...';
+                }
+            };
+
+            recognition.onerror = function(event) {
+                console.error('Erro no reconhecimento de voz:', event.error);
+                // Evita perturbar o usuário com mensagens de timeout ('no-speech') ou cancelamento ('aborted')
+                if (event.error !== 'no-speech' && event.error !== 'aborted') {
+                    alert('Erro no reconhecimento de voz: ' + event.error);
+                }
+            };
+
+            recognition.onresult = function(event) {
+                const transcript = event.results[0][0].transcript;
+                if (inputEl && transcript) {
+                    inputEl.value = transcript;
+                    // Envia a mensagem automaticamente
+                    window.handleSendChatMessage();
+                }
+            };
+
+            try {
                 recognition.start();
+            } catch (err) {
+                console.error('Erro ao iniciar SpeechRecognition:', err);
             }
         };
 
@@ -9024,7 +9033,7 @@
 
     <!-- 🔖 INDICADOR DE VERSÃO -->
     <div style="text-align:center; padding:20px; color:#00D4FF; font-size:0.75rem; margin-top:30px; opacity:0.7;">
-        Versão: v1.6.15 em 17/08/2026 23:25
+        Versão: v1.6.16 em 18/08/2026 22:30
     </div>
 <!-- Cloudflare Web Analytics --><script type='module' src='https://static.cloudflareinsights.com/beacon.min.js' data-cf-beacon='{"token": "d1a9b25d409d47f693bbb1a7f0afbc97"}'></script><!-- End Cloudflare Web Analytics -->
 

@@ -1,8 +1,6 @@
-# ===== v1.6.15 - 2026-08-17 23:25 BRT =========================================
-# - CTG-107 (fix): migração automática da tabela push_subscriptions (adiciona
-#   user_id e renomeia subscription_info -> keys) — schema antigo impedia o push.
-# - v1.6.14: Web Push em background no agendador, botão "Reagendar" (+15min),
-#   ícones de notificação, endpoints /api/diagnostico-push e /api/teste-push-web.
+# ===== v1.6.16 - 2026-08-18 22:30 BRT =========================================
+# - FIX: correção da inicialização do SpeechRecognition e sanitização automática de env vars
+# - Histórico anterior: v1.6.15 (2026-08-17 23:25) - CTG-107 migração da push_subscriptions.
 # - Histórico anterior: v1.6.13 (2026-08-16 21:03) - DIAG modo mock/real ao vivo.
 import sys
 # Garante codificação UTF-8 para evitar erros de unicode no console (especialmente no Windows)
@@ -77,11 +75,16 @@ if IS_VERCEL:
 # Carrega variáveis de ambiente ANTES de usar
 load_dotenv(override=True)
 
+# Limpa espaços em branco acidentais de todas as variáveis de ambiente (evita chaves com espaço à esquerda/direita)
+for key, value in list(os.environ.items()):
+    if value:
+        os.environ[key] = value.strip()
+
 # ===== CRIAÇÃO DO APP (APENAS UMA VEZ) =====
 app = FastAPI(
     title="CR$ HOME CARE AI",
     description="Sistema de Cuidado Domiciliar Inteligente",
-    version="1.6.4"
+    version="1.6.16"
 )
 
 # ===== CORS =====
