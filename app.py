@@ -1,4 +1,4 @@
-# ===== v1.6.17 - 2026-08-19 17:15 BRT =========================================
+# ===== v1.6.18 - 2026-08-19 18:40 BRT =========================================
 # - FIX: correção da inicialização do SpeechRecognition e sanitização automática de env vars
 # - Histórico anterior: v1.6.15 (2026-08-17 23:25) - CTG-107 migração da push_subscriptions.
 # - Histórico anterior: v1.6.13 (2026-08-16 21:03) - DIAG modo mock/real ao vivo.
@@ -84,7 +84,7 @@ for key, value in list(os.environ.items()):
 app = FastAPI(
     title="CR$ HOME CARE AI",
     description="Sistema de Cuidado Domiciliar Inteligente",
-    version="1.6.17"
+    version="1.6.18"
 )
 
 # ===== CORS =====

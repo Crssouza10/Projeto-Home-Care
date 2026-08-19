@@ -2427,6 +2427,17 @@
 
             console.log('✅ API_URL configurada:', API_URL);
 
+            window.obterMensagemErro = function(error) {
+                if (!navigator.onLine) {
+                    return 'Sem conexão com a internet. Verifique sua rede e tente novamente.';
+                }
+                const msg = error ? (error.message || String(error)) : '';
+                if (msg.includes('Failed to fetch') || msg.includes('NetworkError') || msg.includes('Load failed')) {
+                    return 'Sem conexão com a internet. Não foi possível falar com o servidor.';
+                }
+                return msg;
+            };
+
         // ============================================
         // 🛡 VERIFICAÇÃO DE LOGIN IMEDIATA E BLOQUEANTE
         // ============================================
@@ -2849,7 +2860,7 @@
                     const registration = await navigator.serviceWorker.register('/sw.js');
                     console.log('✅ Service Worker registrado:', registration.scope);
                 } catch (err) {
-                    console.warn('⚠️ Service Worker não registrado:', err.message);
+                    console.warn('⚠️ Service Worker não registrado:', obterMensagemErro(err));
                 }
             }
             
@@ -5901,7 +5912,7 @@
                 document.getElementById('ocr-result').style.background = 'rgba(239,68,68,0.15)';
                 document.getElementById('ocr-result').style.borderColor = 'rgba(239,68,68,0.3)';
                 document.getElementById('ocr-result').style.color = '#ef4444';
-                document.getElementById('ocr-result').textContent = 'âŒ ' + error.message;
+                document.getElementById('ocr-result').textContent = 'âŒ ' + obterMensagemErro(error);
                 
                 setTimeout(() => {
                     document.getElementById('ocr-result').style.display = 'none';
@@ -6014,7 +6025,7 @@
                 closeModal('modal-medication');
                 await reloadAndRefresh();
             } catch (error) {
-                showToast('âŒ ' + error.message, true);
+                showToast('âŒ ' + obterMensagemErro(error), true);
                 console.error('Erro ao salvar medicamento:', error);
             } finally {
                 btn.disabled = false;
@@ -6145,7 +6156,7 @@
                 closeModal('modal-appointment');
                 await reloadAndRefresh();
             } catch (error) {
-                showToast('âŒ ' + error.message, true);
+                showToast('âŒ ' + obterMensagemErro(error), true);
                 console.error('âŒ Erro detalhado:', error);
             } finally {
                 btn.disabled = false;
@@ -6190,7 +6201,7 @@
                 closeModal('modal-responsible');
                 await reloadAndRefresh();
             } catch (error) {
-                showToast('âŒ ' + error.message, true);
+                showToast('âŒ ' + obterMensagemErro(error), true);
                 console.error(error);
             } finally {
                 btn.disabled = false;
@@ -6234,7 +6245,7 @@
                 closeModal('modal-contact');
                 await reloadAndRefresh();
             } catch (error) {
-                showToast('âŒ ' + error.message, true);
+                showToast('âŒ ' + obterMensagemErro(error), true);
                 console.error(error);
             } finally {
                 btn.disabled = false;
@@ -6288,7 +6299,7 @@
                 openModal('modal-delete-medication');
             } catch (error) {
                 console.error('🔥 [DIAGNÓSTICO] Erro ao contar schedules:', error);
-                alert('⚠ Ocorreu um erro ao obter detalhes do medicamento:\n' + error.message + '\n\nTentando deleção direta...');
+                alert('⚠ Ocorreu um erro ao obter detalhes do medicamento:\n' + obterMensagemErro(error) + '\n\nTentando deleção direta...');
                 // Fallback: delete direto
                 if (!confirm('Deseja excluir este medicamento de forma direta?')) return;
                 await doDeleteMedication(id, 'all');
@@ -6337,9 +6348,9 @@
                 }
                 await reloadAndRefresh();
             } catch (error) {
-                showToast('âŒ Erro ao excluir: ' + error.message);
+                showToast('âŒ Erro ao excluir: ' + obterMensagemErro(error));
                 console.error('🔥 [DIAGNÓSTICO] Erro ao excluir:', error);
-                alert('🔥 Erro ao excluir medicamento:\n' + error.message);
+                alert('🔥 Erro ao excluir medicamento:\n' + obterMensagemErro(error));
             }
         }
         
@@ -6359,7 +6370,7 @@
                 showToast('🗑 Consulta excluída');
                 await reloadAndRefresh();
             } catch (error) {
-                showToast('âŒ Erro ao excluir: ' + error.message, true);
+                showToast('âŒ Erro ao excluir: ' + obterMensagemErro(error), true);
                 console.error(error);
             }
         }
@@ -6375,7 +6386,7 @@
                 showToast('🗑 Responsável excluído');
                 await reloadAndRefresh();
             } catch (error) {
-                showToast('âŒ Erro ao excluir: ' + error.message, true);
+                showToast('âŒ Erro ao excluir: ' + obterMensagemErro(error), true);
                 console.error(error);
             }
         }
@@ -6391,7 +6402,7 @@
                 showToast('🗑 Contato excluído');
                 await reloadAndRefresh();
             } catch (error) {
-                showToast('âŒ Erro ao excluir: ' + error.message, true);
+                showToast('âŒ Erro ao excluir: ' + obterMensagemErro(error), true);
                 console.error(error);
             }
         }
@@ -7016,7 +7027,7 @@
                 }
                 
             } catch (error) {
-                showToast('❌ ' + error.message, true);
+                showToast('❌ ' + obterMensagemErro(error), true);
                 console.error('Erro ao salvar medicamento da receita:', error);
                 if (buttonEl) {
                     buttonEl.disabled = false;
@@ -7488,7 +7499,7 @@
                 if (typingEl) typingEl.remove();
                 
                 console.error('Erro no chatbot:', error);
-                appendChatMessage('assistant', 'System', `âŒ Erro: ${error.message}`);
+                appendChatMessage('assistant', 'System', `âŒ Erro: ${obterMensagemErro(error)}`);
             }
         };
 
@@ -8042,7 +8053,7 @@
                 }
             } catch (error) {
                 console.error('âŒ Erro ao confirmar:', error);
-                showToast('âŒ Erro: ' + error.message, true);
+                showToast('âŒ Erro: ' + obterMensagemErro(error), true);
             }
         }
 
@@ -8385,7 +8396,7 @@
                 window.location.href = '/';
 
             } catch (err) {
-                alert('❌ Erro: ' + err.message);
+                alert('❌ Erro: ' + obterMensagemErro(err));
                 console.error('Erro ao cancelar conta:', err);
             }
         }
@@ -9033,7 +9044,7 @@
 
     <!-- 🔖 INDICADOR DE VERSÃO -->
     <div style="text-align:center; padding:20px; color:#00D4FF; font-size:0.75rem; margin-top:30px; opacity:0.7;">
-        Versão: v1.6.17 em 19/08/2026 17:15
+        Versão: v1.6.18 em 19/08/2026 18:40
     </div>
 <!-- Cloudflare Web Analytics --><script type='module' src='https://static.cloudflareinsights.com/beacon.min.js' data-cf-beacon='{"token": "d1a9b25d409d47f693bbb1a7f0afbc97"}'></script><!-- End Cloudflare Web Analytics -->
 

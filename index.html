@@ -1225,7 +1225,7 @@ footer p { font-size:0.9rem; line-height:1.6 }
   <p>
     Home Care Inteligente — Tecnologia e cuidado para sua família.<br>
     &copy; 2025 Cuidadoso. Todos os direitos reservados.
-    <br><span style="font-size: 0.8rem; color: rgba(255,255,255,0.45);">Versão: v1.6.17 em 19/08/2026 17:15</span>
+    <br><span style="font-size: 0.8rem; color: rgba(255,255,255,0.45);">Versão: v1.6.18 em 19/08/2026 18:40</span>
     <br><br>
     <a href="/privacidade.html" style="color:rgba(255,255,255,.6);text-decoration:none;margin:0 12px">Política de Privacidade</a>
     <a href="/termos-de-uso.html" style="color:rgba(255,255,255,.6);text-decoration:none;margin:0 12px">Termos de Uso</a>
@@ -1619,7 +1619,7 @@ async function handleForgotPassword(event) {
         emailInput.value = '';
     } catch (err) {
         console.error(err);
-        errorDiv.textContent = err.message || 'Erro ao processar solicitação. Tente novamente.';
+        errorDiv.textContent = obterMensagemErro(err);
     } finally {
         btn.disabled = false;
         btn.textContent = 'Enviar instruções';
@@ -1637,6 +1637,17 @@ function togglePassword() {
 
 // Helper: API base URL (backend principal)
 const API_BASE = window.location.origin;
+
+function obterMensagemErro(error) {
+    if (!navigator.onLine) {
+        return 'Sem conexão com a internet. Verifique sua rede e tente novamente.';
+    }
+    const msg = error ? (error.message || String(error)) : '';
+    if (msg.includes('Failed to fetch') || msg.includes('NetworkError') || msg.includes('Load failed')) {
+        return 'Sem conexão com a internet. Não foi possível falar com o servidor.';
+    }
+    return msg;
+}
 
 // Helper to get local or server redirect URL
 function getRedirectUrl() {
@@ -1709,7 +1720,7 @@ async function handleLogin(e) {
             }
         }
     } catch (error) {
-        errorMsg.textContent = '❌ ' + error.message;
+        errorMsg.textContent = '❌ ' + obterMensagemErro(error);
         errorMsg.style.display = 'block';
         loginBtn.disabled = false;
         loginBtn.innerHTML = '🚀 Entrar no Sistema';
@@ -1797,7 +1808,7 @@ async function handleRegister(e) {
             }
         }
     } catch (error) {
-        errorBox.textContent = '❌ ' + error.message;
+        errorBox.textContent = '❌ ' + obterMensagemErro(error);
         errorBox.style.display = 'block';
     } finally {
         btn.disabled = false;
