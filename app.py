@@ -1,4 +1,4 @@
-# ===== v1.6.19 - 2026-08-19 20:00 BRT =========================================
+# ===== v1.6.20 - 2026-08-19 21:00 BRT =========================================
 # - FIX: correção da inicialização do SpeechRecognition e sanitização automática de env vars
 # - Histórico anterior: v1.6.15 (2026-08-17 23:25) - CTG-107 migração da push_subscriptions.
 # - Histórico anterior: v1.6.13 (2026-08-16 21:03) - DIAG modo mock/real ao vivo.
@@ -84,7 +84,7 @@ for key, value in list(os.environ.items()):
 app = FastAPI(
     title="CR$ HOME CARE AI",
     description="Sistema de Cuidado Domiciliar Inteligente",
-    version="1.6.19"
+    version="1.6.20"
 )
 
 # ===== CORS =====
@@ -3857,10 +3857,11 @@ def verificar_e_enviar_relatorios(db: Session):
                 print(f"⚠️ [RELATORIO] Usuario {user.full_name} tem relatorio agendado, mas nenhum responsavel com WhatsApp configurado.")
                 continue
                 
-            # Busca todos os medicamentos agendados de hoje para este usuario
+            # Busca todos os medicamentos agendados de hoje para este usuario (ignorando os cancelados)
             schedules = db.query(MedicationSchedule).filter(
                 MedicationSchedule.user_id == user.id,
-                MedicationSchedule.scheduled_date == hoje
+                MedicationSchedule.scheduled_date == hoje,
+                MedicationSchedule.status != "cancelled"
             ).all()
             
             if not schedules:
@@ -3872,10 +3873,16 @@ def verificar_e_enviar_relatorios(db: Session):
             
             linhas_relatorio = []
             for sched in schedules:
-                # Busca detalhes do remedio
-                med = db.query(Medication).filter(Medication.id == sched.medication_id).first()
-                med_name = med.name if med else "Medicamento"
-                med_dosage = med.dosage if med else ""
+                # Busca detalhes do remedio (apenas os ativos)
+                med = db.query(Medication).filter(
+                    Medication.id == sched.medication_id,
+                    Medication.is_active == True
+                ).first()
+                if not med:
+                    # Pula se o medicamento foi inativado/deletado
+                    continue
+                med_name = med.name
+                med_dosage = med.dosage
                 
                 time_str = sched.scheduled_time.strftime("%H:%M")
                 
@@ -3946,7 +3953,8 @@ async def test_report(user_id: str, db: Session = Depends(get_db), current_user:
         
         schedules = db.query(MedicationSchedule).filter(
             MedicationSchedule.user_id == user.id,
-            MedicationSchedule.scheduled_date == hoje
+            MedicationSchedule.scheduled_date == hoje,
+            MedicationSchedule.status != "cancelled"
         ).all()
         
         if not schedules:
@@ -3956,9 +3964,14 @@ async def test_report(user_id: str, db: Session = Depends(get_db), current_user:
         
         linhas_relatorio = []
         for sched in schedules:
-            med = db.query(Medication).filter(Medication.id == sched.medication_id).first()
-            med_name = med.name if med else "Medicamento"
-            med_dosage = med.dosage if med else ""
+            med = db.query(Medication).filter(
+                Medication.id == sched.medication_id,
+                Medication.is_active == True
+            ).first()
+            if not med:
+                continue
+            med_name = med.name
+            med_dosage = med.dosage
             time_str = sched.scheduled_time.strftime("%H:%M")
             
             if sched.status == "taken":
