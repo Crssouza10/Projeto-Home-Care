@@ -1,4 +1,4 @@
-# ===== v1.6.16 - 2026-08-18 22:30 BRT =========================================
+# ===== v1.6.17 - 2026-08-19 17:15 BRT =========================================
 # - FIX: correção da inicialização do SpeechRecognition e sanitização automática de env vars
 # - Histórico anterior: v1.6.15 (2026-08-17 23:25) - CTG-107 migração da push_subscriptions.
 # - Histórico anterior: v1.6.13 (2026-08-16 21:03) - DIAG modo mock/real ao vivo.
@@ -84,7 +84,7 @@ for key, value in list(os.environ.items()):
 app = FastAPI(
     title="CR$ HOME CARE AI",
     description="Sistema de Cuidado Domiciliar Inteligente",
-    version="1.6.16"
+    version="1.6.17"
 )
 
 # ===== CORS =====
@@ -1446,6 +1446,24 @@ def _send_email_via_gmail_api(to_email: str, subject: str, body: str, from_email
             print(f"✅ [EMAIL] E-mail enviado com sucesso via Resend API para {to_email}")
             return True
         except Exception as resend_err:
+            # ✅ CTG-104: Trata limite de conta Sandbox do Resend e redireciona para o e-mail do proprietário
+            if hasattr(resend_err, 'response') and resend_err.response is not None:
+                try:
+                    resp_json = resend_err.response.json()
+                    err_msg = resp_json.get("message", "")
+                    import re
+                    match = re.search(r"your own email address \((.*?)\)", err_msg)
+                    if match:
+                        owner_email = match.group(1)
+                        print(f"⚠️ [EMAIL] Resend limitou o envio para {to_email}. Redirecionando para o e-mail da conta do Resend: {owner_email}")
+                        payload["to"] = owner_email
+                        payload["subject"] = f"[REDIRECIONADO para {to_email}] {subject}"
+                        retry_resp = requests.post(resend_url, headers=headers, json=payload, timeout=20)
+                        retry_resp.raise_for_status()
+                        print(f"✅ [EMAIL] E-mail redirecionado com sucesso via Resend para {owner_email}")
+                        return True
+                except Exception as retry_err:
+                    print(f"⚠️ [EMAIL] Falha ao tentar redirecionar e-mail no Resend: {retry_err}")
             print(f"⚠️ [EMAIL] Resend API falhou ({resend_err}) — tentando outros métodos...")
 
     # --- 2. GMAIL API / SMTP FALLBACK ---
