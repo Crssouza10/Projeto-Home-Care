@@ -1,4 +1,4 @@
-# ===== v1.6.18 - 2026-08-19 18:40 BRT =========================================
+# ===== v1.6.19 - 2026-08-19 20:00 BRT =========================================
 # - FIX: correção da inicialização do SpeechRecognition e sanitização automática de env vars
 # - Histórico anterior: v1.6.15 (2026-08-17 23:25) - CTG-107 migração da push_subscriptions.
 # - Histórico anterior: v1.6.13 (2026-08-16 21:03) - DIAG modo mock/real ao vivo.
@@ -84,7 +84,7 @@ for key, value in list(os.environ.items()):
 app = FastAPI(
     title="CR$ HOME CARE AI",
     description="Sistema de Cuidado Domiciliar Inteligente",
-    version="1.6.18"
+    version="1.6.19"
 )
 
 # ===== CORS =====
@@ -3903,6 +3903,20 @@ def verificar_e_enviar_relatorios(db: Session):
                 print(f"📱 [RELATORIO] Enviando Relatorio Diario para {resp.name} ({resp.phone})")
                 enviar_whatsapp_custom(resp.phone, mensagem)
                 
+            # 📧 CTG-033-01: Envio do Relatório Diário via E-mail para o cuidador (user.email)
+            if user.email:
+                try:
+                    # Remove formatação de negrito (*) do WhatsApp para exibição limpa no e-mail
+                    corpo_email = mensagem.replace('*', '')
+                    _send_email_via_gmail_api(
+                        to_email=user.email,
+                        subject=f"Relatório Diário de Medicamentos - {user.full_name} ({dia_str})",
+                        body=corpo_email
+                    )
+                    print(f"📧 [RELATORIO] Relatório Diário enviado por e-mail para {user.email}")
+                except Exception as mail_err:
+                    print(f"❌ [RELATORIO] Falha ao enviar e-mail do relatório diário: {mail_err}")
+                
     except Exception as e:
         print(f"❌ Erro ao enviar relatorios diarios: {e}")
         import traceback
@@ -3969,6 +3983,20 @@ async def test_report(user_id: str, db: Session = Depends(get_db), current_user:
         for resp in responsibles:
             enviado = enviar_whatsapp_custom(resp.phone, mensagem)
             enviados.append({"nome": resp.name, "telefone": resp.phone, "sucesso": enviado})
+            
+        # 📧 Envia e-mail de teste também para o user.email
+        if user.email:
+            try:
+                corpo_email = mensagem.replace('*', '')
+                _send_email_via_gmail_api(
+                    to_email=user.email,
+                    subject=f"Relatório Diário de Medicamentos (MOCK) - {user.full_name} ({dia_str})",
+                    body=corpo_email
+                )
+                enviados.append({"nome": "E-mail Cuidador", "email": user.email, "sucesso": True})
+            except Exception as mail_err:
+                print(f"❌ [RELATORIO MOCK] Falha ao enviar e-mail: {mail_err}")
+                enviados.append({"nome": "E-mail Cuidador", "email": user.email, "sucesso": False, "erro": str(mail_err)})
             
         return {
             "status": "success",
