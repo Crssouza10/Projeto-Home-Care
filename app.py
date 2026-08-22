@@ -679,9 +679,16 @@ def get_current_user(request: Request, db: Session = Depends(get_db)):
         from datetime import datetime, timedelta
         limit_date = user.created_at + timedelta(days=14)
         if datetime.utcnow() > limit_date:
-            # CTG-086-02: Permite acessar endpoints de pagamento/faturamento mesmo com o trial expirado
+            # CTG-086-02: Permite acessar endpoints de pagamento/faturamento e páginas HTML do dashboard mesmo com o trial expirado
             path = request.url.path
-            allowed_paths = ["/api/subscribe", "/api/subscription", "/api/plans"]
+            allowed_paths = [
+                "/api/subscribe", 
+                "/api/subscription", 
+                "/api/plans",
+                "/dashboard",
+                "/dashboard-cliente",
+                "/ia"
+            ]
             if not any(path.startswith(p) for p in allowed_paths):
                 raise HTTPException(
                     status_code=403,
@@ -745,6 +752,14 @@ async def serve_landing():
 
 @app.get("/dashboard", response_class=HTMLResponse)
 async def serve_dashboard(user: User = Depends(get_current_user)):
+    plan_lower = (user.plan or "trial").lower()
+    is_trial = plan_lower == "trial" or plan_lower == "gratis" or plan_lower == "free"
+    if is_trial and user.created_at:
+        from datetime import datetime, timedelta
+        if datetime.utcnow() > user.created_at + timedelta(days=14):
+            from fastapi.responses import RedirectResponse
+            return RedirectResponse(url="/plans.html")
+            
     html_file = Path(__file__).parent / "dashboard.html"
     if not html_file.exists():
         return HTMLResponse(content="<h1>Erro: dashboard.html não encontrado</h1>", status_code=500)
@@ -752,6 +767,14 @@ async def serve_dashboard(user: User = Depends(get_current_user)):
 
 @app.get("/dashboard-cliente", response_class=HTMLResponse)
 async def serve_dashboard_cliente(user: User = Depends(get_current_user)):
+    plan_lower = (user.plan or "trial").lower()
+    is_trial = plan_lower == "trial" or plan_lower == "gratis" or plan_lower == "free"
+    if is_trial and user.created_at:
+        from datetime import datetime, timedelta
+        if datetime.utcnow() > user.created_at + timedelta(days=14):
+            from fastapi.responses import RedirectResponse
+            return RedirectResponse(url="/plans.html")
+            
     html_file = Path(__file__).parent / "dashboard_cliente.html"
     if not html_file.exists():
         return HTMLResponse(content="<h1>Erro: dashboard_cliente.html não encontrado</h1>", status_code=500)
@@ -759,6 +782,14 @@ async def serve_dashboard_cliente(user: User = Depends(get_current_user)):
 
 @app.get("/ia", response_class=HTMLResponse)
 async def serve_home_care_ia(user: User = Depends(get_current_user)):
+    plan_lower = (user.plan or "trial").lower()
+    is_trial = plan_lower == "trial" or plan_lower == "gratis" or plan_lower == "free"
+    if is_trial and user.created_at:
+        from datetime import datetime, timedelta
+        if datetime.utcnow() > user.created_at + timedelta(days=14):
+            from fastapi.responses import RedirectResponse
+            return RedirectResponse(url="/plans.html")
+            
     html_file = Path(__file__).parent / "home_care_ia.html"
     if not html_file.exists():
         return HTMLResponse(content="<h1>Erro: home_care_ia.html não encontrado</h1>", status_code=500)
