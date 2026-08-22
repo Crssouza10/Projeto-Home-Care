@@ -1,7 +1,7 @@
-# ===== v1.6.20 - 2026-08-19 21:00 BRT =========================================
-# - FIX: correção da inicialização do SpeechRecognition e sanitização automática de env vars
+# ===== v1.6.21 - 2026-08-22 17:48 BRT =========================================
+# - FIX: CTG-086-02 liberação de acesso pós-expiração de trial e redirecionamento para upgrade
+# - Histórico anterior: v1.6.20 (2026-08-19 21:00) - correção da inicialização do SpeechRecognition e sanitização automática de env vars
 # - Histórico anterior: v1.6.15 (2026-08-17 23:25) - CTG-107 migração da push_subscriptions.
-# - Histórico anterior: v1.6.13 (2026-08-16 21:03) - DIAG modo mock/real ao vivo.
 import sys
 # Garante codificação UTF-8 para evitar erros de unicode no console (especialmente no Windows)
 if sys.platform.startswith('win'):
@@ -679,10 +679,14 @@ def get_current_user(request: Request, db: Session = Depends(get_db)):
         from datetime import datetime, timedelta
         limit_date = user.created_at + timedelta(days=14)
         if datetime.utcnow() > limit_date:
-            raise HTTPException(
-                status_code=403,
-                detail="Período de teste (trial) expirado. Por favor, faça o upgrade do seu plano para continuar."
-            )
+            # CTG-086-02: Permite acessar endpoints de pagamento/faturamento mesmo com o trial expirado
+            path = request.url.path
+            allowed_paths = ["/api/subscribe", "/api/subscription", "/api/plans"]
+            if not any(path.startswith(p) for p in allowed_paths):
+                raise HTTPException(
+                    status_code=403,
+                    detail="Período de teste (trial) expirado. Por favor, faça o upgrade do seu plano para continuar."
+                )
             
     return user
 

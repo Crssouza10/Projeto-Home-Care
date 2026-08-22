@@ -2589,15 +2589,8 @@
                 
                 // CTG-086: Se alguma resposta for 403, significa que o trial expirou
                 if (medsRes.status === 403 || apptsRes.status === 403 || respRes.status === 403 || contRes.status === 403) {
-                    console.log('🔒 Trial expirado detectado via API 403. Bloqueando acesso...');
-                    const modalUpgrade = document.getElementById('modal-upgrade-plan');
-                    if (modalUpgrade) {
-                        modalUpgrade.style.display = 'flex';
-                        const closeBtn = modalUpgrade.querySelector('.modal-close');
-                        if (closeBtn) closeBtn.style.display = 'none';
-                        const backSystemBtn = modalUpgrade.querySelector('button[onclick*="closeModal"]');
-                        if (backSystemBtn) backSystemBtn.style.display = 'none';
-                    }
+                    console.log('🔒 Trial expirado detectado via API 403. Redirecionando para página de upgrade...');
+                    window.location.href = '/plans.html';
                     return;
                 }
                 
@@ -2929,16 +2922,9 @@
                         trialBadge.style.color = '#ffffff';
                         trialBadge.style.display = 'inline-block';
                         
-                        // Bloquear ações de fechar o modal e forçar exibição dele
-                        const modalUpgrade = document.getElementById('modal-upgrade-plan');
-                        if (modalUpgrade) {
-                            modalUpgrade.style.display = 'flex';
-                            // Ocultar botão de fechar e botão "Voltar ao Sistema"
-                            const closeBtn = modalUpgrade.querySelector('.modal-close');
-                            if (closeBtn) closeBtn.style.display = 'none';
-                            const backSystemBtn = modalUpgrade.querySelector('button[onclick*="closeModal"]');
-                            if (backSystemBtn) backSystemBtn.style.display = 'none';
-                        }
+                        console.log('🔒 Trial expirado (dias esgotados). Redirecionando para página de upgrade...');
+                        window.location.href = '/plans.html';
+                        return;
                     } else if (daysLeft <= 3) {
                         // Urgência: <= 3 dias
                         trialBadge.textContent = `Urgente: apenas ${daysLeft} ${daysLeft === 1 ? 'dia' : 'dias'}`;
@@ -9044,7 +9030,7 @@
 
     <!-- 🔖 INDICADOR DE VERSÃO -->
     <div style="text-align:center; padding:20px; color:#00D4FF; font-size:0.75rem; margin-top:30px; opacity:0.7;">
-        Versão: v1.6.20 em 19/08/2026 21:00
+        Versão: v1.6.21 em 22/08/2026 17:48
     </div>
 <!-- Cloudflare Web Analytics --><script type='module' src='https://static.cloudflareinsights.com/beacon.min.js' data-cf-beacon='{"token": "d1a9b25d409d47f693bbb1a7f0afbc97"}'></script><!-- End Cloudflare Web Analytics -->
 

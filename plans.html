@@ -473,6 +473,13 @@ async function carregarStatusAssinatura() {
         } catch(e) {}
     }
 
+    if (userData && userData.email) {
+        const emailInput = document.getElementById('payerEmail');
+        if (emailInput) {
+            emailInput.value = userData.email;
+        }
+    }
+
     if (!userData || !userData.id) {
         // Sem usuário logado — mostra planos mesmo assim
         document.getElementById('noSubscription').style.display = 'block';
@@ -567,34 +574,51 @@ async function carregarPlanos() {
         const resp = await fetch(`${API_URL}/api/plans`);
         const data = await resp.json();
 
-        if (data.status !== 'sucesso' || !data.planos) {
+        // Aceita 'success' ou 'sucesso' e 'plans' ou 'planos'
+        const isSuccess = data.status === 'success' || data.status === 'sucesso';
+        const plansList = data.plans || data.planos;
+
+        if (!isSuccess || !plansList) {
             grid.innerHTML = '<p style="color:var(--red);text-align:center;padding:20px;">Erro ao carregar planos</p>';
             return;
         }
 
-        // Identifica qual plano é o "popular" (trimestral = melhor custo-benefício intermediário)
-        const planos = data.planos;
-        const popularIndex = planos.length === 3 ? 1 : 0;  // Trimestral é o do meio
+        // Identifica qual plano é o "popular" (trimestral ou Pro Mensal = melhor custo-benefício)
+        const plansCount = plansList.length;
+        const popularIndex = plansCount === 3 ? 1 : (plansCount >= 2 ? 1 : 0);
 
-        grid.innerHTML = planos.map((plano, i) => {
+        grid.innerHTML = plansList.map((plano, i) => {
             const popular = i === popularIndex;
-            const features = getFeatures(plano.duration_months);
+            
+            // Mapeia period/duration_months
+            let durationMonths = plano.duration_months;
+            if (!durationMonths) {
+                if (plano.period === 'mensal') durationMonths = 1;
+                else if (plano.period === 'trimestral') durationMonths = 3;
+                else if (plano.period === 'anual') durationMonths = 12;
+            }
+            
+            const features = plano.features || getFeatures(durationMonths || 1);
+            const planKey = plano.key || plano.id;
+            const priceDisplay = plano.price_display || plano.price_formatted || `R$${(plano.price/100).toFixed(2).replace('.',',')}`;
+            const durationLabel = plano.duration_label || plano.period || 'mês';
+
             return `
                 <div class="plan-card ${popular ? 'selected' : ''}" 
-                     onclick="selecionarPlano('${plano.id}', this)"
-                     data-plan-id="${plano.id}">
+                     onclick="selecionarPlano('${planKey}', this)"
+                     data-plan-id="${planKey}">
                     ${popular ? '<span class="popular-badge">Mais Popular</span>' : ''}
                     <div class="plan-header">
                         <span class="plan-name">${plano.name}</span>
                         <div class="plan-price">
-                            <div class="amount">${plano.price_formatted}</div>
-                            <div class="period">/${plano.duration_label}</div>
-                            ${plano.duration_months > 1 ? 
-                                `<div class="per-month">${calcularPorMes(plano.price, plano.duration_months)}/mês</div>` 
+                            <div class="amount">${priceDisplay}</div>
+                            <div class="period">/${durationLabel}</div>
+                            ${(durationMonths && durationMonths > 1) ? 
+                                `<div class="per-month">${calcularPorMes(plano.price, durationMonths)}/mês</div>` 
                                 : ''}
                         </div>
                     </div>
-                    <p class="plan-desc">${plano.description}</p>
+                    <p class="plan-desc">${plano.description || ''}</p>
                     <div class="plan-features">
                         ${features.map(f => `
                             <div class="plan-feature">
@@ -691,8 +715,9 @@ async function iniciarAssinatura() {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-                plan_id: selectedPlanId,
-                payer_email: email
+                user_id: userData ? userData.id : null,
+                email: email,
+                plan: selectedPlanId
             })
         });
 
