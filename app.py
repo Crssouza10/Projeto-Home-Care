@@ -1,5 +1,6 @@
-# ===== v1.6.21 - 2026-08-22 17:48 BRT =========================================
-# - FIX: CTG-086-02 liberação de acesso pós-expiração de trial e redirecionamento para upgrade
+# ===== v1.6.22 - 2026-08-22 18:30 BRT =========================================
+# - CHG: _ask_ai agora usa DeepSeek V4 Flash (deepseek-v4-flash) como motor principal de texto; Gemini vira fallback (imagem continua só Gemini)
+# - Histórico anterior: v1.6.21 (2026-08-22 17:48) - CTG-086-02 liberação de acesso pós-expiração de trial e redirecionamento para upgrade
 # - Histórico anterior: v1.6.20 (2026-08-19 21:00) - correção da inicialização do SpeechRecognition e sanitização automática de env vars
 # - Histórico anterior: v1.6.15 (2026-08-17 23:25) - CTG-107 migração da push_subscriptions.
 import sys
@@ -1301,33 +1302,25 @@ async def send_documents_email(user_id: str, payload: dict, db: Session = Depend
 
 def _ask_ai(prompt: str, image_base64: str = None, image_mime: str = "image/jpeg") -> str:
     """
-    Envia prompt para IA. Tenta Gemini primeiro; se falhar (cota, erro),
-    faz fallback para DeepSeek. Retorna o texto da resposta.
+    Envia prompt para IA. Para texto: DeepSeek Flash primeiro (mais barato);
+    se falhar (cota, erro), faz fallback para Gemini.
     Para prompts com imagem, apenas Gemini é usado (DeepSeek não suporta visão).
     """
     gemini_key = os.getenv("GEMINI_API_KEY")
     deepseek_key = os.getenv("DEEPSEEK_API_KEY")
     
-    # === TENTATIVA 1: Gemini ===
-    if gemini_key:
+    # === IMAGEM: apenas Gemini (DeepSeek não suporta visão) ===
+    if image_base64 and gemini_key:
         try:
-            if image_base64:
-                # Prompt com imagem (Gemini apenas)
-                payload = {
-                    "contents": [{
-                        "parts": [
-                            {"text": prompt},
-                            {"inlineData": {"mimeType": image_mime, "data": image_base64}}
-                        ]
-                    }],
-                    "generationConfig": {"temperature": 0.3, "maxOutputTokens": 500}
-                }
-            else:
-                payload = {
-                    "contents": [{"parts": [{"text": prompt}]}],
-                    "generationConfig": {"temperature": 0.3, "maxOutputTokens": 500}
-                }
-            
+            payload = {
+                "contents": [{
+                    "parts": [
+                        {"text": prompt},
+                        {"inlineData": {"mimeType": image_mime, "data": image_base64}}
+                    ]
+                }],
+                "generationConfig": {"temperature": 0.3, "maxOutputTokens": 500}
+            }
             for model in ["gemini-2.0-flash", "gemini-1.5-flash"]:
                 url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={gemini_key}"
                 r = requests.post(url, json=payload, timeout=20)
@@ -1337,17 +1330,17 @@ def _ask_ai(prompt: str, image_base64: str = None, image_mime: str = "image/jpeg
                 elif r.status_code == 429:
                     continue  # Quota exceeded, try next model
         except Exception as e:
-            print(f"⚠️ Gemini falhou: {e}")
+            print(f"⚠️ Gemini (imagem) falhou: {e}")
     
-    # === TENTATIVA 2: DeepSeek (apenas texto, sem imagem) ===
-    if deepseek_key and not image_base64:
+    # === TEXTO: TENTATIVA 1 — DeepSeek Flash (mais barato) ===
+    if not image_base64 and deepseek_key:
         try:
             headers = {
                 "Authorization": f"Bearer {deepseek_key}",
                 "Content-Type": "application/json"
             }
             payload = {
-                "model": "deepseek-chat",
+                "model": "deepseek-v4-flash",
                 "messages": [{"role": "user", "content": prompt}],
                 "temperature": 0.3,
                 "max_tokens": 500
@@ -1360,8 +1353,26 @@ def _ask_ai(prompt: str, image_base64: str = None, image_mime: str = "image/jpeg
         except Exception as e:
             print(f"⚠️ DeepSeek falhou: {e}")
     
+    # === TEXTO: TENTATIVA 2 — Gemini (fallback) ===
+    if not image_base64 and gemini_key:
+        try:
+            payload = {
+                "contents": [{"parts": [{"text": prompt}]}],
+                "generationConfig": {"temperature": 0.3, "maxOutputTokens": 500}
+            }
+            for model in ["gemini-2.0-flash", "gemini-1.5-flash"]:
+                url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={gemini_key}"
+                r = requests.post(url, json=payload, timeout=20)
+                if r.status_code == 200:
+                    data = r.json()
+                    return data["candidates"][0]["content"]["parts"][0]["text"]
+                elif r.status_code == 429:
+                    continue  # Quota exceeded, try next model
+        except Exception as e:
+            print(f"⚠️ Gemini falhou: {e}")
+    
     # === FALHA TOTAL ===
-    raise RuntimeError("Nenhuma IA disponível (Gemini e DeepSeek indisponíveis)")
+    raise RuntimeError("Nenhuma IA disponível (DeepSeek e Gemini indisponíveis)")
 
 # ══════════════════════════════════════════════════════════════
 # FUNÇÕES AUXILIARES — GMAIL API
