@@ -1,5 +1,6 @@
-# ===== v1.6.23 - 2026-08-22 18:48 BRT =========================================
-# - FIX: CTG-086-02 criada rota /plans.html (e /plans) para servir a página de upgrade; redirecionamento de trial expirado agora resolve (antes dava 404 Not Found)
+# ===== v1.6.24 - 2026-08-22 19:02 BRT =========================================
+# - FIX: CTG-086-02 erro "one of the hex, bytes..." ao assinar plano (user_id null do localStorage + verify_resource_owner não capturava TypeError). Backend usa current_user.id como fonte de verdade; plans.html lê currentUser/userId.
+# - Histórico anterior: v1.6.23 (2026-08-22 18:48) - rota /plans.html ausente causava 404 no redirect de trial expirado
 # - Histórico anterior: v1.6.22 (2026-08-22 18:30) - _ask_ai usa DeepSeek V4 Flash como motor principal de texto; Gemini vira fallback
 # - Histórico anterior: v1.6.21 (2026-08-22 17:48) - CTG-086-02 liberação de acesso pós-expiração de trial e redirecionamento para upgrade
 # - Histórico anterior: v1.6.20 (2026-08-19 21:00) - correção da inicialização do SpeechRecognition e sanitização automática de env vars
@@ -707,9 +708,11 @@ def verify_resource_owner(user_id: str, current_user: User):
     Levanta HTTPException 400 se user_id inválido, 403 se não pertence ao usuário logado.
     Retorna o UUID do recurso caso a validação passe.
     """
+    if not user_id:
+        raise HTTPException(status_code=400, detail="ID de usuário inválido")
     try:
-        user_uuid = uuid.UUID(user_id)
-    except (ValueError, AttributeError):
+        user_uuid = uuid.UUID(str(user_id))
+    except (ValueError, AttributeError, TypeError):
         raise HTTPException(status_code=400, detail="ID de usuário inválido")
     if current_user.id != user_uuid:
         raise HTTPException(status_code=403, detail="Acesso negado: você não tem permissão para acessar estes dados.")
@@ -5170,13 +5173,16 @@ async def criar_assinatura(request: Request, db: Session = Depends(get_db), curr
 
     body = await request.json()
     user_id = body.get("user_id")
-    # CTG-126: o user_id do body deve pertencer ao usuário logado
+    # CTG-126: se o body não trouxer user_id, usa o usuário autenticado (fonte de verdade).
+    # Isso evita erro de UUID None quando o frontend não tem o id no localStorage.
+    if not user_id:
+        user_id = str(current_user.id)
     user_uuid = verify_resource_owner(user_id, current_user)
     payer_email = body.get("email")
     plan_key = body.get("plan", "basico_mensal")
 
-    if not user_id or not payer_email:
-        raise HTTPException(status_code=400, detail="user_id e email são obrigatórios")
+    if not payer_email:
+        raise HTTPException(status_code=400, detail="email é obrigatório")
 
     planos_precos = {
         "basico_mensal": ("Básico Mensal", 49.90),

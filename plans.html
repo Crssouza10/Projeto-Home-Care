@@ -465,12 +465,18 @@ document.addEventListener('DOMContentLoaded', () => {
 
 // ===== CARREGAR STATUS =====
 async function carregarStatusAssinatura() {
-    // Tenta pegar user_id do localStorage (salvo no login)
-    const storedUser = localStorage.getItem('homecare_user');
+    // Tenta pegar usuário do localStorage (salvo no login: currentUser ou userId)
+    const storedUser = localStorage.getItem('currentUser');
     if (storedUser) {
         try {
             userData = JSON.parse(storedUser);
         } catch(e) {}
+    }
+    // Fallback: userId salvo separadamente
+    const storedUserId = localStorage.getItem('userId');
+    if (storedUserId && (!userData || !userData.id)) {
+        if (!userData) userData = {};
+        userData.id = storedUserId;
     }
 
     if (userData && userData.email) {
