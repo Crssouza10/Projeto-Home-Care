@@ -1,5 +1,6 @@
-# ===== v1.6.22 - 2026-08-22 18:30 BRT =========================================
-# - CHG: _ask_ai agora usa DeepSeek V4 Flash (deepseek-v4-flash) como motor principal de texto; Gemini vira fallback (imagem continua só Gemini)
+# ===== v1.6.23 - 2026-08-22 18:48 BRT =========================================
+# - FIX: CTG-086-02 criada rota /plans.html (e /plans) para servir a página de upgrade; redirecionamento de trial expirado agora resolve (antes dava 404 Not Found)
+# - Histórico anterior: v1.6.22 (2026-08-22 18:30) - _ask_ai usa DeepSeek V4 Flash como motor principal de texto; Gemini vira fallback
 # - Histórico anterior: v1.6.21 (2026-08-22 17:48) - CTG-086-02 liberação de acesso pós-expiração de trial e redirecionamento para upgrade
 # - Histórico anterior: v1.6.20 (2026-08-19 21:00) - correção da inicialização do SpeechRecognition e sanitização automática de env vars
 # - Histórico anterior: v1.6.15 (2026-08-17 23:25) - CTG-107 migração da push_subscriptions.
@@ -794,6 +795,15 @@ async def serve_home_care_ia(user: User = Depends(get_current_user)):
     html_file = Path(__file__).parent / "home_care_ia.html"
     if not html_file.exists():
         return HTMLResponse(content="<h1>Erro: home_care_ia.html não encontrado</h1>", status_code=500)
+    return HTMLResponse(content=html_file.read_text(encoding="utf-8"))
+
+@app.get("/plans.html", response_class=HTMLResponse)
+@app.get("/plans", response_class=HTMLResponse)
+async def serve_plans():
+    """Página de planos/upgrade — destino do redirecionamento quando o trial expira."""
+    html_file = Path(__file__).parent / "plans.html"
+    if not html_file.exists():
+        return HTMLResponse(content="<h1>Erro: plans.html não encontrado</h1>", status_code=500)
     return HTMLResponse(content=html_file.read_text(encoding="utf-8"))
 
 @app.get("/success", response_class=HTMLResponse)
