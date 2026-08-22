@@ -590,6 +590,8 @@ async function carregarPlanos() {
         }
 
         // Identifica qual plano é o "popular" (trimestral ou Pro Mensal = melhor custo-benefício)
+        // ⚠️ CTG-086-02: o popular recebe apenas o selo "Mais Popular", NUNCA a seleção automática.
+        // O usuário deve escolher explicitamente qual plano assinar.
         const plansCount = plansList.length;
         const popularIndex = plansCount === 3 ? 1 : (plansCount >= 2 ? 1 : 0);
 
@@ -610,7 +612,7 @@ async function carregarPlanos() {
             const durationLabel = plano.duration_label || plano.period || 'mês';
 
             return `
-                <div class="plan-card ${popular ? 'selected' : ''}" 
+                <div class="plan-card" 
                      onclick="selecionarPlano('${planKey}', this)"
                      data-plan-id="${planKey}">
                     ${popular ? '<span class="popular-badge">Mais Popular</span>' : ''}
@@ -637,16 +639,10 @@ async function carregarPlanos() {
             `;
         }).join('');
 
-        // Seleciona o popular por padrão
-        const popularCard = grid.querySelector('[data-plan-id]');
-        if (popularCard) {
-            const popularId = grid.querySelector('.popular-badge')?.parentElement?.dataset?.planId 
-                || grid.querySelector('.selected')?.dataset?.planId;
-            if (popularId) {
-                selectedPlanId = popularId;
-                document.getElementById('emailSection').style.display = 'block';
-            }
-        }
+        // ⚠️ CTG-086-02: NÃO pré-seleciona nenhum plano.
+        // A seção de email + botão "Assinar Plano" só aparece após o usuário clicar
+        // em um card (via selecionarPlano), garantindo que a escolha é explícita.
+        document.getElementById('emailSection').style.display = 'none';
     } catch(e) {
         console.error('Erro:', e);
         grid.innerHTML = '<p style="color:var(--red);text-align:center;padding:20px;">Erro ao conectar com servidor</p>';
@@ -683,6 +679,12 @@ function selecionarPlano(planId, cardEl) {
     cardEl.classList.add('selected');
     selectedPlanId = planId;
     document.getElementById('emailSection').style.display = 'block';
+    // Feedback visual: mostra o nome do plano escolhido no botão
+    const btnText = document.querySelector('#btnSubscribe .btn-text');
+    const planName = cardEl.querySelector('.plan-name')?.textContent || 'Plano';
+    if (btnText) {
+        btnText.textContent = 'Assinar ' + planName;
+    }
 }
 
 // ===== INICIAR ASSINATURA =====

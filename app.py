@@ -1,5 +1,6 @@
-# ===== v1.6.24 - 2026-08-22 19:02 BRT =========================================
-# - FIX: CTG-086-02 erro "one of the hex, bytes..." ao assinar plano (user_id null do localStorage + verify_resource_owner não capturava TypeError). Backend usa current_user.id como fonte de verdade; plans.html lê currentUser/userId.
+# ===== v1.6.25 - 2026-08-22 19:27 BRT =========================================
+# - FIX: CTG-086-02 plans.html não pré-seleciona mais o Plano Pro automaticamente; usuário escolhe o plano explicitamente antes do checkout Mercado Pago
+# - Histórico anterior: v1.6.24 (2026-08-22 19:02) - erro "one of the hex, bytes..." ao assinar (user_id null + verify_resource_owner TypeError)
 # - Histórico anterior: v1.6.23 (2026-08-22 18:48) - rota /plans.html ausente causava 404 no redirect de trial expirado
 # - Histórico anterior: v1.6.22 (2026-08-22 18:30) - _ask_ai usa DeepSeek V4 Flash como motor principal de texto; Gemini vira fallback
 # - Histórico anterior: v1.6.21 (2026-08-22 17:48) - CTG-086-02 liberação de acesso pós-expiração de trial e redirecionamento para upgrade
